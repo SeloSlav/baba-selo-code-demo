@@ -1,7 +1,7 @@
 'use client';
 
 import { useConversation } from '@11labs/react';
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useState } from 'react';
 
 export function Conversation() {
   const [microphoneEnabled, setMicrophoneEnabled] = useState(false);
@@ -37,12 +37,12 @@ export function Conversation() {
   const startConversation = useCallback(async () => {
     try {
       // Request microphone access
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      await navigator.mediaDevices.getUserMedia({ audio: true });
       setMicrophoneEnabled(true);
 
       // Start the conversation
       await conversation.startSession({
-        agentId: 'tRQ8VBuYOhpOecaDuGiX', // Replace with your actual Agent ID
+        agentId: 'YOUR_AGENT_ID', // Replace with your actual Agent ID
       });
     } catch (error) {
       console.error('Microphone access denied or failed to start conversation:', error);
@@ -59,11 +59,14 @@ export function Conversation() {
   }, [conversation]);
 
   // Handle volume adjustment
-  const adjustVolume = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const volumeLevel = parseFloat(event.target.value);
-    setVolume(volumeLevel);
-    conversation.setVolume({ volume: volumeLevel });
-  }, [conversation]);
+  const adjustVolume = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const volumeLevel = parseFloat(event.target.value);
+      setVolume(volumeLevel);
+      conversation.setVolume({ volume: volumeLevel });
+    },
+    [conversation]
+  );
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-pink-100 via-rose-200 to-amber-100 p-4">
@@ -111,9 +114,7 @@ export function Conversation() {
 
         {conversation.status === 'connected' && (
           <div className="flex flex-col items-center mb-4">
-            <p className="text-green-700 font-medium">
-              Status: Connected
-            </p>
+            <p className="text-green-700 font-medium">Status: Connected</p>
             <p className="text-gray-600">
               Baba is currently {conversation.isSpeaking ? 'speaking' : 'listening'}.
             </p>
