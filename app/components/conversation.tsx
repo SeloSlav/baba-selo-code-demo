@@ -7,7 +7,6 @@ export function Conversation() {
   const [microphoneEnabled, setMicrophoneEnabled] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [volume, setVolume] = useState(1); // Default volume at 100%
-  const [showGif, setShowGif] = useState(false);
 
   const conversation = useConversation({
     onConnect: () => console.log('Connected to conversation.'),
@@ -51,31 +50,20 @@ export function Conversation() {
     conversation.setVolume({ volume: volumeLevel });
   }, [conversation]);
 
-  // Randomly toggle GIF display
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setShowGif((prev) => !prev);
-    }, 60000); // Toggles every minute
-
-    return () => clearInterval(interval); // Cleanup interval on unmount
-  }, []);
-
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-pink-100 via-rose-200 to-amber-100 p-4">
       <div className="max-w-xl w-full bg-white shadow-xl rounded-lg p-6 text-center">
-        <h1 className="text-2xl font-bold text-rose-800 mb-4">
-          Baba's Warm Conversation
+        <h1 className="text-3xl font-extrabold text-rose-900 mb-4">
+          Baba Selo - Your Warm Guide to Recipes, Wisdom, and More
         </h1>
-        <p className="text-rose-700 mb-6">
-          Chat with Baba. She's always here to li sten and share her wisdom.
+        <p className="text-rose-800 mb-6">
+          Discover Balkan recipes, timeless life advice, and a comforting chat with Baba. She's here to share her secrets, stories, and love—just like home.
         </p>
 
         {/* Baba GIF */}
-        {showGif && (
-          <div className="mb-6">
-            <img src="/baba.gif" alt="Baba" className="w-48 h-48 mx-auto rounded-full shadow-md" />
-          </div>
-        )}
+        <div className="mb-6">
+          <img src="/baba.png" alt="Baba" className="w-64 h-64 mx-auto" />
+        </div>
 
         {!microphoneEnabled && (
           <div className="bg-yellow-100 text-yellow-800 px-4 py-3 rounded mb-4">
