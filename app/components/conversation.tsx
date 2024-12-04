@@ -1,30 +1,24 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useConversation } from '@11labs/react';
+import React, { useCallback, useState } from 'react';
 
 export function Conversation() {
   const [microphoneEnabled, setMicrophoneEnabled] = useState(false);
-  const [volume, setVolume] = useState(1);
-  const [transcript, setTranscript] = useState<{ role: string; message: string }[]>([]);
   const [errorMessage, setErrorMessage] = useState('');
-
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [volume, setVolume] = useState(1); // Default volume at 100%
+  const [transcript, setTranscript] = useState<string[]>([]); // State to store transcript lines
 
   const conversation = useConversation({
     onConnect: () => console.log('Connected to conversation.'),
     onDisconnect: () => console.log('Disconnected from conversation.'),
     onMessage: (message) => {
+      // Update transcript when a new message is received
       if (message && typeof message.message === 'string') {
-        setTranscript((prevTranscript) => [
-          ...prevTranscript,
-          { role: message.source || 'agent', message: message.message },
-        ]);
+        setTranscript((prevTranscript) => [...prevTranscript, message.message]);
       } else if (message && typeof message === 'string') {
-        setTranscript((prevTranscript) => [
-          ...prevTranscript,
-          { role: 'agent', message },
-        ]);
+        // In case the message itself is the text
+        setTranscript((prevTranscript) => [...prevTranscript, message]);
       } else {
         console.warn('Unexpected message structure:', message);
       }
@@ -35,41 +29,37 @@ export function Conversation() {
     },
   });
 
+  // Handle starting the conversation
   const startConversation = useCallback(async () => {
     try {
+      // Request microphone access
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       setMicrophoneEnabled(true);
 
+      // Start the conversation
       await conversation.startSession({
         agentId: 'tRQ8VBuYOhpOecaDuGiX', // Replace with your actual Agent ID
       });
     } catch (error) {
-      console.error('Failed to start conversation:', error);
+      console.error('Microphone access denied or failed to start conversation:', error);
       setErrorMessage(
         'Microphone access is required. Please allow microphone access in your browser settings.'
       );
     }
   }, [conversation]);
 
+  // Handle stopping the conversation
   const stopConversation = useCallback(async () => {
     await conversation.endSession();
     setMicrophoneEnabled(false);
   }, [conversation]);
 
-  const adjustVolume = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const volumeLevel = parseFloat(event.target.value);
-      setVolume(volumeLevel);
-      conversation.setVolume({ volume: volumeLevel });
-    },
-    [conversation]
-  );
-
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [transcript]);
+  // Handle volume adjustment
+  const adjustVolume = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const volumeLevel = parseFloat(event.target.value);
+    setVolume(volumeLevel);
+    conversation.setVolume({ volume: volumeLevel });
+  }, [conversation]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-pink-100 via-rose-200 to-amber-100 p-4">
@@ -78,8 +68,7 @@ export function Conversation() {
           Baba Selo - Your Warm Guide to Recipes, Wisdom, and More
         </h1>
         <p className="text-rose-800 mb-6">
-          Discover Balkan recipes, timeless life advice, and a comforting chat with Baba. She's here
-          to share her secrets, stories, and love—just like home.
+          Discover Balkan recipes, timeless life advice, and a comforting chat with Baba. She's here to share her secrets, stories, and love—just like home.
         </p>
 
         {/* Baba GIF */}
@@ -118,26 +107,12 @@ export function Conversation() {
 
         <div className="bg-amber-50 p-4 rounded-lg w-full shadow-inner mb-6">
           <h2 className="text-xl font-semibold text-rose-900 mb-2">Conversation Transcript</h2>
-          <div
-            ref={scrollRef}
-            className="text-left overflow-y-auto max-h-48 bg-gray-50 p-4 rounded-lg shadow-inner"
-          >
+          <div className="text-left overflow-y-auto max-h-48">
             {transcript.length > 0 ? (
               transcript.map((line, index) => (
-                <div
-                  key={index}
-                  className={`flex ${line.role === 'user' ? 'justify-end' : 'justify-start'
-                    } mb-2`}
-                >
-                  <div
-                    className={`px-4 py-2 rounded-lg max-w-xs ${line.role === 'user'
-                        ? 'bg-rose-500 text-white'
-                        : 'bg-gray-200 text-gray-800'
-                      }`}
-                  >
-                    {line.message}
-                  </div>
-                </div>
+                <p key={index} className="text-rose-800 mb-2">
+                  {line}
+                </p>
               ))
             ) : (
               <p className="text-gray-500 italic">No messages yet. Start talking to Baba!</p>
@@ -145,18 +120,6 @@ export function Conversation() {
           </div>
         </div>
 
-        <div className="mt-6">
-          <label className="block mb-2 text-rose-900 font-semibold">Volume Control</label>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.1"
-            value={volume}
-            onChange={adjustVolume}
-            className="w-full"
-          />
-        </div>
       </div>
     </div>
   );
