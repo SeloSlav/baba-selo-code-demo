@@ -15,8 +15,8 @@ export function Conversation() {
     onMessage: (message) => {
       console.log('Message:', message);
       // Update transcript when new message is received
-      if (message && message.type === 'text') {
-        setTranscript((prevTranscript) => [...prevTranscript, message.text]);
+      if (message && message.message) {
+        setTranscript((prevTranscript) => [...prevTranscript, message.message]);
       }
     },
     onError: (error) => {
