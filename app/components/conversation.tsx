@@ -1,19 +1,15 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useConversation } from '@11labs/react';
 
 export function Conversation() {
   const [microphoneEnabled, setMicrophoneEnabled] = useState(false);
   const [volume, setVolume] = useState(1);
   const [transcript, setTranscript] = useState<{ role: string; message: string }[]>([]);
-  const [conversations, setConversations] = useState([]);
   const [errorMessage, setErrorMessage] = useState('');
-  const [loadingConversations, setLoadingConversations] = useState(false);
-  const [hasMoreConversations, setHasMoreConversations] = useState(false);
-  const [nextCursor, setNextCursor] = useState('');
 
-  const apiKey = 'sk_7fcb44554be4d7e2bac8451043141dc7702e874614d869d1'; // Replace with your actual API key
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const conversation = useConversation({
     onConnect: () => console.log('Connected to conversation.'),
@@ -38,41 +34,6 @@ export function Conversation() {
       setErrorMessage('An error occurred while connecting.');
     },
   });
-
-  const fetchConversations = async (cursor = '') => {
-    setLoadingConversations(true);
-    try {
-      const response = await fetch(
-        `https://api.elevenlabs.io/v1/convai/conversations?${new URLSearchParams({
-          page_size: '30',
-          cursor,
-        })}`,
-        {
-          method: 'GET',
-          headers: {
-            'xi-api-key': apiKey,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch conversations: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      setConversations((prev) => [...prev, ...data.conversations]);
-      setHasMoreConversations(data.has_more);
-      setNextCursor(data.next_cursor || '');
-    } catch (error) {
-      setErrorMessage(error.message || 'An error occurred while fetching conversations.');
-    } finally {
-      setLoadingConversations(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchConversations();
-  }, []);
 
   const startConversation = useCallback(async () => {
     try {
@@ -103,6 +64,12 @@ export function Conversation() {
     },
     [conversation]
   );
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [transcript]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-pink-100 via-rose-200 to-amber-100 p-4">
@@ -151,21 +118,22 @@ export function Conversation() {
 
         <div className="bg-amber-50 p-4 rounded-lg w-full shadow-inner mb-6">
           <h2 className="text-xl font-semibold text-rose-900 mb-2">Conversation Transcript</h2>
-          <div className="text-left overflow-y-auto max-h-48">
+          <div
+            ref={scrollRef}
+            className="text-left overflow-y-auto max-h-48 bg-gray-50 p-4 rounded-lg shadow-inner"
+          >
             {transcript.length > 0 ? (
               transcript.map((line, index) => (
                 <div
                   key={index}
-                  className={`flex ${
-                    line.role === 'user' ? 'justify-end' : 'justify-start'
-                  }`}
+                  className={`flex ${line.role === 'user' ? 'justify-end' : 'justify-start'
+                    } mb-2`}
                 >
                   <div
-                    className={`px-4 py-2 rounded-lg max-w-sm ${
-                      line.role === 'user'
+                    className={`px-4 py-2 rounded-lg max-w-xs ${line.role === 'user'
                         ? 'bg-rose-500 text-white'
                         : 'bg-gray-200 text-gray-800'
-                    }`}
+                      }`}
                   >
                     {line.message}
                   </div>
@@ -177,43 +145,17 @@ export function Conversation() {
           </div>
         </div>
 
-        <div className="bg-gray-50 p-4 rounded-lg w-full shadow-inner">
-          <h2 className="text-xl font-semibold text-rose-900 mb-2">Past Conversations</h2>
-          {loadingConversations && <p className="text-gray-500 italic">Loading conversations...</p>}
-          {errorMessage && (
-            <div className="bg-red-100 text-red-800 px-4 py-3 rounded mb-4">{errorMessage}</div>
-          )}
-          <ul className="space-y-4">
-            {conversations.map((conv, index) => (
-              <li
-                key={conv.conversation_id || index}
-                className="p-4 bg-gray-200 rounded-lg border border-gray-300"
-              >
-                <p>
-                  <strong>Agent Name:</strong> {conv.agent_name || 'Unknown'}
-                </p>
-                <p>
-                  <strong>Start Time:</strong>{' '}
-                  {new Date(conv.start_time_unix_secs * 1000).toLocaleString()}
-                </p>
-                <p>
-                  <strong>Duration:</strong> {conv.call_duration_secs} seconds
-                </p>
-                <p>
-                  <strong>Status:</strong> {conv.status}
-                </p>
-              </li>
-            ))}
-          </ul>
-          {hasMoreConversations && (
-            <button
-              onClick={() => fetchConversations(nextCursor)}
-              disabled={loadingConversations}
-              className="mt-4 px-4 py-2 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600"
-            >
-              Load More
-            </button>
-          )}
+        <div className="mt-6">
+          <label className="block mb-2 text-rose-900 font-semibold">Volume Control</label>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.1"
+            value={volume}
+            onChange={adjustVolume}
+            className="w-full"
+          />
         </div>
       </div>
     </div>
