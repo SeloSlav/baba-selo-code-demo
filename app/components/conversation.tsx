@@ -4,12 +4,18 @@ import { useConversation } from '@11labs/react';
 import React, { useCallback, useState, useEffect } from 'react';
 import axios from 'axios';
 
+// Define the type for a transcript entry
+type TranscriptEntry = {
+  role: 'user' | 'agent'; // Adjust roles if necessary
+  message: string;
+};
+
 export function Conversation() {
   const [microphoneEnabled, setMicrophoneEnabled] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [transcript, setTranscript] = useState<string[]>([]);
+  const [transcript, setTranscript] = useState<TranscriptEntry[]>([]); // Updated type
   const [messageObject, setMessageObject] = useState<any>(null);
-  const [conversationId, setConversationId] = useState<string | null>(null); // State to store conversation ID
+  const [conversationId, setConversationId] = useState<string | null>(null);
 
   const conversation = useConversation({
     onConnect: () => console.log('Connected to conversation.'),
@@ -17,11 +23,22 @@ export function Conversation() {
     onMessage: (message) => {
       console.log('Full Message Object:', message);
       setMessageObject(message);
-
-      if (message && typeof message.message === 'string') {
-        setTranscript((prevTranscript) => [...prevTranscript, message.message]);
-      } else if (message && typeof message === 'string') {
-        setTranscript((prevTranscript) => [...prevTranscript, message]);
+  
+      if (typeof message === 'object' && message.message) {
+        // Normalize the role to match the TranscriptEntry type
+        const role: 'user' | 'agent' =
+          message.source === 'user' ? 'user' : 'agent'; // Default to 'agent' if not 'user'
+  
+        setTranscript((prevTranscript) => [
+          ...prevTranscript,
+          { role, message: message.message },
+        ]);
+      } else if (typeof message === 'string') {
+        // For plain string messages, default to agent
+        setTranscript((prevTranscript) => [
+          ...prevTranscript,
+          { role: 'agent', message },
+        ]);
       } else {
         console.warn('Unexpected message structure:', message);
       }
@@ -32,13 +49,12 @@ export function Conversation() {
     },
   });
 
-  // Fetch conversation details
   const fetchConversationDetails = useCallback(async (id: string) => {
     try {
       const response = await axios.get(
         `https://api.elevenlabs.io/v1/convai/conversations/${id}`,
         {
-          headers: { 'xi-api-key': 'sk_7fcb44554be4d7e2bac8451043141dc7702e874614d869d1' }, // Replace with your actual API key
+          headers: { 'xi-api-key': 'YOUR_API_KEY' }, // Replace with your actual API key
         }
       );
 
@@ -58,13 +74,13 @@ export function Conversation() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       setMicrophoneEnabled(true);
-  
+
       const conversationId = await conversation.startSession({
         agentId: 'tRQ8VBuYOhpOecaDuGiX', // Replace with your actual Agent ID
       });
-  
+
       if (conversationId) {
-        setConversationId(conversationId); // Store the conversation ID in state
+        setConversationId(conversationId);
         console.log('Conversation ID:', conversationId);
       } else {
         console.warn('Failed to retrieve a valid conversation ID:', conversationId);
@@ -80,10 +96,9 @@ export function Conversation() {
   const stopConversation = useCallback(async () => {
     await conversation.endSession();
     setMicrophoneEnabled(false);
-    setConversationId(null); // Clear the conversation ID
+    setConversationId(null);
   }, [conversation]);
 
-  // Fetch transcript periodically if conversation ID exists
   useEffect(() => {
     if (conversationId) {
       const interval = setInterval(() => fetchConversationDetails(conversationId), 3000);
@@ -100,10 +115,6 @@ export function Conversation() {
         <p className="text-rose-800 mb-6">
           Discover Balkan recipes, timeless life advice, and a comforting chat with Baba. She's here to share her secrets, stories, and love—just like home.
         </p>
-
-        <div className="mb-6">
-          <img src="/baba.png" alt="Baba" className="w-64 h-64 mx-auto" />
-        </div>
 
         {!microphoneEnabled && (
           <div className="bg-yellow-100 text-yellow-800 px-4 py-3 rounded mb-4">
