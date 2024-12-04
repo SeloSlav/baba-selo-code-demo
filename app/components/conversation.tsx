@@ -58,16 +58,16 @@ export function Conversation() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       setMicrophoneEnabled(true);
-
-      const session = await conversation.startSession({
+  
+      const conversationId = await conversation.startSession({
         agentId: 'tRQ8VBuYOhpOecaDuGiX', // Replace with your actual Agent ID
       });
-
-      if (session && typeof session === 'object' && session.conversationId) {
-        setConversationId(session.conversationId); // Store the conversation ID in state
-        console.log('Conversation ID:', session.conversationId);
+  
+      if (conversationId) {
+        setConversationId(conversationId); // Store the conversation ID in state
+        console.log('Conversation ID:', conversationId);
       } else {
-        console.warn('Session did not return a valid conversation ID:', session);
+        console.warn('Failed to retrieve a valid conversation ID:', conversationId);
       }
     } catch (error) {
       console.error('Microphone access denied or failed to start conversation:', error);
