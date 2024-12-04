@@ -7,11 +7,18 @@ export function Conversation() {
   const [microphoneEnabled, setMicrophoneEnabled] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [volume, setVolume] = useState(1); // Default volume at 100%
+  const [transcript, setTranscript] = useState<string[]>([]); // State to store transcript lines
 
   const conversation = useConversation({
     onConnect: () => console.log('Connected to conversation.'),
     onDisconnect: () => console.log('Disconnected from conversation.'),
-    onMessage: (message) => console.log('Message:', message),
+    onMessage: (message) => {
+      console.log('Message:', message);
+      // Update transcript when new message is received
+      if (message && message.type === 'text') {
+        setTranscript((prevTranscript) => [...prevTranscript, message.text]);
+      }
+    },
     onError: (error) => {
       console.error('Conversation error:', error);
       setErrorMessage('An error occurred while connecting.');
@@ -105,7 +112,7 @@ export function Conversation() {
           </div>
         )}
 
-        <div className="flex flex-col items-center">
+        <div className="flex flex-col items-center mb-4">
           <label htmlFor="volume" className="text-gray-700 mb-2">
             Adjust Baba's Volume
           </label>
@@ -119,6 +126,22 @@ export function Conversation() {
             onChange={adjustVolume}
             className="w-full accent-rose-500"
           />
+        </div>
+
+        {/* Transcript Section */}
+        <div className="bg-amber-50 p-4 rounded-lg w-full shadow-inner">
+          <h2 className="text-xl font-semibold text-rose-900 mb-2">Conversation Transcript</h2>
+          <div className="text-left overflow-y-auto max-h-48">
+            {transcript.length > 0 ? (
+              transcript.map((line, index) => (
+                <p key={index} className="text-rose-800 mb-2">
+                  {line}
+                </p>
+              ))
+            ) : (
+              <p className="text-gray-500 italic">No messages yet. Start talking to Baba!</p>
+            )}
+          </div>
         </div>
       </div>
     </div>

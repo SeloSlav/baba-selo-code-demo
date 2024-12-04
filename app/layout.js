@@ -14,7 +14,7 @@ const geistMono = localFont({
 
 export const metadata = {
   title: "Baba Selo",
-  description: "Your Companion At Home",
+  description: "Your Warm Guide to Recipes, Wisdom, and More",
 };
 
 export default function RootLayout({ children }) {
