@@ -1,7 +1,8 @@
 'use client';
 
 import { useConversation } from '@11labs/react';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
+import axios from 'axios';
 
 export function Conversation() {
   const [microphoneEnabled, setMicrophoneEnabled] = useState(false);
@@ -31,16 +32,38 @@ export function Conversation() {
     },
   });
 
+  // Fetch conversation details
+  const fetchConversationDetails = useCallback(async (id: string) => {
+    try {
+      const response = await axios.get(
+        `https://api.elevenlabs.io/v1/convai/conversations/${id}`,
+        {
+          headers: { 'xi-api-key': 'YOUR_API_KEY' }, // Replace with your actual API key
+        }
+      );
+
+      const { transcript: apiTranscript } = response.data;
+      setTranscript(
+        apiTranscript.map((entry: any) => ({
+          role: entry.role,
+          message: entry.message,
+        }))
+      );
+    } catch (error) {
+      console.error('Failed to fetch conversation details:', error);
+    }
+  }, []);
+
   const startConversation = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       setMicrophoneEnabled(true);
 
       const session = await conversation.startSession({
-        agentId: 'tRQ8VBuYOhpOecaDuGiX',
+        agentId: 'tRQ8VBuYOhpOecaDuGiX', // Replace with your actual Agent ID
       });
 
-      if (typeof session === 'object' && session.conversationId) {
+      if (session && typeof session === 'object' && session.conversationId) {
         setConversationId(session.conversationId); // Store the conversation ID in state
         console.log('Conversation ID:', session.conversationId);
       } else {
@@ -59,6 +82,14 @@ export function Conversation() {
     setMicrophoneEnabled(false);
     setConversationId(null); // Clear the conversation ID
   }, [conversation]);
+
+  // Fetch transcript periodically if conversation ID exists
+  useEffect(() => {
+    if (conversationId) {
+      const interval = setInterval(() => fetchConversationDetails(conversationId), 3000);
+      return () => clearInterval(interval);
+    }
+  }, [conversationId, fetchConversationDetails]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-pink-100 via-rose-200 to-amber-100 p-4">
@@ -109,7 +140,7 @@ export function Conversation() {
             {transcript.length > 0 ? (
               transcript.map((line, index) => (
                 <p key={index} className="text-rose-800 mb-2">
-                  {line}
+                  {line.role === 'user' ? 'You' : 'Baba'}: {line.message}
                 </p>
               ))
             ) : (
