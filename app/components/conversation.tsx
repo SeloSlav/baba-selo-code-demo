@@ -1,44 +1,28 @@
 'use client';
 
 import { useConversation } from '@11labs/react';
-import React, { useCallback, useState, useEffect } from 'react';
-import axios from 'axios';
-
-// Define the type for a transcript entry
-type TranscriptEntry = {
-  role: 'user' | 'agent'; // Adjust roles if necessary
-  message: string;
-};
+import React, { useCallback, useState } from 'react';
 
 export function Conversation() {
   const [microphoneEnabled, setMicrophoneEnabled] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [transcript, setTranscript] = useState<TranscriptEntry[]>([]); // Updated type
-  const [messageObject, setMessageObject] = useState<any>(null);
-  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [volume, setVolume] = useState(1); // Default volume at 100%
+  const [transcript, setTranscript] = useState<string[]>([]); // State to store transcript lines
+  const [messageObject, setMessageObject] = useState<any>(null); // State to store the full message object
 
   const conversation = useConversation({
     onConnect: () => console.log('Connected to conversation.'),
     onDisconnect: () => console.log('Disconnected from conversation.'),
     onMessage: (message) => {
       console.log('Full Message Object:', message);
-      setMessageObject(message);
-  
-      if (typeof message === 'object' && message.message) {
-        // Normalize the role to match the TranscriptEntry type
-        const role: 'user' | 'agent' =
-          message.source === 'user' ? 'user' : 'agent'; // Default to 'agent' if not 'user'
-  
-        setTranscript((prevTranscript) => [
-          ...prevTranscript,
-          { role, message: message.message },
-        ]);
-      } else if (typeof message === 'string') {
-        // For plain string messages, default to agent
-        setTranscript((prevTranscript) => [
-          ...prevTranscript,
-          { role: 'agent', message },
-        ]);
+      setMessageObject(message); // Update the messageObject state to display the full message
+
+      // Update transcript when a new message is received
+      if (message && typeof message.message === 'string') {
+        setTranscript((prevTranscript) => [...prevTranscript, message.message]);
+      } else if (message && typeof message === 'string') {
+        // In case the `message` itself is the text
+        setTranscript((prevTranscript) => [...prevTranscript, message]);
       } else {
         console.warn('Unexpected message structure:', message);
       }
@@ -49,42 +33,17 @@ export function Conversation() {
     },
   });
 
-  const fetchConversationDetails = useCallback(async (id: string) => {
-    try {
-      const response = await axios.get(
-        `https://api.elevenlabs.io/v1/convai/conversations/${id}`,
-        {
-          headers: { 'xi-api-key': 'YOUR_API_KEY' }, // Replace with your actual API key
-        }
-      );
-
-      const { transcript: apiTranscript } = response.data;
-      setTranscript(
-        apiTranscript.map((entry: any) => ({
-          role: entry.role,
-          message: entry.message,
-        }))
-      );
-    } catch (error) {
-      console.error('Failed to fetch conversation details:', error);
-    }
-  }, []);
-
+  // Handle starting the conversation
   const startConversation = useCallback(async () => {
     try {
+      // Request microphone access
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       setMicrophoneEnabled(true);
 
-      const conversationId = await conversation.startSession({
+      // Start the conversation
+      await conversation.startSession({
         agentId: 'tRQ8VBuYOhpOecaDuGiX', // Replace with your actual Agent ID
       });
-
-      if (conversationId) {
-        setConversationId(conversationId);
-        console.log('Conversation ID:', conversationId);
-      } else {
-        console.warn('Failed to retrieve a valid conversation ID:', conversationId);
-      }
     } catch (error) {
       console.error('Microphone access denied or failed to start conversation:', error);
       setErrorMessage(
@@ -93,18 +52,18 @@ export function Conversation() {
     }
   }, [conversation]);
 
+  // Handle stopping the conversation
   const stopConversation = useCallback(async () => {
     await conversation.endSession();
     setMicrophoneEnabled(false);
-    setConversationId(null);
   }, [conversation]);
 
-  useEffect(() => {
-    if (conversationId) {
-      const interval = setInterval(() => fetchConversationDetails(conversationId), 3000);
-      return () => clearInterval(interval);
-    }
-  }, [conversationId, fetchConversationDetails]);
+  // Handle volume adjustment
+  const adjustVolume = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const volumeLevel = parseFloat(event.target.value);
+    setVolume(volumeLevel);
+    conversation.setVolume({ volume: volumeLevel });
+  }, [conversation]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-pink-100 via-rose-200 to-amber-100 p-4">
@@ -115,6 +74,11 @@ export function Conversation() {
         <p className="text-rose-800 mb-6">
           Discover Balkan recipes, timeless life advice, and a comforting chat with Baba. She's here to share her secrets, stories, and love—just like home.
         </p>
+
+        {/* Baba GIF */}
+        <div className="mb-6">
+          <img src="/baba.png" alt="Baba" className="w-64 h-64 mx-auto" />
+        </div>
 
         {!microphoneEnabled && (
           <div className="bg-yellow-100 text-yellow-800 px-4 py-3 rounded mb-4">
@@ -151,7 +115,7 @@ export function Conversation() {
             {transcript.length > 0 ? (
               transcript.map((line, index) => (
                 <p key={index} className="text-rose-800 mb-2">
-                  {line.role === 'user' ? 'You' : 'Baba'}: {line.message}
+                  {line}
                 </p>
               ))
             ) : (
@@ -160,6 +124,7 @@ export function Conversation() {
           </div>
         </div>
 
+        {/* Full Message Object Display */}
         <div className="bg-gray-100 p-4 rounded-lg w-full shadow-inner">
           <h2 className="text-xl font-semibold text-rose-900 mb-2">Full Message Object</h2>
           <div className="text-left overflow-y-auto max-h-48">
