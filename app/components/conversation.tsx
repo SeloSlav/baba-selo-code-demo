@@ -8,12 +8,14 @@ export function Conversation() {
   const [errorMessage, setErrorMessage] = useState('');
   const [volume, setVolume] = useState(1); // Default volume at 100%
   const [transcript, setTranscript] = useState<string[]>([]); // State to store transcript lines
+  const [messageObject, setMessageObject] = useState<any>(null); // State to store the full message object
 
   const conversation = useConversation({
     onConnect: () => console.log('Connected to conversation.'),
     onDisconnect: () => console.log('Disconnected from conversation.'),
     onMessage: (message) => {
       console.log('Full Message Object:', message);
+      setMessageObject(message); // Update the messageObject state to display the full message
 
       // Update transcript when a new message is received
       if (message && typeof message.message === 'string') {
@@ -135,7 +137,7 @@ export function Conversation() {
         </div>
 
         {/* Transcript Section */}
-        <div className="bg-amber-50 p-4 rounded-lg w-full shadow-inner">
+        <div className="bg-amber-50 p-4 rounded-lg w-full shadow-inner mb-6">
           <h2 className="text-xl font-semibold text-rose-900 mb-2">Conversation Transcript</h2>
           <div className="text-left overflow-y-auto max-h-48">
             {transcript.length > 0 ? (
@@ -146,6 +148,20 @@ export function Conversation() {
               ))
             ) : (
               <p className="text-gray-500 italic">No messages yet. Start talking to Baba!</p>
+            )}
+          </div>
+        </div>
+
+        {/* Full Message Object Display */}
+        <div className="bg-gray-100 p-4 rounded-lg w-full shadow-inner">
+          <h2 className="text-xl font-semibold text-rose-900 mb-2">Full Message Object</h2>
+          <div className="text-left overflow-y-auto max-h-48">
+            {messageObject ? (
+              <pre className="text-xs text-gray-700">
+                {JSON.stringify(messageObject, null, 2)}
+              </pre>
+            ) : (
+              <p className="text-gray-500 italic">No messages received yet.</p>
             )}
           </div>
         </div>
