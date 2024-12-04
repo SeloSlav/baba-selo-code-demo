@@ -22,7 +22,7 @@ export function Conversation() {
       if (message && typeof message.message === 'string') {
         setTranscript((prevTranscript) => [
           ...prevTranscript,
-          { role: message.role || 'agent', message: message.message },
+          { role: message.source || 'agent', message: message.message },
         ]);
       } else if (message && typeof message === 'string') {
         setTranscript((prevTranscript) => [
