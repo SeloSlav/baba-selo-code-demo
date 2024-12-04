@@ -13,10 +13,16 @@ export function Conversation() {
     onConnect: () => console.log('Connected to conversation.'),
     onDisconnect: () => console.log('Disconnected from conversation.'),
     onMessage: (message) => {
-      console.log('Message:', message);
-      // Update transcript when new message is received
-      if (message && message.message) {
+      console.log('Full Message Object:', message);
+
+      // Update transcript when a new message is received
+      if (message && typeof message.message === 'string') {
         setTranscript((prevTranscript) => [...prevTranscript, message.message]);
+      } else if (message && typeof message === 'string') {
+        // In case the `message` itself is the text
+        setTranscript((prevTranscript) => [...prevTranscript, message]);
+      } else {
+        console.warn('Unexpected message structure:', message);
       }
     },
     onError: (error) => {
