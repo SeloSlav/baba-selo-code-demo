@@ -37,12 +37,12 @@ export function Conversation() {
   const startConversation = useCallback(async () => {
     try {
       // Request microphone access
-      await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       setMicrophoneEnabled(true);
 
       // Start the conversation
       await conversation.startSession({
-        agentId: 'YOUR_AGENT_ID', // Replace with your actual Agent ID
+        agentId: 'tRQ8VBuYOhpOecaDuGiX', // Replace with your actual Agent ID
       });
     } catch (error) {
       console.error('Microphone access denied or failed to start conversation:', error);
@@ -59,14 +59,11 @@ export function Conversation() {
   }, [conversation]);
 
   // Handle volume adjustment
-  const adjustVolume = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const volumeLevel = parseFloat(event.target.value);
-      setVolume(volumeLevel);
-      conversation.setVolume({ volume: volumeLevel });
-    },
-    [conversation]
-  );
+  const adjustVolume = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const volumeLevel = parseFloat(event.target.value);
+    setVolume(volumeLevel);
+    conversation.setVolume({ volume: volumeLevel });
+  }, [conversation]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-pink-100 via-rose-200 to-amber-100 p-4">
@@ -112,32 +109,6 @@ export function Conversation() {
           </button>
         </div>
 
-        {conversation.status === 'connected' && (
-          <div className="flex flex-col items-center mb-4">
-            <p className="text-green-700 font-medium">Status: Connected</p>
-            <p className="text-gray-600">
-              Baba is currently {conversation.isSpeaking ? 'speaking' : 'listening'}.
-            </p>
-          </div>
-        )}
-
-        <div className="flex flex-col items-center mb-4">
-          <label htmlFor="volume" className="text-gray-700 mb-2">
-            Adjust Baba's Volume
-          </label>
-          <input
-            id="volume"
-            type="range"
-            min="0"
-            max="1"
-            step="0.1"
-            value={volume}
-            onChange={adjustVolume}
-            className="w-full accent-rose-500"
-          />
-        </div>
-
-        {/* Transcript Section */}
         <div className="bg-amber-50 p-4 rounded-lg w-full shadow-inner mb-6">
           <h2 className="text-xl font-semibold text-rose-900 mb-2">Conversation Transcript</h2>
           <div className="text-left overflow-y-auto max-h-48">
