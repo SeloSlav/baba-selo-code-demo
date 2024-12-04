@@ -40,9 +40,12 @@ export function Conversation() {
         agentId: 'tRQ8VBuYOhpOecaDuGiX',
       });
 
-      const id = session.getId(); // Retrieve the conversation ID
-      setConversationId(id); // Store the conversation ID in state
-      console.log('Conversation ID:', id);
+      if (typeof session === 'object' && session.conversationId) {
+        setConversationId(session.conversationId); // Store the conversation ID in state
+        console.log('Conversation ID:', session.conversationId);
+      } else {
+        console.warn('Session did not return a valid conversation ID:', session);
+      }
     } catch (error) {
       console.error('Microphone access denied or failed to start conversation:', error);
       setErrorMessage(
