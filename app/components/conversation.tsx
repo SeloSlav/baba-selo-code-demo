@@ -7,22 +7,23 @@ export function Conversation() {
   const [microphoneEnabled, setMicrophoneEnabled] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [volume, setVolume] = useState(1); // Default volume at 100%
-  const [transcript, setTranscript] = useState<string[]>([]); // State to store transcript lines
-  const [messageObject, setMessageObject] = useState<any>(null); // State to store the full message object
+  const [transcript, setTranscript] = useState<{ sender: string; message: string }[]>([]);
 
   const conversation = useConversation({
     onConnect: () => console.log('Connected to conversation.'),
     onDisconnect: () => console.log('Disconnected from conversation.'),
     onMessage: (message) => {
-      console.log('Full Message Object:', message);
-      setMessageObject(message); // Update the messageObject state to display the full message
-
-      // Update transcript when a new message is received
+      // Update transcript with sender and message
       if (message && typeof message.message === 'string') {
-        setTranscript((prevTranscript) => [...prevTranscript, message.message]);
+        setTranscript((prevTranscript) => [
+          ...prevTranscript,
+          { sender: message.sender || 'Agent', message: message.message },
+        ]);
       } else if (message && typeof message === 'string') {
-        // In case the `message` itself is the text
-        setTranscript((prevTranscript) => [...prevTranscript, message]);
+        setTranscript((prevTranscript) => [
+          ...prevTranscript,
+          { sender: 'Agent', message },
+        ]);
       } else {
         console.warn('Unexpected message structure:', message);
       }
@@ -36,11 +37,9 @@ export function Conversation() {
   // Handle starting the conversation
   const startConversation = useCallback(async () => {
     try {
-      // Request microphone access
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       setMicrophoneEnabled(true);
 
-      // Start the conversation
       await conversation.startSession({
         agentId: 'tRQ8VBuYOhpOecaDuGiX', // Replace with your actual Agent ID
       });
@@ -59,11 +58,14 @@ export function Conversation() {
   }, [conversation]);
 
   // Handle volume adjustment
-  const adjustVolume = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const volumeLevel = parseFloat(event.target.value);
-    setVolume(volumeLevel);
-    conversation.setVolume({ volume: volumeLevel });
-  }, [conversation]);
+  const adjustVolume = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const volumeLevel = parseFloat(event.target.value);
+      setVolume(volumeLevel);
+      conversation.setVolume({ volume: volumeLevel });
+    },
+    [conversation]
+  );
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-pink-100 via-rose-200 to-amber-100 p-4">
@@ -75,7 +77,6 @@ export function Conversation() {
           Discover Balkan recipes, timeless life advice, and a comforting chat with Baba. She's here to share her secrets, stories, and love—just like home.
         </p>
 
-        {/* Baba GIF */}
         <div className="mb-6">
           <img src="/baba.png" alt="Baba" className="w-64 h-64 mx-auto" />
         </div>
@@ -109,31 +110,33 @@ export function Conversation() {
           </button>
         </div>
 
+        {/* Updated Conversation Transcript */}
         <div className="bg-amber-50 p-4 rounded-lg w-full shadow-inner mb-6">
           <h2 className="text-xl font-semibold text-rose-900 mb-2">Conversation Transcript</h2>
-          <div className="text-left overflow-y-auto max-h-48">
+          <div className="overflow-y-auto max-h-48">
             {transcript.length > 0 ? (
-              transcript.map((line, index) => (
-                <p key={index} className="text-rose-800 mb-2">
-                  {line}
-                </p>
-              ))
+              <div className="space-y-4">
+                {transcript.map((line, index) => (
+                  <div
+                    key={index}
+                    className={`flex ${
+                      line.sender === 'User' ? 'justify-end' : 'justify-start'
+                    }`}
+                  >
+                    <div
+                      className={`px-4 py-2 rounded-lg max-w-sm ${
+                        line.sender === 'User'
+                          ? 'bg-rose-500 text-white self-end'
+                          : 'bg-gray-200 text-gray-800 self-start'
+                      }`}
+                    >
+                      {line.message}
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : (
               <p className="text-gray-500 italic">No messages yet. Start talking to Baba!</p>
-            )}
-          </div>
-        </div>
-
-        {/* Full Message Object Display */}
-        <div className="bg-gray-100 p-4 rounded-lg w-full shadow-inner">
-          <h2 className="text-xl font-semibold text-rose-900 mb-2">Full Message Object</h2>
-          <div className="text-left overflow-y-auto max-h-48">
-            {messageObject ? (
-              <pre className="text-xs text-gray-700">
-                {JSON.stringify(messageObject, null, 2)}
-              </pre>
-            ) : (
-              <p className="text-gray-500 italic">No messages received yet.</p>
             )}
           </div>
         </div>
