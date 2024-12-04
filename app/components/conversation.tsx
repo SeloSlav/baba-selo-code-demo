@@ -17,7 +17,7 @@ export function Conversation() {
       if (message && typeof message.message === 'string') {
         setTranscript((prevTranscript) => [...prevTranscript, message.message]);
       } else if (message && typeof message === 'string') {
-        // In case the message itself is the text
+        // In case the `message` itself is the text
         setTranscript((prevTranscript) => [...prevTranscript, message]);
       } else {
         console.warn('Unexpected message structure:', message);
@@ -119,7 +119,6 @@ export function Conversation() {
             )}
           </div>
         </div>
-
       </div>
     </div>
   );
