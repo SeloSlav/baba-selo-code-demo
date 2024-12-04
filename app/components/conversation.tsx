@@ -38,7 +38,7 @@ export function Conversation() {
       const response = await axios.get(
         `https://api.elevenlabs.io/v1/convai/conversations/${id}`,
         {
-          headers: { 'xi-api-key': 'YOUR_API_KEY' }, // Replace with your actual API key
+          headers: { 'xi-api-key': 'sk_7fcb44554be4d7e2bac8451043141dc7702e874614d869d1' }, // Replace with your actual API key
         }
       );
 
