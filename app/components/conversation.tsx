@@ -5,25 +5,31 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import dotenv from 'dotenv';
 dotenv.config();
 
-export function Conversation() {
+export function ConversationComponent() {
   const [microphoneEnabled, setMicrophoneEnabled] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [volume, setVolume] = useState(1); // Default volume at 100%
   const [transcript, setTranscript] = useState<{ role: string; message: string }[]>([]); // State to store transcript lines
-  const [conversationId, setConversationId] = useState<string | null>(null);
-  const [socket, setSocket] = useState<WebSocket | null>(null);
-
-  const conversation = useConversation({
+  const transcriptRef = useRef<HTMLDivElement>(null);
+  const { startSession, endSession, setVolume: setConversationVolume, status, isSpeaking } = useConversation({
+    agentId: 'tRQ8VBuYOhpOecaDuGiX', // Replace with your actual Agent ID
     onConnect: () => console.log('Connected to conversation.'),
     onDisconnect: () => console.log('Disconnected from conversation.'),
     onMessage: (message) => {
       console.log('Message received:', message);
       // Update transcript when a new message is received
-      if (message && typeof message.message === 'string') {
-        setTranscript((prevTranscript) => [...prevTranscript, { role: message.source || 'agent', message: message.message }]);
-      } else if (message && typeof message === 'string') {
-        // In case the `message` itself is the text
-        setTranscript((prevTranscript) => [...prevTranscript, { role: 'user', message }]);
+      if (message.type === 'user_transcript') {
+        // Add user transcript to the state
+        setTranscript((prevTranscript) => [
+          ...prevTranscript,
+          { role: 'user', message: message.user_transcription_event.user_transcript },
+        ]);
+      } else if (message.type === 'agent_response') {
+        // Add agent response to the state
+        setTranscript((prevTranscript) => [
+          ...prevTranscript,
+          { role: 'agent', message: message.agent_response_event.agent_response },
+        ]);
       } else {
         console.warn('Unexpected message structure:', message);
       }
@@ -34,64 +40,23 @@ export function Conversation() {
     },
   });
 
-  const transcriptRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     if (transcriptRef.current) {
       transcriptRef.current.scrollTop = transcriptRef.current.scrollHeight;
     }
   }, [transcript]);
 
-  useEffect(() => {
-    if (conversation.status === 'connected') {
-      const ws = new WebSocket(`wss://api.elevenlabs.io/v1/convai/conversation?agent_id=tRQ8VBuYOhpOecaDuGiX`);
-      setSocket(ws);
-
-      ws.onopen = () => {
-        console.log('WebSocket connection opened');
-      };
-
-      ws.onmessage = (event) => {
-        const message = JSON.parse(event.data);
-        console.log('WebSocket message received:', message);
-        if (message && typeof message.message === 'string') {
-          setTranscript((prevTranscript) => {
-            const updatedTranscript = [...prevTranscript, { role: message.source || 'agent', message: message.message }];
-            return updatedTranscript;
-          });
-        } else {
-          console.warn('Unexpected WebSocket message structure:', message);
-        }
-      };
-
-      ws.onclose = () => {
-        console.log('WebSocket connection closed');
-      };
-
-      ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        setErrorMessage('An error occurred with the WebSocket connection.');
-      };
-
-      return () => {
-        ws.close();
-      };
-    }
-  }, [conversation.status]);
-
   // Handle starting the conversation
   const startConversation = useCallback(async () => {
     try {
       // Request microphone access
       console.log('Requesting microphone access...');
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      await navigator.mediaDevices.getUserMedia({ audio: true });
       setMicrophoneEnabled(true);
 
       // Start the conversation
       console.log('Starting conversation session...');
-      await conversation.startSession({
-        agentId: 'tRQ8VBuYOhpOecaDuGiX', // Replace with your actual Agent ID
-      });
+      await startSession();
 
       // Clear transcript when starting a new conversation
       setTranscript([]);
@@ -99,27 +64,22 @@ export function Conversation() {
       console.error('Microphone access denied or failed to start conversation:', error);
       setErrorMessage('Microphone access is required. Please allow microphone access in your browser settings.');
     }
-  }, [conversation]);
+  }, [startSession]);
 
   // Handle stopping the conversation
   const stopConversation = useCallback(async () => {
     console.log('Ending conversation session...');
-    await conversation.endSession();
+    await endSession();
     setMicrophoneEnabled(false);
-    setConversationId(null);
-
-    if (socket) {
-      socket.close();
-    }
-  }, [conversation, socket]);
+  }, [endSession]);
 
   // Handle volume adjustment
-  const adjustVolume = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+  const adjustVolume = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const volumeLevel = parseFloat(event.target.value);
     setVolume(volumeLevel);
-    conversation.setVolume({ volume: volumeLevel });
+    await setConversationVolume({ volume: volumeLevel });
     console.log('Volume set to:', volumeLevel);
-  }, [conversation]);
+  }, [setConversationVolume]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-pink-100 via-rose-200 to-amber-100 p-4">
@@ -151,19 +111,40 @@ export function Conversation() {
         <div className="flex gap-4 justify-center mb-4">
           <button
             onClick={startConversation}
-            disabled={conversation.status === 'connected'}
+            disabled={status === 'connected'}
             className="px-4 py-2 bg-rose-500 text-white font-semibold rounded-lg hover:bg-rose-600 disabled:bg-gray-300"
           >
             Enable Microphone
           </button>
           <button
             onClick={stopConversation}
-            disabled={conversation.status !== 'connected'}
+            disabled={status !== 'connected'}
             className="px-4 py-2 bg-gray-500 text-white font-semibold rounded-lg hover:bg-gray-600 disabled:bg-gray-300"
           >
             End Conversation
           </button>
         </div>
+
+        <div className="flex items-center gap-4 mb-4">
+          <label htmlFor="volume-slider" className="text-rose-900 font-semibold">Volume:</label>
+          <input
+            id="volume-slider"
+            type="range"
+            min="0"
+            max="1"
+            step="0.1"
+            value={volume}
+            onChange={adjustVolume}
+            className="w-48"
+          />
+        </div>
+
+        {status === 'connected' && isSpeaking && (
+          <div className="mb-4">
+            <div className="w-8 h-8 rounded-full bg-rose-500 animate-pulse mx-auto"></div>
+            <p className="text-rose-900 font-semibold mt-2">Baba is speaking...</p>
+          </div>
+        )}
 
         <div className="bg-amber-50 p-4 rounded-lg w-full shadow-inner mb-6">
           <h2 className="text-xl font-semibold text-rose-900 mb-2">Conversation Transcript</h2>
