@@ -11,34 +11,7 @@ export function ConversationComponent() {
   const [volume, setVolume] = useState(1); // Default volume at 100%
   const [transcript, setTranscript] = useState<{ role: string; message: string }[]>([]); // State to store transcript lines
   const transcriptRef = useRef<HTMLDivElement>(null);
-  const { startSession, endSession, setVolume: setConversationVolume, status, isSpeaking } = useConversation({
-    agentId: 'tRQ8VBuYOhpOecaDuGiX', // Replace with your actual Agent ID
-    onConnect: () => console.log('Connected to conversation.'),
-    onDisconnect: () => console.log('Disconnected from conversation.'),
-    onMessage: (message) => {
-      console.log('Message received:', message);
-      // Update transcript when a new message is received
-      if (message.type === 'user_transcript') {
-        // Add user transcript to the state
-        setTranscript((prevTranscript) => [
-          ...prevTranscript,
-          { role: 'user', message: message.user_transcription_event.user_transcript },
-        ]);
-      } else if (message.type === 'agent_response') {
-        // Add agent response to the state
-        setTranscript((prevTranscript) => [
-          ...prevTranscript,
-          { role: 'agent', message: message.agent_response_event.agent_response },
-        ]);
-      } else {
-        console.warn('Unexpected message structure:', message);
-      }
-    },
-    onError: (error) => {
-      console.error('Conversation error:', error);
-      setErrorMessage('An error occurred while connecting.');
-    },
-  });
+  const { startSession, endSession, setVolume: setConversationVolume, status, isSpeaking } = useConversation();
 
   useEffect(() => {
     if (transcriptRef.current) {
@@ -52,11 +25,23 @@ export function ConversationComponent() {
       // Request microphone access
       console.log('Requesting microphone access...');
       await navigator.mediaDevices.getUserMedia({ audio: true });
+      console.log('Microphone access granted.');
       setMicrophoneEnabled(true);
 
       // Start the conversation
       console.log('Starting conversation session...');
-      await startSession();
+      await startSession({
+        agentId: 'tRQ8VBuYOhpOecaDuGiX', // Replace with your actual Agent ID
+        onConnect: () => console.log('Connected to conversation.'),
+        onDisconnect: () => console.log('Disconnected from conversation.'),
+        onMessage: (message) => {
+          console.log('Message received:', message);
+        },
+        onError: (error) => {
+          console.error('Conversation error:', error);
+          setErrorMessage('An error occurred while connecting.');
+        },
+      });
 
       // Clear transcript when starting a new conversation
       setTranscript([]);
@@ -78,7 +63,7 @@ export function ConversationComponent() {
     const volumeLevel = parseFloat(event.target.value);
     setVolume(volumeLevel);
     await setConversationVolume({ volume: volumeLevel });
-    console.log('Volume set to:', volumeLevel);
+    // console.log('Volume set to:', volumeLevel);
   }, [setConversationVolume]);
 
   return (
@@ -135,7 +120,7 @@ export function ConversationComponent() {
             step="0.1"
             value={volume}
             onChange={adjustVolume}
-            className="w-48"
+            className="w-full"
           />
         </div>
 
