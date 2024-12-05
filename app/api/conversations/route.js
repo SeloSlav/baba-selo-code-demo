@@ -11,7 +11,7 @@ export async function GET() {
         const response = await fetch('https://api.elevenlabs.io/v1/convai/conversations', {
             method: 'GET',
             headers: {
-                'xi-api-key': `sk_38cfbd994d56bd8be5310b8ce0ff2503248d1433200a1e07`,
+                'xi-api-key': `${process.env.ELEVENLABS_API_KEY}`,
             },
         });
         const data = await response.json();

@@ -42,65 +42,42 @@ export function Conversation() {
     }
   }, [transcript]);
 
-  // Fetch conversation details to get conversation ID
   useEffect(() => {
-    if (!conversationId && conversation.status === 'connected') {
-      const fetchConversations = async () => {
-        try {
-          console.log('Fetching conversations...');
-          const response = await fetch('/api/conversations', {
-            method: 'GET',
-          });
-          if (!response.ok) {
-            throw new Error(`Failed to fetch conversations: ${response.statusText}`);
-          }
-          const data = await response.json();
-          console.log('Conversations data:', data);
-          if (data && data.conversations && data.conversations.length > 0) {
-            const currentConversation = data.conversations.find(conv => conv.agent_id === 'tRQ8VBuYOhpOecaDuGiX' && conv.status === 'processing');
-            if (currentConversation) {
-              setConversationId(currentConversation.conversation_id);
-              console.log('Current conversation ID set:', currentConversation.conversation_id);
-            } else {
-              const latestConversation = data.conversations[0];
-              setConversationId(latestConversation.conversation_id);
-              console.log('Latest conversation ID set:', latestConversation.conversation_id);
-            }
-          }
-        } catch (error) {
-          console.error('Error fetching conversations:', error);
-        }
-      };
-      fetchConversations();
-    }
-  }, [conversation.status, conversationId]);
+    if (conversation.status === 'connected') {
+      const ws = new WebSocket(`wss://api.elevenlabs.io/v1/convai/conversation?agent_id=tRQ8VBuYOhpOecaDuGiX`);
+      setSocket(ws);
 
-  // Fetch transcript updates based on conversation ID
-  useEffect(() => {
-    if (conversationId) {
-      const fetchTranscript = async () => {
-        try {
-          console.log(`Fetching transcript for conversation ID: ${conversationId}`);
-          const response = await fetch(`/api/conversations/${conversationId}`, {
-            method: 'GET',
+      ws.onopen = () => {
+        console.log('WebSocket connection opened');
+      };
+
+      ws.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+        console.log('WebSocket message received:', message);
+        if (message && typeof message.message === 'string') {
+          setTranscript((prevTranscript) => {
+            const updatedTranscript = [...prevTranscript, { role: message.source || 'agent', message: message.message }];
+            return updatedTranscript;
           });
-          if (!response.ok) {
-            throw new Error(`Failed to fetch transcript: ${response.statusText}`);
-          }
-          const data = await response.json();
-          console.log('Transcript data:', data);
-          if (data && data.transcript) {
-            setTranscript(data.transcript.map(item => ({ role: item.role, message: item.message })));
-          }
-        } catch (error) {
-          console.error('Error fetching conversation transcript:', error);
+        } else {
+          console.warn('Unexpected WebSocket message structure:', message);
         }
       };
 
-      const interval = setInterval(fetchTranscript, 2000); // Poll every 2 seconds
-      return () => clearInterval(interval);
+      ws.onclose = () => {
+        console.log('WebSocket connection closed');
+      };
+
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        setErrorMessage('An error occurred with the WebSocket connection.');
+      };
+
+      return () => {
+        ws.close();
+      };
     }
-  }, [conversationId]);
+  }, [conversation.status]);
 
   // Handle starting the conversation
   const startConversation = useCallback(async () => {
@@ -115,6 +92,9 @@ export function Conversation() {
       await conversation.startSession({
         agentId: 'tRQ8VBuYOhpOecaDuGiX', // Replace with your actual Agent ID
       });
+
+      // Clear transcript when starting a new conversation
+      setTranscript([]);
     } catch (error) {
       console.error('Microphone access denied or failed to start conversation:', error);
       setErrorMessage('Microphone access is required. Please allow microphone access in your browser settings.');
