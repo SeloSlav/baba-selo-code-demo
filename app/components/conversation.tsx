@@ -68,7 +68,7 @@ export function Conversation() {
           Baba Selo - Your Warm Guide to Recipes, Wisdom, and More
         </h1>
         <p className="text-rose-800 mb-6">
-          Discover Balkan recipes, timeless life advice, and a comforting chat with Baba. She's here to share her secrets, stories, and love—just like home.
+          Discover Balkan recipes, timeless life advice, and a comforting chat with Baba Selo. She's here to share her secrets, stories, and love.
         </p>
 
         {/* Baba GIF */}
