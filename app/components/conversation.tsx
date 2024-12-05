@@ -35,7 +35,23 @@ export function ConversationComponent() {
         onConnect: () => console.log('Connected to conversation.'),
         onDisconnect: () => console.log('Disconnected from conversation.'),
         onMessage: (message) => {
-          console.log('Message received:', message);
+
+          console.log('Raw data received:', message);
+
+          if (message.source === 'ai') {
+            setTranscript((prevTranscript) => [
+              ...prevTranscript,
+              { role: 'agent', message: message.message }
+            ]);
+          } else if (message.source === 'user') {
+            setTranscript((prevTranscript) => [
+              ...prevTranscript,
+              { role: 'user', message: message.message }
+            ]);
+          } else {
+            console.warn('Unknown message source:', message);
+          }
+
         },
         onError: (error) => {
           console.error('Conversation error:', error);
@@ -45,6 +61,18 @@ export function ConversationComponent() {
 
       // Clear transcript when starting a new conversation
       setTranscript([]);
+
+      // Add mock message after 2 seconds
+      // setTimeout(() => {
+      //   const testMessage = { role: 'ai', message: 'Hello, how can I help you?' };
+      //   setTranscript((prevTranscript) => [...prevTranscript, testMessage]);
+      // }, 2000);
+
+      // setTimeout(() => {
+      //   const testMessage = { role: 'user', message: 'I need a recipe!' };
+      //   setTranscript((prevTranscript) => [...prevTranscript, testMessage]);
+      // }, 2000);
+
     } catch (error) {
       console.error('Microphone access denied or failed to start conversation:', error);
       setErrorMessage('Microphone access is required. Please allow microphone access in your browser settings.');
@@ -149,6 +177,7 @@ export function ConversationComponent() {
             )}
           </div>
         </div>
+
       </div>
     </div>
   );
