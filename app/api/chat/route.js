@@ -22,7 +22,7 @@ export async function POST(req) {
       body: JSON.stringify({
         model: "gpt-4o-mini", // If "gpt-4o-mini" is not a valid model, use "gpt-4" or "gpt-3.5-turbo"
         max_tokens: 1500,
-        temperature: 0.7,
+        temperature: 1.0,
         messages: [
           {
             role: "system",
