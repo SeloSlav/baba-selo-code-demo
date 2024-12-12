@@ -44,6 +44,30 @@ function linkifyOliveOil(text: string): React.ReactNode {
     );
 }
 
+// Function to linkify only the last instance of "Selo olive oil"
+function linkifyLastSelo(text: string): React.ReactNode {
+    const target = "selo olive oil";
+    const lower = text.toLowerCase();
+    const lastIndex = lower.lastIndexOf(target);
+
+    if (lastIndex === -1) return text;
+
+    return (
+        <>
+            {text.substring(0, lastIndex)}
+            <a
+                href="https://seloolive.com/products/authentic-croatian-olive-oil?variant=40790542549035"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 underline"
+            >
+                {text.substring(lastIndex, lastIndex + target.length)}
+            </a>
+            {text.substring(lastIndex + target.length)}
+        </>
+    );
+}
+
 // Add the renderNutritionInfo helper function here
 const renderNutritionInfo = (macros: any) => {
     if (!macros || !macros.total || !macros.per_serving) {
@@ -123,6 +147,11 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
             typeof data.total.calories === "number" &&
             typeof data.per_serving.calories === "number"
         );
+    };
+
+    // Function to check if the message is about Selo olive oil
+    const isSelo = (text: string): boolean => {
+        return text.toLowerCase().includes("selo olive oil");
     };
 
     const parseRecipe = (text: string) => {
@@ -255,6 +284,15 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
                 }
 
                 if (msg.role === "assistant") {
+                    if (isSelo(msg.content)) {
+                        return (
+                            <div key={actualIndex} className="flex items-start space-x-2">
+                                <div className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl">
+                                    {linkifyLastSelo(msg.content)} {/* Linkify only the last instance */}
+                                </div>
+                            </div>
+                        );
+                    }
                     if (isRecipe(msg.content)) {
                         const { title, ingredients, directions } = parseRecipe(msg.content);
                         const classification = recipeClassification[actualIndex];
@@ -407,7 +445,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
                                                 }
                                             }}
                                         >
-                                            📜 Tell Me More About Origin Story
+                                            📜 Tell Me About Its Origin Story
                                         </button>
                                     </div>
 
@@ -436,7 +474,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
 
             {loading && (
                 <div className="flex items-start space-x-2">
-                    <div className="typing-indicator flex space-x-2">
+                    <div className="typing-indicator flex space-x-2 mt-4">
                         <div className="dot bg-gray-400 rounded-full w-2 h-2"></div>
                         <div className="dot bg-gray-400 rounded-full w-2 h-2"></div>
                         <div className="dot bg-gray-400 rounded-full w-2 h-2"></div>

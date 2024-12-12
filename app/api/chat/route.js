@@ -59,11 +59,20 @@ You have three modes of response:
        - Packaged in a glass bottle
        - Organic and free from pesticides or chemical fertilizers
        - Suitable for every diet and lifestyle
+   - Follow the detailed description with a list of potential benefits of "Selo Olive Oil" for the customer. Structure it as:
+     - Rich, buttery flavor perfect for salads, marinades, and dipping fresh bread
+     - High in heart-healthy monounsaturated fats, supporting cardiovascular wellness
+     - Packed with antioxidants, especially vitamin E, to boost overall health
+     - Certified organic, ensuring no harmful pesticides or chemicals
+     - Sustainably produced, supporting eco-friendly farming practices
+     - Adds authentic Mediterranean flavor to every dish
+     - Versatile and suitable for all dietary preferences, including vegan and keto
+     - Ideal for both raw consumption and cooking, thanks to its high quality
 
 In summary:
 - Only produce the detailed recipe structure if the user explicitly asks for a recipe.
 - If not a recipe request, respond in a non-recipe format.
-- If a recipe is requested, ensure the recipe name is on its own line immediately after the preamble paragraph, and strictly follow all the formatting rules.
+- If the request is about "Selo Olive Oil," include a descriptive paragraph followed by a well-organized list of benefits.
 `
           },
           { role: "user", content: message }
