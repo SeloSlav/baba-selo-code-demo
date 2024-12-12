@@ -1,9 +1,9 @@
-"use client";
-
+// app/components/ChatSidebar.tsx
 import React, { useState, useEffect, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBookOpenReader, faGear, faHamburger, faPencilRuler, faPersonRifle, faSignOut, faStarOfLife } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "../context/AuthContext"; // Import the AuthContext hook
+import { RecipeList } from "./RecipeList"; // Import the new RecipeList component
 
 export const ChatSidebar = ({
     focusInput,
@@ -60,11 +60,6 @@ export const ChatSidebar = ({
         toggleSidebar();
         focusInput();
     };
-
-    // Simulate 20 chat items
-    const chatItems = isHydrated
-        ? Array.from({ length: 20 }, (_, index) => `Recipe ${index + 1}`)
-        : [];
 
     return (
         <div>
@@ -133,39 +128,9 @@ export const ChatSidebar = ({
                         </button>
                     </div>
 
-                    {/* Scrollable Chat List */}
+                    {/* Recipe List Component */}
                     <div className="flex-grow overflow-y-auto p-4 space-y-6">
-                        {/* Pinned Chats Section */}
-                        <div>
-                            <h2 className="text-gray-600 text-sm font-semibold pb-2 border-b">
-                                Pinned Recipes
-                            </h2>
-                            <div className="space-y-2 mt-2">
-                                <div className="bg-yellow-200 p-3 rounded-md cursor-pointer hover:bg-yellow-300">
-                                    Pinned Recipe 1
-                                </div>
-                                <div className="bg-yellow-200 p-3 rounded-md cursor-pointer hover:bg-yellow-300">
-                                    Pinned Recipe 2
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Recent Chats Section */}
-                        <div>
-                            <h2 className="text-gray-600 text-sm font-semibold pb-2 border-b">
-                                Recently Saved Recipes
-                            </h2>
-                            <div className="space-y-2 mt-2">
-                                {chatItems.map((chat, index) => (
-                                    <div
-                                        key={index}
-                                        className="bg-pink-200 p-3 rounded-md cursor-pointer hover:bg-pink-300"
-                                    >
-                                        {chat}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+                        <RecipeList /> {/* Importing and rendering RecipeList */}
                     </div>
                 </div>
             </aside>

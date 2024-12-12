@@ -19,7 +19,13 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     // Show a loading spinner while checking authentication
     return (
       <div className="flex items-center justify-center h-screen">
-        <p>Loading...</p>
+        <div className="flex items-start space-x-2">
+          <div className="typing-indicator flex space-x-2 mt-4">
+            <div className="dot bg-gray-400 rounded-full w-2 h-2"></div>
+            <div className="dot bg-gray-400 rounded-full w-2 h-2"></div>
+            <div className="dot bg-gray-400 rounded-full w-2 h-2"></div>
+          </div>
+        </div>
       </div>
     );
   }

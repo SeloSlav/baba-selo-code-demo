@@ -78,8 +78,11 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
         sendMessage(suggestion);
     };
 
-    const onAssistantResponse = (assistantMsg: string) => {
-        setMessages((prev) => [...prev, { role: "assistant", content: assistantMsg }]);
+    const onAssistantResponse = (assistantMsg: React.ReactNode) => {
+        setMessages((prev) => [
+            ...prev,
+            { role: "assistant", content: assistantMsg },
+        ]);
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -158,7 +161,7 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
                 </div>
                 {/* Baba's caution message */}
                 <p className="text-xs text-gray-500 text-center mt-2 mb-2">
-                    Babushka is wise, but even I can mix things up. Double-check, dear—better safe than sorry!
+                    Baba Selo is wise, but even I can mix things up. Double-check, dear—better safe than sorry!
                 </p>
             </div>
         </div>

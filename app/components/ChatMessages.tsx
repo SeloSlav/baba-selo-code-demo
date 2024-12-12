@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
+import { getAuth } from "firebase/auth"; // Import Firebase auth to get current user
 
 interface Message {
     role: "user" | "assistant";
@@ -130,6 +131,16 @@ const renderNutritionInfo = (macros: any) => {
 export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, setLoading, onSuggestionClick, onAssistantResponse }) => {
     const [recipeClassification, setRecipeClassification] = useState<Record<number, RecipeClassification | null>>({});
     const bottomRef = useRef<HTMLDivElement | null>(null); // Reference for scrolling
+    const [userId, setUserId] = useState<string>(""); // To hold the current user ID from Firebase
+
+    useEffect(() => {
+        // Fetch the current user from Firebase Auth
+        const auth = getAuth();
+        const user = auth.currentUser;
+        if (user) {
+            setUserId(user.uid); // Set userId from Firebase Auth
+        }
+    }, []);
 
     const isRecipe = (text: any) => {
         return (
@@ -137,6 +148,50 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
             text.toLowerCase().includes("ingredients") &&
             text.toLowerCase().includes("directions")
         );
+    };
+
+    const handleSaveRecipe = async (msg: string, classification: RecipeClassification | null) => {
+        // Save recipe and then scroll to the bottom
+        // Scroll to the bottom
+        setLoading(true); // Start loading
+        // if (bottomRef.current) {
+        //     bottomRef.current.scrollIntoView({ behavior: "smooth" });
+        // }
+
+        try {
+            const { title, ingredients, directions } = parseRecipe(msg);  // Parse the title from the message
+
+            // Save the recipe
+            const response = await fetch("/api/saveRecipe", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    recipeContent: msg,
+                    userId,
+                    cuisineType: classification?.cuisine || "Croatian",
+                    cookingDifficulty: classification?.difficulty || "Medium",
+                    cookingTime: classification?.cooking_time || "2 hours",
+                    diet: classification?.diet || ["gluten-free", "paleo"],
+                }),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+
+                // Append a new message with the recipe title
+                onAssistantResponse(`Your ${title} recipe has been tucked away in the kitchen vault, ready for use!`);
+
+            } else {
+                const errorData = await response.json();
+                console.error("Failed to save recipe:", errorData.error);
+            }
+        } catch (error) {
+            console.error("Error saving recipe:", error);
+        } finally {
+            setLoading(false); // Stop loading
+        }
     };
 
     const isCalorieInfo = (data: any) => {
@@ -169,6 +224,43 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
 
         return { title, ingredients, directions };
     };
+
+    useEffect(() => {
+        const lastAssistantIndex = messages
+            .map((m, i) => (m.role === "assistant" ? i : -1))
+            .filter(i => i !== -1)
+            .pop();
+
+        if (lastAssistantIndex !== undefined && lastAssistantIndex !== -1) {
+            const msg = messages[lastAssistantIndex];
+            if (isRecipe(msg.content)) {
+                (async () => {
+                    try {
+                        const response = await fetch("/api/classifyRecipe", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ message: msg.content }),
+                        });
+                        if (response.ok) {
+                            const data = await response.json();
+                            setRecipeClassification(prev => ({ ...prev, [lastAssistantIndex]: data }));
+                        } else {
+                            setRecipeClassification(prev => ({ ...prev, [lastAssistantIndex]: null }));
+                        }
+                    } catch {
+                        setRecipeClassification(prev => ({ ...prev, [lastAssistantIndex]: null }));
+                    }
+                })();
+            }
+        }
+    }, [messages]);
+
+    useEffect(() => {
+        // Scroll to the bottom when messages change
+        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [messages]);
+
+    const [firstMessage, ...restMessages] = messages;
 
     function renderMarkdown(text: string): React.ReactNode {
         // Split by bold markers
@@ -227,19 +319,12 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
         }
     }, [messages]);
 
-    useEffect(() => {
-        // Scroll to the bottom when messages change
-        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages]);
-
-    const [firstMessage, ...restMessages] = messages;
-
     const suggestions = [
         "Make me a random Balkan recipe",
         "Give me a recipe for breakfast",
         "Give me a recipe for lunch",
         "Give me a recipe for dinner",
-        "Tell me a brief story about your selo",
+        "Tell me a brief story about your village",
         "Tell me about SELO olive oil"
     ];
 
@@ -363,7 +448,10 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
 
                                     {/* Row of action buttons */}
                                     <div className="flex flex-wrap gap-2 mt-3">
-                                        <button className="p-2 bg-black rounded-md hover:bg-gray-600 text-white">
+                                        <button
+                                            className="p-2 bg-black rounded-md hover:bg-gray-600 text-white"
+                                            onClick={() => handleSaveRecipe(msg.content, classification)} // Call handleSave
+                                        >
                                             📝 Save Recipe
                                         </button>
                                         <button
