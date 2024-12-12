@@ -78,7 +78,7 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
         sendMessage(suggestion);
     };
 
-    const onAssistantResponse = (assistantMsg: React.ReactNode) => {
+    const onAssistantResponse = (assistantMsg: string) => {
         setMessages((prev) => [
             ...prev,
             { role: "assistant", content: assistantMsg },
