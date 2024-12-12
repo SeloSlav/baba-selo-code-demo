@@ -62,33 +62,37 @@ export const RecipeList = () => {
         <h2 className="text-gray-600 text-sm font-semibold pb-2 border-b">
           Pinned Recipes
         </h2>
+
         <div className="space-y-2 mt-2">
           {recipes.slice(0, 2).map((recipe, index) => (
+            <Link key={recipe.id} href={`/recipe/${recipe.id}`}>
             <div
               key={recipe.id}
-              className={`bg-yellow-200 p-3 rounded-md cursor-pointer hover:bg-yellow-300 ${newRecipeIndex === index ? 'animate-flash' : ''}`}
+              className={`bg-yellow-200 p-3 mt-2 rounded-md cursor-pointer hover:bg-yellow-300 ${newRecipeIndex === index ? 'animate-flash' : ''}`}
             >
-              <Link href={`/recipe/${recipe.id}`}>{recipe.recipeTitle}</Link>
+              {recipe.recipeTitle}
             </div>
+            </Link>
           ))}
         </div>
+
       </div>
 
       <div>
         <h2 className="text-gray-600 text-sm font-semibold pb-2 border-b">
           Recently Saved Recipes
         </h2>
-        <div className="space-y-2 mt-2">
           {recipes.slice(2).map((recipe, index) => (
-            <div
-              key={recipe.id}
-              className={`bg-pink-200 p-3 rounded-md cursor-pointer hover:bg-pink-300 ${newRecipeIndex === index + 2 ? 'animate-flash' : ''}`}
-            >
-              <Link href={`/recipe/${recipe.id}`}>{recipe.recipeTitle}</Link>
-            </div>
+            <Link key={recipe.id} href={`/recipe/${recipe.id}`}>
+              <div
+                className={`bg-pink-200 p-3 mt-2 rounded-md cursor-pointer hover:bg-pink-300 ${newRecipeIndex === index + 2 ? 'animate-flash' : ''}`}
+              >
+                {recipe.recipeTitle}
+              </div>
+            </Link>
           ))}
-        </div>
       </div>
+      
     </div>
   );
 };

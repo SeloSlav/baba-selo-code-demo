@@ -81,9 +81,9 @@ const RecipeDetails = () => {
   };
 
   return (
-    <div className="p-4 max-w-4xl mx-auto">
+    <div className="bg-gray-100 p-4">
       {recipe ? (
-        <div className="bg-white shadow-lg rounded-lg p-6">
+        <div className="bg-white shadow-lg rounded-lg p-6 max-w-4xl mx-auto">
           <h1 className="text-3xl font-bold mb-4">{recipe.recipeTitle}</h1>
 
           {/* Classification section */}
