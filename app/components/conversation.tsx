@@ -27,7 +27,7 @@ export function ConversationComponent() {
       await navigator.mediaDevices.getUserMedia({ audio: true });
       console.log('Microphone access granted.');
       setMicrophoneEnabled(true);
-
+      
       // Start the conversation
       console.log('Starting conversation session...');
       await startSession({

@@ -11,8 +11,12 @@
   "dependencies": {
     "@11labs/client": "^0.0.4",
     "@11labs/react": "^0.0.4",
+    "@fortawesome/fontawesome-svg-core": "^6.7.1",
+    "@fortawesome/free-solid-svg-icons": "^6.7.1",
+    "@fortawesome/react-fontawesome": "^0.2.2",
     "axios": "^1.7.9",
     "dotenv": "^16.4.7",
+    "firebase": "^11.0.2",
     "next": "15.0.3",
     "node-fetch": "^3.3.2",
     "react": "^18.3.1",

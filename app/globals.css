@@ -19,3 +19,73 @@ body {
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Custom scrollbar styling */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 10px; /* Narrower scrollbar width */
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f1f1; /* Light gray background for the track */
+  border-radius: 10px; /* Rounded corners for track */
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #d1d1d1; /* Medium gray for scrollbar thumb */
+  border-radius: 10px; /* Rounded corners for thumb */
+  margin-right: 4px; /* Create additional space from the right edge */
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1; /* Darker gray on hover */
+}
+
+/* Typing indicator */
+@keyframes bounceSequential {
+  0%, 80% {
+    transform: translateY(0); /* Start and stay at the original position */
+  }
+  40% {
+    transform: translateY(-10px); /* Bounce upward (reduced height for quicker effect) */
+  }
+}
+
+.typing-indicator .dot {
+  width: 8px;
+  height: 8px;
+  margin: 0 4px;
+  background-color: #B44F1B;
+  border-radius: 50%;
+  display: inline-block;
+  animation: bounceSequential 1.5s infinite; /* Reduced duration: 1.5s */
+}
+
+.typing-indicator .dot:nth-child(1) {
+  animation-delay: 0s; /* First dot starts immediately */
+}
+
+.typing-indicator .dot:nth-child(2) {
+  animation-delay: 0.25s; /* Second dot starts after 0.5s */
+}
+
+.typing-indicator .dot:nth-child(3) {
+  animation-delay: 0.5s; /* Third dot starts after 1s */
+}
+
+
+
+
+/* Save recipe button */
+.save-button {
+  background-color: #333;
+  color: #fff;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  display: inline-block;
+  margin-top: 1rem;
+  text-align: center;
+}
+.save-button:hover {
+  background-color: #444;
+}
