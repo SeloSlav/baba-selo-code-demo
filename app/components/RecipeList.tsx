@@ -155,7 +155,7 @@ export const RecipeList = () => {
                   {recipe.recipeTitle}
                   <FontAwesomeIcon
                     icon={faEllipsisH}
-                    className="ml-4 text-gray-500 group-hover:opacity-100 opacity-0"
+                    className="ml-4 text-gray-500 group-hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -171,35 +171,35 @@ export const RecipeList = () => {
       </div>
 
       <div>
-  <h2 className="text-gray-600 text-sm font-semibold pb-2 border-b">
-    Recently Saved Recipes
-  </h2>
-  {recipes.map((recipe, index) => (
-    <div
-      key={recipe.id}
-      className="relative group bg-pink-200 p-3 mt-2 rounded-md hover:bg-pink-300"
-      onMouseLeave={() => setMenuOpen(null)}
-    >
-      <Link href={`/recipe/${recipe.id}`} passHref>
-        <div className="block">
-          <div className="flex justify-between items-center">
-            {recipe.recipeTitle}
-            <FontAwesomeIcon
-              icon={faEllipsisH}
-              className="ml-4 text-gray-500 group-hover:opacity-100 opacity-0"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleMenuToggle(recipe.id);
-              }}
-            />
+        <h2 className="text-gray-600 text-sm font-semibold pb-2 border-b">
+          Recently Saved Recipes
+        </h2>
+        {recipes.map((recipe, index) => (
+          <div
+            key={recipe.id}
+            className="relative group bg-pink-200 p-3 mt-2 rounded-md hover:bg-pink-300"
+            onMouseLeave={() => setMenuOpen(null)}
+          >
+            <Link href={`/recipe/${recipe.id}`} passHref>
+              <div className="block">
+                <div className="flex justify-between items-center">
+                  {recipe.recipeTitle}
+                  <FontAwesomeIcon
+                    icon={faEllipsisH}
+                    className="ml-4 text-gray-500 group-hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleMenuToggle(recipe.id);
+                    }}
+                  />
+                </div>
+              </div>
+            </Link>
+            {menuOpen === recipe.id && renderMenu(recipe.id, recipe.pinned)}
           </div>
-        </div>
-      </Link>
-      {menuOpen === recipe.id && renderMenu(recipe.id, recipe.pinned)}
-    </div>
-  ))}
-</div>
+        ))}
+      </div>
 
     </div>
   );
