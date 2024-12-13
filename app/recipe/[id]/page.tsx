@@ -2,11 +2,12 @@
 
 import { useParams, useRouter } from "next/navigation"; // Use useParams and useRouter for navigation
 import { db } from "../../firebase/firebase"; // Import Firestore db
-import { doc, getDoc, deleteDoc } from "firebase/firestore"; // Firestore methods
+import { doc, getDoc, deleteDoc, updateDoc } from "firebase/firestore"; // Firestore methods
 import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircle, faCheckCircle, faTrashCan } from "@fortawesome/free-regular-svg-icons"; // Import FontAwesome icons
 import { getAuth } from "firebase/auth"; // Import Firebase auth
+import Image from "next/image";
 
 interface Recipe {
   recipeTitle: string;
@@ -19,6 +20,7 @@ interface Recipe {
   diet: string[];
   directions: string[];
   ingredients: string[];
+  imageURL?: string; // Optional imageURL for the recipe image
 }
 
 const RecipeDetails = () => {
@@ -26,6 +28,7 @@ const RecipeDetails = () => {
   const [checkedDirections, setCheckedDirections] = useState<boolean[]>([]); // Track checked directions
   const [checkedIngredients, setCheckedIngredients] = useState<boolean[]>([]); // Track checked ingredients
   const [isOwner, setIsOwner] = useState(false); // Check if the current user owns the recipe
+  const [loadingImage, setLoadingImage] = useState(false); // Loading state for image generation
   const { id } = useParams(); // Use useParams to get route params
   const router = useRouter(); // Use useRouter for redirection
   const auth = getAuth();
@@ -40,11 +43,11 @@ const RecipeDetails = () => {
 
         if (recipeDoc.exists()) {
           const data = recipeDoc.data();
-          
+
           // Safely handle missing data
           const directions = Array.isArray(data.directions) ? data.directions : []; // Default to empty array if directions is not valid
           const ingredients = Array.isArray(data.ingredients) ? data.ingredients : []; // Default to empty array if ingredients is not valid
-          
+
           setRecipe({
             id: recipeDoc.id,
             recipeTitle: data.recipeTitle || "No title", // Fallback if title is missing
@@ -56,6 +59,7 @@ const RecipeDetails = () => {
             diet: data.diet || [], // Default to empty array if diet is missing
             directions: directions, // Safely use the directions
             ingredients: ingredients, // Safely use the ingredients
+            imageURL: data.imageURL || "", // Handle optional imageURL
           });
 
           // Check if the current user is the owner of the recipe
@@ -78,8 +82,8 @@ const RecipeDetails = () => {
     fetchRecipe();
   }, [id, auth]);
 
-   // Function to toggle the checkmark for directions
-   const toggleDirectionCheck = (index: number) => {
+  // Function to toggle the checkmark for directions
+  const toggleDirectionCheck = (index: number) => {
     const updatedCheckedDirections = [...checkedDirections];
     updatedCheckedDirections[index] = !updatedCheckedDirections[index];
     setCheckedDirections(updatedCheckedDirections);
@@ -92,6 +96,7 @@ const RecipeDetails = () => {
     setCheckedIngredients(updatedCheckedIngredients);
   };
 
+  // Function to delete the recipe
   const handleDelete = async () => {
     if (!id) return;
 
@@ -103,10 +108,83 @@ const RecipeDetails = () => {
     }
   };
 
+  // Function to generate a new recipe image using DALL·E
+  const handleGenerateImage = async () => {
+    if (!recipe || !id) return;
+
+    setLoadingImage(true);
+
+    try {
+      const response = await fetch("/api/generateImage", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt: `A beautiful and creative dish representation for ${recipe.recipeTitle}`,
+          recipeId: id,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.imageUrl) {
+        const recipeDocRef = doc(db, "recipes", id as string);
+
+        // Save the absolute URL to Firestore
+        await updateDoc(recipeDocRef, { imageURL: data.imageUrl });
+
+        // Update local state with the new image URL
+        setRecipe((prevRecipe) => prevRecipe && { ...prevRecipe, imageURL: data.imageUrl });
+      }
+    } catch (error) {
+      console.error("Error generating image:", error);
+    }
+
+    setLoadingImage(false);
+  };
+
   return (
     <div className="bg-gray-100 p-4">
       {recipe ? (
         <div className="bg-white shadow-lg rounded-lg p-6 max-w-4xl mx-auto">
+          {/* Recipe Image */}
+          <div className="relative h-64 w-full mb-6">
+            {recipe.imageURL ? (
+              <Image
+                src={recipe.imageURL}
+                alt={recipe.recipeTitle}
+                fill
+                className="object-cover rounded-lg"
+                unoptimized
+              />
+            ) : (
+              <div className="h-full w-full flex items-center justify-center bg-gray-200 rounded-lg">
+                {isOwner && !loadingImage && (
+                  <button
+                    onClick={handleGenerateImage}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg ml-4 hover:bg-blue-700"
+                  >
+                    Generate Image
+                  </button>
+                )}
+                {loadingImage && (
+                  <div className="ml-4">
+                    <div className="flex items-center justify-start">
+                      <div className="typing-indicator flex space-x-2 mt-4">
+                        <div className="dot bg-gray-400 rounded-full w-6 h-6"></div>
+                        <div className="dot bg-gray-400 rounded-full w-6 h-6"></div>
+                        <div className="dot bg-gray-400 rounded-full w-6 h-6"></div>
+                      </div>
+                    </div>
+                    <p className="text-gray-500 max-w-sm mt-2">
+                      Baba selo is weaving her magic in the kitchen! You can go explore and come back later; your masterpiece will be ready.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           <h1 className="text-3xl font-bold mb-4">{recipe.recipeTitle}</h1>
 
           {/* Classification section */}
@@ -114,7 +192,7 @@ const RecipeDetails = () => {
             {recipe.diet.length > 0 && (
               <div className="flex items-center bg-gray-100 border border-gray-300 shadow-sm rounded-full px-4 py-2">
                 <span className="font-semibold mr-2">🍲</span>
-                <span>{recipe.diet.map(d => d.charAt(0).toUpperCase() + d.slice(1)).join(", ")}</span>
+                <span>{recipe.diet.map((d) => d.charAt(0).toUpperCase() + d.slice(1)).join(", ")}</span>
               </div>
             )}
             {recipe.cuisineType && (
@@ -137,15 +215,14 @@ const RecipeDetails = () => {
             )}
           </div>
 
-          {/* Ingredients section */}
+          {/* Ingredients, Directions, Delete Button */}
           <div className="mb-6">
             <h3 className="text-xl font-semibold mb-2">Ingredients</h3>
             <ul className="list-none pl-6 space-y-2">
               {recipe.ingredients.map((ingredient, index) => (
                 <li
                   key={index}
-                  className={`cursor-pointer flex items-center bg-gray-100 border border-gray-300 rounded-full px-3 py-2 ${checkedIngredients[index] ? "bg-gray-200 line-through text-gray-400" : ""
-                    }`}
+                  className={`cursor-pointer flex items-center bg-gray-100 border border-gray-300 rounded-full px-3 py-2 ${checkedIngredients[index] ? "bg-gray-200 line-through text-gray-400" : ""}`}
                   onClick={() => toggleIngredientCheck(index)}
                 >
                   <FontAwesomeIcon
@@ -158,30 +235,25 @@ const RecipeDetails = () => {
             </ul>
           </div>
 
-          {/* Directions section */}
           <div className="mb-6">
             <h3 className="text-xl font-semibold mb-2">Directions</h3>
             <ul className="list-none pl-6 space-y-2">
               {recipe.directions.map((direction, index) => (
                 <li
                   key={index}
-                  className={`cursor-pointer flex items-center bg-gray-100 border border-gray-300 rounded-md  px-3 py-2 ${checkedDirections[index] ? "bg-gray-200 line-through text-gray-400" : "bg-gray-100"
-                    }`}
+                  className={`cursor-pointer flex items-center bg-gray-100 border border-gray-300 rounded-md px-3 py-2 ${checkedDirections[index] ? "bg-gray-200 line-through text-gray-400" : ""}`}
                   onClick={() => toggleDirectionCheck(index)}
                 >
-                  <div className="flex items-center">
-                    <FontAwesomeIcon
-                      icon={checkedDirections[index] ? faCheckCircle : faCircle}
-                      className={`mr-3 ${checkedDirections[index] ? "text-green-500" : "text-gray-400"}`}
-                    />
-                    {direction}
-                  </div>
+                  <FontAwesomeIcon
+                    icon={checkedDirections[index] ? faCheckCircle : faCircle}
+                    className={`mr-3 ${checkedDirections[index] ? "text-green-500" : "text-gray-400"}`}
+                  />
+                  {direction}
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* Delete button (visible only for owner) */}
           {isOwner && (
             <>
               <hr className="my-6 border-gray-300" />

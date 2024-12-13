@@ -11,6 +11,7 @@ interface Recipe {
   id: string; // Firebase document ID
   createdAt: any; // Add the createdAt field to sort by it
   pinned: boolean; // Indicates if the recipe is pinned
+  imageURL: string;
 }
 
 export const RecipeList = () => {
@@ -40,6 +41,7 @@ export const RecipeList = () => {
           recipeTitle: doc.data().recipeTitle,
           createdAt: doc.data().createdAt,
           pinned: doc.data().pinned,
+          imageURL: doc.data().imageURL || null,
         }));
         setPinnedRecipes(pinnedRecipes);
       });
@@ -63,6 +65,7 @@ export const RecipeList = () => {
           recipeTitle: doc.data().recipeTitle,
           createdAt: doc.data().createdAt,
           pinned: doc.data().pinned,
+          imageURL: doc.data().imageURL || null,
         }));
 
         // Filter out pinned recipes
@@ -177,12 +180,23 @@ export const RecipeList = () => {
         {recipes.map((recipe, index) => (
           <div
             key={recipe.id}
-            className="relative group bg-pink-200 p-3 mt-2 rounded-md hover:bg-pink-300"
+            className={`relative group p-3 mt-2 rounded-md bg-cover bg-center ${
+              recipe.imageURL ? "" : "bg-pink-200 hover:bg-pink-300"
+            }`}
+            style={{
+              backgroundImage: recipe.imageURL
+                ? `url(${recipe.imageURL})`
+                : "none",
+            }}
             onMouseLeave={() => setMenuOpen(null)}
           >
             <Link href={`/recipe/${recipe.id}`} passHref>
               <div className="block">
-                <div className="flex justify-between items-center">
+              <div
+                  className={`flex justify-between items-center ${
+                    recipe.imageURL ? "text-white font-bold text-shadow [text-shadow:_0_2px_4px_rgb(0_0_0_/_0.8)]" : "text-black"
+                  }`}
+                >
                   {recipe.recipeTitle}
                   <FontAwesomeIcon
                     icon={faEllipsisH}
