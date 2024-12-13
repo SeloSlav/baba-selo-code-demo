@@ -1,16 +1,18 @@
 "use client"; // This marks this file as a client component
 
-import { useParams } from "next/navigation"; // Use useParams from next/navigation
+import { useParams, useRouter } from "next/navigation"; // Use useParams and useRouter for navigation
 import { db } from "../../firebase/firebase"; // Import Firestore db
-import { doc, getDoc } from "firebase/firestore"; // Firestore methods
+import { doc, getDoc, deleteDoc } from "firebase/firestore"; // Firestore methods
 import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCircle, faCheckCircle } from "@fortawesome/free-regular-svg-icons"; // Import FontAwesome icons
+import { faCircle, faCheckCircle, faTrashCan } from "@fortawesome/free-regular-svg-icons"; // Import FontAwesome icons
+import { getAuth } from "firebase/auth"; // Import Firebase auth
 
 interface Recipe {
   recipeTitle: string;
   recipeContent: string;
   id: string;
+  userId: string; // Add userId to track ownership
   cuisineType: string;
   cookingDifficulty: string;
   cookingTime: string;
@@ -23,7 +25,10 @@ const RecipeDetails = () => {
   const [recipe, setRecipe] = useState<Recipe | null>(null); // State to store the recipe details
   const [checkedDirections, setCheckedDirections] = useState<boolean[]>([]); // Track checked directions
   const [checkedIngredients, setCheckedIngredients] = useState<boolean[]>([]); // Track checked ingredients
+  const [isOwner, setIsOwner] = useState(false); // Check if the current user owns the recipe
   const { id } = useParams(); // Use useParams to get route params
+  const router = useRouter(); // Use useRouter for redirection
+  const auth = getAuth();
 
   useEffect(() => {
     if (!id) return; // If no id, do nothing
@@ -44,6 +49,7 @@ const RecipeDetails = () => {
             id: recipeDoc.id,
             recipeTitle: data.recipeTitle || "No title", // Fallback if title is missing
             recipeContent: data.recipeContent || "No content", // Fallback if content is missing
+            userId: data.userId || "", // Track the userId
             cuisineType: data.cuisineType || "Unknown", // Fallback if cuisineType is missing
             cookingDifficulty: data.cookingDifficulty || "Unknown", // Fallback if difficulty is missing
             cookingTime: data.cookingTime || "Unknown", // Fallback if cookingTime is missing
@@ -52,7 +58,13 @@ const RecipeDetails = () => {
             ingredients: ingredients, // Safely use the ingredients
           });
 
-          // Initialize the checkedDirections and checkedIngredients state based on the number of directions and ingredients
+          // Check if the current user is the owner of the recipe
+          const currentUser = auth.currentUser;
+          if (currentUser && currentUser.uid === data.userId) {
+            setIsOwner(true);
+          }
+
+          // Initialize the checkedDirections and checkedIngredients state
           setCheckedDirections(new Array(directions.length).fill(false));
           setCheckedIngredients(new Array(ingredients.length).fill(false));
         } else {
@@ -64,10 +76,10 @@ const RecipeDetails = () => {
     };
 
     fetchRecipe();
-  }, [id]); // Dependency on `id`
+  }, [id, auth]);
 
-  // Function to toggle the checkmark for directions
-  const toggleDirectionCheck = (index: number) => {
+   // Function to toggle the checkmark for directions
+   const toggleDirectionCheck = (index: number) => {
     const updatedCheckedDirections = [...checkedDirections];
     updatedCheckedDirections[index] = !updatedCheckedDirections[index];
     setCheckedDirections(updatedCheckedDirections);
@@ -78,6 +90,17 @@ const RecipeDetails = () => {
     const updatedCheckedIngredients = [...checkedIngredients];
     updatedCheckedIngredients[index] = !updatedCheckedIngredients[index];
     setCheckedIngredients(updatedCheckedIngredients);
+  };
+
+  const handleDelete = async () => {
+    if (!id) return;
+
+    try {
+      await deleteDoc(doc(db, "recipes", id as string)); // Delete the recipe from Firestore
+      router.push("/recipes"); // Redirect to the /recipes page
+    } catch (error) {
+      console.error("Error deleting recipe:", error);
+    }
   };
 
   return (
@@ -91,13 +114,13 @@ const RecipeDetails = () => {
             {recipe.diet.length > 0 && (
               <div className="flex items-center bg-gray-100 border border-gray-300 shadow-sm rounded-full px-4 py-2">
                 <span className="font-semibold mr-2">🍲</span>
-                <span>{recipe.diet.map(d => d.charAt(0).toUpperCase() + d.slice(1)).join(", ")}</span> {/* Capitalize first letter */}
+                <span>{recipe.diet.map(d => d.charAt(0).toUpperCase() + d.slice(1)).join(", ")}</span>
               </div>
             )}
             {recipe.cuisineType && (
               <div className="flex items-center bg-gray-100 border border-gray-300 shadow-sm rounded-full px-4 py-2">
                 <span className="font-semibold mr-2">🍽️</span>
-                <span>{recipe.cuisineType.charAt(0).toUpperCase() + recipe.cuisineType.slice(1)}</span> {/* Capitalize first letter */}
+                <span>{recipe.cuisineType.charAt(0).toUpperCase() + recipe.cuisineType.slice(1)}</span>
               </div>
             )}
             {recipe.cookingTime && (
@@ -109,7 +132,7 @@ const RecipeDetails = () => {
             {recipe.cookingDifficulty && (
               <div className="flex items-center bg-gray-100 border border-gray-300 shadow-sm rounded-full px-4 py-2">
                 <span className="font-semibold mr-2">🧩</span>
-                <span>{recipe.cookingDifficulty.charAt(0).toUpperCase() + recipe.cookingDifficulty.slice(1)}</span> {/* Capitalize first letter */}
+                <span>{recipe.cookingDifficulty.charAt(0).toUpperCase() + recipe.cookingDifficulty.slice(1)}</span>
               </div>
             )}
           </div>
@@ -123,10 +146,10 @@ const RecipeDetails = () => {
                   key={index}
                   className={`cursor-pointer flex items-center bg-gray-100 border border-gray-300 rounded-full px-3 py-2 ${checkedIngredients[index] ? "bg-gray-200 line-through text-gray-400" : ""
                     }`}
-                  onClick={() => toggleIngredientCheck(index)} // Toggle checked state on click
+                  onClick={() => toggleIngredientCheck(index)}
                 >
                   <FontAwesomeIcon
-                    icon={checkedIngredients[index] ? faCheckCircle : faCircle} // Toggle between checked and unchecked circle
+                    icon={checkedIngredients[index] ? faCheckCircle : faCircle}
                     className={`mr-3 ${checkedIngredients[index] ? "text-green-500" : "text-gray-400"}`}
                   />
                   {ingredient}
@@ -142,13 +165,13 @@ const RecipeDetails = () => {
               {recipe.directions.map((direction, index) => (
                 <li
                   key={index}
-                  className={`cursor-pointer flex items-center bg-gray-100 border border-gray-300 rounded-full px-3 py-2 ${checkedDirections[index] ? "bg-gray-200 line-through text-gray-400" : "bg-gray-100"
+                  className={`cursor-pointer flex items-center bg-gray-100 border border-gray-300 rounded-md  px-3 py-2 ${checkedDirections[index] ? "bg-gray-200 line-through text-gray-400" : "bg-gray-100"
                     }`}
-                  onClick={() => toggleDirectionCheck(index)} // Toggle checked state on click
+                  onClick={() => toggleDirectionCheck(index)}
                 >
                   <div className="flex items-center">
                     <FontAwesomeIcon
-                      icon={checkedDirections[index] ? faCheckCircle : faCircle} // Toggle between checked and unchecked circle
+                      icon={checkedDirections[index] ? faCheckCircle : faCircle}
                       className={`mr-3 ${checkedDirections[index] ? "text-green-500" : "text-gray-400"}`}
                     />
                     {direction}
@@ -157,6 +180,22 @@ const RecipeDetails = () => {
               ))}
             </ul>
           </div>
+
+          {/* Delete button (visible only for owner) */}
+          {isOwner && (
+            <>
+              <hr className="my-6 border-gray-300" />
+              <div className="flex justify-center">
+                <button
+                  onClick={handleDelete}
+                  className="flex items-center bg-red-600 text-white px-4 py-2 rounded-lg shadow hover:bg-red-700"
+                >
+                  <FontAwesomeIcon icon={faTrashCan} className="mr-2" />
+                  Delete Recipe
+                </button>
+              </div>
+            </>
+          )}
         </div>
       ) : (
         <div className="flex items-center justify-center min-h-screen">

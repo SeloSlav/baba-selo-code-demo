@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBookOpenReader, faGear, faHamburger, faPencilRuler, faPersonRifle, faSignOut, faStarOfLife } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "../context/AuthContext"; // Import the AuthContext hook
 import { RecipeList } from "./RecipeList"; // Import the new RecipeList component
+import Link from "next/link";
 
 export const ChatSidebar = ({
     focusInput,
@@ -16,7 +17,7 @@ export const ChatSidebar = ({
     toggleSidebar: () => void;
     chatWindowRef: React.RefObject<any>; // Add the type for the ref
 }) => {
-    
+
     const [isHydrated, setIsHydrated] = useState(false);
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
     const profileMenuRef = useRef<HTMLDivElement | null>(null);
@@ -62,7 +63,7 @@ export const ChatSidebar = ({
     const handleNewConversation = () => {
         toggleSidebar();
         focusInput(); // Focuses the input field via the exposed `focusInput` method
-    
+
         if (chatWindowRef?.current?.inputRef?.current) {
             const chatInput = chatWindowRef.current.inputRef.current;
             chatInput.value = "Make a recipe with the following ingredients: ";
@@ -96,8 +97,10 @@ export const ChatSidebar = ({
                 >
                     <ul className="space-y-1">
                         <li className="flex items-center px-4 py-2 rounded-md hover:bg-gray-100 cursor-pointer">
-                            <FontAwesomeIcon icon={faBookOpenReader} className="text-[#5d5d5d] mr-3" />
-                            <span>My Recipes</span>
+                            <Link href="/recipes" className="flex items-center w-full">
+                                <FontAwesomeIcon icon={faBookOpenReader} className="text-[#5d5d5d] mr-3" />
+                                <span>My Recipes</span>
+                            </Link>
                         </li>
                         <li className="flex items-center px-4 py-2 rounded-md hover:bg-gray-100 cursor-pointer">
                             <FontAwesomeIcon icon={faGear} className="text-[#5d5d5d] mr-3" />
