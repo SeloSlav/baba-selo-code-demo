@@ -75,7 +75,7 @@ export const ChatSidebar = ({
             {/* Hamburger Menu Icon */}
             <button
                 onClick={toggleSidebar}
-                className="absolute top-4 left-4 z-30 p-2 rounded-md hover:bg-gray-200"
+                className="fixed top-4 left-4 z-30 p-2 rounded-md hover:bg-gray-200 bg-white"
             >
                 <FontAwesomeIcon icon={faHamburger} className="text-[#5d5d5d]" />
             </button>
@@ -83,7 +83,7 @@ export const ChatSidebar = ({
             {/* Profile Menu Icon */}
             <button
                 onClick={toggleProfileMenu}
-                className="profile-menu-icon absolute top-4 right-8 z-30 p-2 rounded-md hover:bg-gray-200"
+                className="profile-menu-icon fixed top-4 right-8 z-30 p-2 rounded-md hover:bg-gray-200 bg-white"
             >
                 <FontAwesomeIcon icon={faPersonRifle} className="text-[#5d5d5d]" />
             </button>
