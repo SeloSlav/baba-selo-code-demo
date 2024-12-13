@@ -123,6 +123,7 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
                 />
             </div>
 
+            {/* Start chat input area */}
             <div
                 className={`relative md:static w-full max-w-2xl mx-auto px-4 md:px-0 ${windowWidth !== null && windowWidth < 768 ? "absolute bottom-0 left-0 w-full" : ""
                     }`}
@@ -171,6 +172,7 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
                     Baba Selo is wise, but even I can mix things up. Double-check, dear—better safe than sorry!
                 </p>
             </div>
+            {/* End chat input area */}
 
         </div>
     );
