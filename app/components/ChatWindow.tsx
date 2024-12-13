@@ -27,6 +27,7 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
         focusInput: () => {
             inputRef.current?.focus();
         },
+        inputRef, // Expose inputRef for setting the value
     }));
 
     useEffect(() => {

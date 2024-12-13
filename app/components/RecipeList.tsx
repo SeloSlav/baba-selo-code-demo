@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link"; // Import Link from next/link
 import { db } from "../firebase/firebase"; // Import Firestore db
 import { collection, query, where, orderBy, limit, onSnapshot, doc, updateDoc, deleteDoc } from "firebase/firestore"; // Firestore methods
@@ -19,7 +19,6 @@ export const RecipeList = () => {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [newRecipeIndex, setNewRecipeIndex] = useState<number | null>(null); // Track the index of the new recipe for animation
   const [menuOpen, setMenuOpen] = useState<string | null>(null); // Track which recipe's menu is open
-  const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!user) return; // If no user is authenticated, do not fetch recipes
@@ -59,13 +58,19 @@ export const RecipeList = () => {
       );
 
       const unsubscribe = onSnapshot(allQuery, (snapshot) => {
-        const recipes = snapshot.docs.map((doc) => ({
+        const allRecipes = snapshot.docs.map((doc) => ({
           id: doc.id,
           recipeTitle: doc.data().recipeTitle,
           createdAt: doc.data().createdAt,
           pinned: doc.data().pinned,
         }));
-        setRecipes(recipes);
+
+        // Filter out pinned recipes
+        const nonPinnedRecipes = allRecipes.filter(
+          (recipe) => !recipe.pinned
+        );
+
+        setRecipes(nonPinnedRecipes);
       });
 
       return unsubscribe;
@@ -79,19 +84,6 @@ export const RecipeList = () => {
       unsubscribeAll();
     };
   }, [user]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setMenuOpen(null);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
 
   const handleMenuToggle = (id: string) => {
     setMenuOpen(menuOpen === id ? null : id);
@@ -121,7 +113,6 @@ export const RecipeList = () => {
 
   const renderMenu = (id: string, isPinned: boolean) => (
     <div
-      ref={menuRef}
       className="absolute right-0 z-40 bg-white rounded-3xl shadow-lg w-48 border border-gray-300 p-3"
     >
       <ul className="space-y-1">
@@ -156,6 +147,7 @@ export const RecipeList = () => {
           <div
             key={recipe.id}
             className="relative group bg-yellow-200 p-3 mt-2 rounded-md hover:bg-yellow-300"
+            onMouseLeave={() => setMenuOpen(null)}
           >
             <Link href={`/recipe/${recipe.id}`} passHref>
               <div className="block">
@@ -179,34 +171,36 @@ export const RecipeList = () => {
       </div>
 
       <div>
-        <h2 className="text-gray-600 text-sm font-semibold pb-2 border-b">
-          Recently Saved Recipes
-        </h2>
-        {recipes.slice(2).map((recipe, index) => (
-          <div
-            key={recipe.id}
-            className="relative group bg-pink-200 p-3 mt-2 rounded-md hover:bg-pink-300"
-          >
-            <Link href={`/recipe/${recipe.id}`} passHref>
-              <div className="block">
-                <div className="flex justify-between items-center">
-                  {recipe.recipeTitle}
-                  <FontAwesomeIcon
-                    icon={faEllipsisH}
-                    className="ml-4 text-gray-500 group-hover:opacity-100 opacity-0"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleMenuToggle(recipe.id);
-                    }}
-                  />
-                </div>
-              </div>
-            </Link>
-            {menuOpen === recipe.id && renderMenu(recipe.id, recipe.pinned)}
+  <h2 className="text-gray-600 text-sm font-semibold pb-2 border-b">
+    Recently Saved Recipes
+  </h2>
+  {recipes.map((recipe, index) => (
+    <div
+      key={recipe.id}
+      className="relative group bg-pink-200 p-3 mt-2 rounded-md hover:bg-pink-300"
+      onMouseLeave={() => setMenuOpen(null)}
+    >
+      <Link href={`/recipe/${recipe.id}`} passHref>
+        <div className="block">
+          <div className="flex justify-between items-center">
+            {recipe.recipeTitle}
+            <FontAwesomeIcon
+              icon={faEllipsisH}
+              className="ml-4 text-gray-500 group-hover:opacity-100 opacity-0"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleMenuToggle(recipe.id);
+              }}
+            />
           </div>
-        ))}
-      </div>
+        </div>
+      </Link>
+      {menuOpen === recipe.id && renderMenu(recipe.id, recipe.pinned)}
+    </div>
+  ))}
+</div>
+
     </div>
   );
 };

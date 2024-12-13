@@ -9,11 +9,14 @@ export const ChatSidebar = ({
     focusInput,
     isSidebarOpen,
     toggleSidebar,
+    chatWindowRef,
 }: {
     focusInput: () => void;
     isSidebarOpen: boolean;
     toggleSidebar: () => void;
+    chatWindowRef: React.RefObject<any>; // Add the type for the ref
 }) => {
+    
     const [isHydrated, setIsHydrated] = useState(false);
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
     const profileMenuRef = useRef<HTMLDivElement | null>(null);
@@ -58,7 +61,13 @@ export const ChatSidebar = ({
 
     const handleNewConversation = () => {
         toggleSidebar();
-        focusInput();
+        focusInput(); // Focuses the input field via the exposed `focusInput` method
+    
+        if (chatWindowRef?.current?.inputRef?.current) {
+            const chatInput = chatWindowRef.current.inputRef.current;
+            chatInput.value = "Make a recipe with the following ingredients: ";
+            chatInput.focus(); // Ensure the input is focused after setting the value
+        }
     };
 
     return (

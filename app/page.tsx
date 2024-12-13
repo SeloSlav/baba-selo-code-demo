@@ -45,6 +45,7 @@ const Home = () => {
         focusInput={() => chatWindowRef.current?.focusInput?.()}
         isSidebarOpen={isSidebarOpen}
         toggleSidebar={toggleSidebar}
+        chatWindowRef={chatWindowRef}
       />
 
       {isSidebarOpen && isMobileOverlay && (
