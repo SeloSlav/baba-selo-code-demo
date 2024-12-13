@@ -1,13 +1,11 @@
-import { OpenAIApi, Configuration } from "openai";
+import OpenAI from "openai";
 import { storage } from "../../firebase/firebase"; // Import initialized storage
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 // Initialize OpenAI
-const openai = new OpenAIApi(
-    new Configuration({
-        apiKey: process.env.OPENAI_API_KEY,
-    })
-);
+const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+});
 
 export async function POST(req) {
     try {
@@ -24,16 +22,16 @@ export async function POST(req) {
         const validPrompt = prompt || "A placeholder image for a recipe";
 
         // Generate the image using OpenAI DALL·E
-        const aiResponse = await openai.createImage({
+        const aiResponse = await openai.images.generate({
             prompt: validPrompt,
             n: 1,
             size: "1024x1024", // Supported size
         });
 
-        if (!aiResponse?.data?.data?.[0]?.url) {
+        if (!aiResponse.data[0]?.url) {
             throw new Error("Invalid response from OpenAI API");
         }
-        const imageUrl = aiResponse.data.data[0].url;
+        const imageUrl = aiResponse.data[0].url;
 
         // Fetch the image blob
         const imageResponse = await fetch(imageUrl);
