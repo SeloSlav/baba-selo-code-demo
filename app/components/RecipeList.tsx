@@ -148,17 +148,28 @@ export const RecipeList = () => {
         </h2>
         {pinnedRecipes.map((recipe, index) => (
           <div
-            key={recipe.id}
-            className="relative group bg-yellow-200 p-3 mt-2 rounded-md hover:bg-yellow-300"
-            onMouseLeave={() => setMenuOpen(null)}
-          >
+          key={recipe.id}
+          className={`relative group p-3 mt-2 rounded-md bg-cover bg-center ${
+            recipe.imageURL ? "" : "bg-pink-200 hover:bg-pink-300"
+          }`}
+          style={{
+            backgroundImage: recipe.imageURL
+              ? `url(${recipe.imageURL})`
+              : "none",
+          }}
+          onMouseLeave={() => setMenuOpen(null)}
+        >
             <Link href={`/recipe/${recipe.id}`} passHref>
               <div className="block">
-                <div className="flex justify-between items-center">
+              <div
+                  className={`flex justify-between items-center ${
+                    recipe.imageURL ? "text-white font-bold text-shadow [text-shadow:_0_2px_4px_rgb(0_0_0_/_0.8)]" : "text-black"
+                  }`}
+                >
                   {recipe.recipeTitle}
                   <FontAwesomeIcon
                     icon={faEllipsisH}
-                    className="ml-4 text-gray-500 group-hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                    className="ml-4 text-white group-hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -200,7 +211,7 @@ export const RecipeList = () => {
                   {recipe.recipeTitle}
                   <FontAwesomeIcon
                     icon={faEllipsisH}
-                    className="ml-4 text-gray-500 group-hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                    className="ml-4 text-white group-hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
