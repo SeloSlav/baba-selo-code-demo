@@ -150,6 +150,25 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
         );
     };
 
+    // Render a discount button if the message is about Selo olive oil
+    const renderDiscountButton = () => (
+        <div className="mt-3">
+            <a
+                href="https://seloolive.com/discount/BABASELO10?redirect=/products/authentic-croatian-olive-oil?variant=40790542549035"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block px-4 py-2 bg-green-500 text-white font-semibold rounded-md hover:bg-green-600"
+            >
+                🌿 Click for a 10% Discount on Selo Olive Oil
+            </a>
+        </div>
+    );
+
+    // Function to check if the message mentions Selo olive oil
+    const isAboutSeloOliveOil = (text: string): boolean => {
+        return text.toLowerCase().includes("selo olive oil");
+    };
+
     const handleSaveRecipe = async (msg: string, classification: RecipeClassification | null) => {
         // Save recipe and then scroll to the bottom
         // Scroll to the bottom
@@ -364,6 +383,17 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
                     return (
                         <div key={actualIndex} className="flex items-start space-x-2">
                             {renderNutritionInfo(msg.content)}
+                        </div>
+                    );
+                }
+
+                if (msg.role === "assistant" && isAboutSeloOliveOil(msg.content)) {
+                    return (
+                        <div key={actualIndex} className="flex items-start space-x-2">
+                            <div className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl">
+                                {renderMarkdown(msg.content)} {/* Render content */}
+                                {renderDiscountButton()} {/* Render the discount button */}
+                            </div>
                         </div>
                     );
                 }
