@@ -123,7 +123,14 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
                 />
             </div>
 
-            <div className="relative w-full max-w-2xl mx-auto px-4 md:px-0">
+            <div
+                className={`relative md:static w-full max-w-2xl mx-auto px-4 md:px-0 ${windowWidth !== null && windowWidth < 768 ? "absolute bottom-0 left-0 w-full" : ""
+                    }`}
+                style={{
+                    zIndex: 10,
+                    backgroundColor: windowWidth !== null && windowWidth < 768 ? "white" : "transparent",
+                }}
+            >
                 <textarea
                     ref={inputRef}
                     value={message}
@@ -149,9 +156,9 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
                     </button>
                     <button
                         onClick={() => sendMessage(message)}
-                        disabled={message.trim() === ""} // Disable if message is empty
+                        disabled={message.trim() === ""}
                         className={`rounded-full w-10 h-10 flex items-center justify-center 
-                            ${message.trim() === ""
+                ${message.trim() === ""
                                 ? "bg-gray-300 text-gray-600 cursor-not-allowed"
                                 : "bg-black text-white hover:bg-gray-800"
                             }`}
@@ -160,11 +167,11 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
                         <FontAwesomeIcon icon={faArrowUp} />
                     </button>
                 </div>
-                {/* Baba's caution message */}
                 <p className="text-xs text-gray-500 text-center mt-2 mb-2">
                     Baba Selo is wise, but even I can mix things up. Double-check, dear—better safe than sorry!
                 </p>
             </div>
+
         </div>
     );
 });
