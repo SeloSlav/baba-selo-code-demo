@@ -79,3 +79,30 @@ body {
 .save-button:hover {
   background-color: #444;
 }
+
+/* Recipe List hover effect */
+.relative.group {
+  position: relative; /* Ensure the parent container is the positioning context */
+}
+
+.relative.group[data-has-image="true"]:hover::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5); /* Black with 50% opacity */
+  border-radius: inherit; /* Ensures the rounded corners remain consistent */
+  z-index: 0; /* Places the overlay below all other elements */
+}
+
+.relative.group > .block {
+  position: relative;
+  z-index: 2; /* Keeps text and buttons above the overlay */
+}
+
+.relative.group > .block * {
+  position: relative; /* Ensures all child elements (like buttons) stay above the overlay */
+  z-index: 2; /* Keeps buttons above the overlay */
+}

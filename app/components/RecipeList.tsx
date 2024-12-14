@@ -142,90 +142,100 @@ export const RecipeList = () => {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-gray-600 text-sm font-semibold pb-2 border-b">
-          Pinned Recipes
-        </h2>
-        {pinnedRecipes.map((recipe, index) => (
-          <div
-          key={recipe.id}
-          className={`relative group p-3 mt-2 rounded-md bg-cover bg-center ${
-            recipe.imageURL ? "" : "bg-pink-200 hover:bg-pink-300"
-          }`}
-          style={{
-            backgroundImage: recipe.imageURL
-              ? `url(${recipe.imageURL})`
-              : "none",
-          }}
-          onMouseLeave={() => setMenuOpen(null)}
-        >
-            <Link href={`/recipe/${recipe.id}`} passHref>
-              <div className="block">
-              <div
-                  className={`flex justify-between items-center ${
-                    recipe.imageURL ? "text-white font-bold text-shadow [text-shadow:_0_2px_4px_rgb(0_0_0_/_0.8)]" : "text-black"
-                  }`}
-                >
-                  {recipe.recipeTitle}
-                  <FontAwesomeIcon
-                    icon={faEllipsisH}
-                    className="ml-4 text-white group-hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleMenuToggle(recipe.id);
-                    }}
-                  />
-                </div>
-              </div>
-            </Link>
-            {menuOpen === recipe.id && renderMenu(recipe.id, recipe.pinned)}
-          </div>
-        ))}
-      </div>
+  <div>
+    <h2 className="text-gray-600 text-sm font-semibold pb-2 border-b">
+      Pinned Recipes
+    </h2>
+    {pinnedRecipes.map((recipe) => (
+      <div
+        key={recipe.id}
+        className={`relative group p-3 mt-2 rounded-md bg-cover bg-center ${!recipe.imageURL ? "bg-yellow-200 hover:bg-yellow-300" : ""}`}
+        style={{
+          backgroundImage: recipe.imageURL ? `url(${recipe.imageURL})` : "none",
+        }}
+        onMouseLeave={() => setMenuOpen(null)}
+      >
+        {/* Conditional Overlay */}
+        {recipe.imageURL && (
+          <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-50 rounded-md transition-opacity"></div>
+        )}
 
-      <div>
-        <h2 className="text-gray-600 text-sm font-semibold pb-2 border-b">
-          Recently Saved Recipes
-        </h2>
-        {recipes.map((recipe, index) => (
-          <div
-            key={recipe.id}
-            className={`relative group p-3 mt-2 rounded-md bg-cover bg-center ${
-              recipe.imageURL ? "" : "bg-pink-200 hover:bg-pink-300"
-            }`}
-            style={{
-              backgroundImage: recipe.imageURL
-                ? `url(${recipe.imageURL})`
-                : "none",
-            }}
-            onMouseLeave={() => setMenuOpen(null)}
-          >
-            <Link href={`/recipe/${recipe.id}`} passHref>
-              <div className="block">
-              <div
-                  className={`flex justify-between items-center ${
-                    recipe.imageURL ? "text-white font-bold text-shadow [text-shadow:_0_2px_4px_rgb(0_0_0_/_0.8)]" : "text-black"
-                  }`}
-                >
-                  {recipe.recipeTitle}
-                  <FontAwesomeIcon
-                    icon={faEllipsisH}
-                    className="ml-4 text-white group-hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleMenuToggle(recipe.id);
-                    }}
-                  />
-                </div>
-              </div>
-            </Link>
-            {menuOpen === recipe.id && renderMenu(recipe.id, recipe.pinned)}
+        {/* Content block */}
+        <Link href={`/recipe/${recipe.id}`} passHref>
+          <div className="relative z-10">
+            <div
+              className={`flex justify-between items-center ${recipe.imageURL
+                ? "text-white font-bold text-shadow [text-shadow:_0_2px_4px_rgb(0_0_0_/_0.8)]"
+                : "text-black"
+              }`}
+            >
+              {recipe.recipeTitle}
+              <FontAwesomeIcon
+                icon={faEllipsisH}
+                className="ml-4 group-hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleMenuToggle(recipe.id);
+                }}
+              />
+            </div>
           </div>
-        ))}
-      </div>
+        </Link>
 
-    </div>
+        {/* Menu rendering */}
+        {menuOpen === recipe.id && renderMenu(recipe.id, recipe.pinned)}
+      </div>
+    ))}
+  </div>
+
+  <div>
+    <h2 className="text-gray-600 text-sm font-semibold pb-2 border-b">
+      Recently Saved Recipes
+    </h2>
+    {recipes.map((recipe) => (
+      <div
+        key={recipe.id}
+        className={`relative group p-3 mt-2 rounded-md bg-cover bg-center ${!recipe.imageURL ? "bg-pink-200 hover:bg-pink-300" : ""}`}
+        style={{
+          backgroundImage: recipe.imageURL ? `url(${recipe.imageURL})` : "none",
+        }}
+        onMouseLeave={() => setMenuOpen(null)}
+      >
+        {/* Conditional Overlay */}
+        {recipe.imageURL && (
+          <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-50 rounded-md transition-opacity"></div>
+        )}
+
+        {/* Content block */}
+        <Link href={`/recipe/${recipe.id}`} passHref>
+          <div className="relative z-10">
+            <div
+              className={`flex justify-between items-center ${recipe.imageURL
+                ? "text-white font-bold text-shadow [text-shadow:_0_2px_4px_rgb(0_0_0_/_0.8)]"
+                : "text-black"
+              }`}
+            >
+              {recipe.recipeTitle}
+              <FontAwesomeIcon
+                icon={faEllipsisH}
+                className="ml-4 group-hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleMenuToggle(recipe.id);
+                }}
+              />
+            </div>
+          </div>
+        </Link>
+
+        {/* Menu rendering */}
+        {menuOpen === recipe.id && renderMenu(recipe.id, recipe.pinned)}
+      </div>
+    ))}
+  </div>
+</div>
+
   );
 };
