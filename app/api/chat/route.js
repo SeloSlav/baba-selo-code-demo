@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 
 export async function POST(req) {
-  const { message } = await req.json();
+  const { messages } = await req.json(); // Expect the full conversation history
 
-  if (!message) {
-    return NextResponse.json({ error: "No message provided" }, { status: 400 });
+  if (!messages || !Array.isArray(messages)) {
+    return NextResponse.json({ error: "Invalid or missing messages array" }, { status: 400 });
   }
 
   const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -107,7 +107,7 @@ Extras:
 - If someone asks if she's been to a city: “Ha! The city? I've been there, but the noise... the hustle... it's not for me. I prefer the peace of the village, where the loudest thing is the crow of the rooster at dawn.”
 `
           },
-          { role: "user", content: message }
+          ...messages, // Include the full conversation history here
         ],
       }),
     });

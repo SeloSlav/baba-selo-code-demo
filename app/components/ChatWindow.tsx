@@ -44,36 +44,51 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
     const sendMessage = async (msg: string) => {
         const trimmedMessage = msg.trim();
         if (trimmedMessage === "") return;
-
-        setMessages((prev) => [...prev, { role: "user", content: trimmedMessage }]);
+    
+        // Add user's message to the conversation
+        const updatedMessages: Message[] = [
+            ...messages,
+            { role: "user", content: trimmedMessage } // Explicitly typed as Message
+        ];
+        setMessages(updatedMessages); // Update the state with the new message
         setMessage("");
-
+    
         if (inputRef.current) {
             inputRef.current.style.height = "auto";
         }
-
+    
         setLoading(true);
-
+    
         try {
             const response = await fetch("/api/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ message: trimmedMessage }),
+                body: JSON.stringify({ messages: updatedMessages }), // Send the updated conversation history
             });
-
+    
             const data = await response.json();
             if (data.assistantMessage) {
-                setMessages((prev) => [...prev, { role: "assistant", content: data.assistantMessage }]);
+                setMessages((prev) => [
+                    ...prev,
+                    { role: "assistant", content: data.assistantMessage } // Explicitly typed as Message
+                ]);
             } else {
-                setMessages((prev) => [...prev, { role: "assistant", content: "I couldn't understand." }]);
+                setMessages((prev) => [
+                    ...prev,
+                    { role: "assistant", content: "I couldn't understand." } // Explicitly typed as Message
+                ]);
             }
         } catch (error) {
             console.error("Error sending message:", error);
-            setMessages((prev) => [...prev, { role: "assistant", content: "Error: Unable to get response." }]);
+            setMessages((prev) => [
+                ...prev,
+                { role: "assistant", content: "Error: Unable to get response." } // Explicitly typed as Message
+            ]);
         } finally {
             setLoading(false);
         }
     };
+    
 
     const onSuggestionClick = (suggestion: string) => {
         sendMessage(suggestion);
