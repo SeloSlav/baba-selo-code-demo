@@ -155,7 +155,7 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
 
     // Base bottom padding for the messages container (enough for input)
     // Add extra padding equal to the keyboard offset to ensure messages are never hidden.
-    const bottomPadding = (windowWidth !== null && windowWidth < 768) ? 175 : 0; // base padding (enough space for input)
+    const bottomPadding = (windowWidth !== null && windowWidth < 768) ? 0 : 0; // base padding (enough space for input)
     const additionalPadding = Math.max(0, -translateY); // additional for keyboard offset
 
     return (
