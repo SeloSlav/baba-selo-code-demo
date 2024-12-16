@@ -1,7 +1,7 @@
 // app/components/ChatSidebar.tsx
 import React, { useState, useEffect, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faHamburger, faPersonRifle, faPencilRuler } from "@fortawesome/free-solid-svg-icons";
+import { faHamburger, faPersonRifle, faPencilRuler, faClose } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "../context/AuthContext";
 import { RecipeList } from "./RecipeList";
 import Link from "next/link";
@@ -22,17 +22,6 @@ export const ChatSidebar = ({
     useEffect(() => {
         setIsHydrated(true);
     }, []);
-
-    const handleNewConversation = () => {
-        toggleSidebar();
-        focusInput();
-
-        if (chatWindowRef?.current?.inputRef?.current) {
-            const chatInput = chatWindowRef.current.inputRef.current;
-            chatInput.value = "Make a recipe with the following ingredients: ";
-            chatInput.focus();
-        }
-    };
 
     return (
         <div>
@@ -55,10 +44,10 @@ export const ChatSidebar = ({
                     <div className="flex items-center justify-between p-4 border-b">
                         <h2 className="text-gray-600 text-sm font-semibold"></h2>
                         <button
-                            onClick={handleNewConversation}
+                            onClick={toggleSidebar}
                             className="p-2 rounded-md hover:bg-gray-200"
                         >
-                            <FontAwesomeIcon icon={faPencilRuler} className="text-[#5d5d5d]" />
+                            <FontAwesomeIcon icon={faClose} className="text-[#5d5d5d]" />
                         </button>
                     </div>
 

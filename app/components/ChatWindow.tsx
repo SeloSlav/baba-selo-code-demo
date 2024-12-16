@@ -166,6 +166,8 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
                 style={{
                     // Add bottom padding so last message is visible above the input.
                     paddingBottom: `${bottomPadding + additionalPadding}px`,
+                    // Disable scrolling if keyboard is open (translateY < 0)
+                    overflowY: translateY < 0 ? 'hidden' : 'auto'
                 }}
             >
                 <div className="flex justify-center mb-6">

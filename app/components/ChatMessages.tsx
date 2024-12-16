@@ -538,7 +538,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
                                         >
                                             🍎 Get Calorie/Macro Info
                                         </button>
-                                        <button
+                                        {/* <button
                                             className="p-2 bg-blue-50 rounded-md hover:bg-blue-100 text-black"
                                             onClick={async () => {
                                                 setLoading(true);
@@ -564,7 +564,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
                                             }}
                                         >
                                             📜 Tell Me About Its Origin Story
-                                        </button>
+                                        </button> */}
                                     </div>
 
                                 </div>
