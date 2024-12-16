@@ -16,6 +16,8 @@ interface ChatWindowProps {
 
 export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) => {
     const inputRef = useRef<HTMLTextAreaElement>(null);
+    const scrollableRef = useRef<HTMLDivElement>(null);
+
     const [message, setMessage] = useState<string>("");
     const [messages, setMessages] = useState<Message[]>([
         { role: "assistant", content: "Hello! Ask me anything dear." },
@@ -23,16 +25,17 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
     const [loading, setLoading] = useState<boolean>(false);
     const [windowWidth, setWindowWidth] = useState<number | null>(null);
 
-    // State to hold translate offset when keyboard is open
+    // Offset state for keyboard push-up
     const [translateY, setTranslateY] = useState(0);
 
     useImperativeHandle(ref, () => ({
         focusInput: () => {
             inputRef.current?.focus();
         },
-        inputRef, // Expose inputRef for setting the value
+        inputRef,
     }));
 
+    // Handle window resize
     useEffect(() => {
         const handleResize = () => {
             if (typeof window !== "undefined") {
@@ -44,19 +47,14 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
         return () => window.removeEventListener("resize", handleResize);
     }, []);
 
-    // Listen for viewport changes to adjust the chat input area for mobile keyboards
+    // Listen for visualViewport changes (to handle keyboard on mobile)
     useEffect(() => {
         if (typeof window !== "undefined" && "visualViewport" in window) {
             const viewport = window.visualViewport;
 
             const handleVisualViewportChange = () => {
                 if (!viewport) return;
-                // The amount of space the keyboard is taking up can be approximated by how
-                // much the viewport height is reduced compared to the layout viewport.
                 const offset = window.innerHeight - viewport.height;
-
-                // If offset > 0, keyboard is open. Translate up by `offset`.
-                // If offset ≤ 0, no keyboard or no need to shift.
                 setTranslateY(offset > 0 ? -offset : 0);
             };
 
@@ -73,11 +71,17 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
         }
     }, []);
 
+    // Always scroll to bottom when messages change
+    useEffect(() => {
+        if (scrollableRef.current) {
+            scrollableRef.current.scrollTop = scrollableRef.current.scrollHeight;
+        }
+    }, [messages]);
+
     const sendMessage = async (msg: string) => {
         const trimmedMessage = msg.trim();
         if (trimmedMessage === "") return;
     
-        // Add user's message to the conversation
         const updatedMessages: Message[] = [
             ...messages,
             { role: "user", content: trimmedMessage }
@@ -95,7 +99,7 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
             const response = await fetch("/api/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ messages: updatedMessages }), 
+                body: JSON.stringify({ messages: updatedMessages }),
             });
     
             const data = await response.json();
@@ -120,7 +124,6 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
             setLoading(false);
         }
     };
-    
 
     const onSuggestionClick = (suggestion: string) => {
         sendMessage(suggestion);
@@ -150,9 +153,21 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
     const sidebarMarginClass =
         isSidebarOpen && windowWidth !== null && windowWidth >= 768 ? "ml-16" : "ml-0";
 
+    // Base bottom padding for the messages container (enough for input)
+    // Add extra padding equal to the keyboard offset to ensure messages are never hidden.
+    const bottomPadding = (windowWidth !== null && windowWidth < 768) ? 175 : 0; // base padding (enough space for input)
+    const additionalPadding = Math.max(0, -translateY); // additional for keyboard offset
+
     return (
         <div className="flex flex-col h-screen w-full">
-            <div className={`flex-grow overflow-y-auto p-6 transition-all duration-300 ${sidebarMarginClass}`}>
+            <div
+                ref={scrollableRef}
+                className={`flex-grow overflow-y-auto p-6 transition-all duration-300 ${sidebarMarginClass}`}
+                style={{
+                    // Add bottom padding so last message is visible above the input.
+                    paddingBottom: `${bottomPadding + additionalPadding}px`,
+                }}
+            >
                 <div className="flex justify-center mb-6">
                     <img src="/baba.png" alt="Baba" className="w-32 h-32" />
                 </div>
@@ -170,13 +185,13 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
                 />
             </div>
 
-            {/* Start chat input area */}
+            {/* Chat input area */}
             <div
                 className={`w-full max-w-2xl mx-auto px-4 md:px-0 ${windowWidth !== null && windowWidth < 768 ? "fixed left-0 bottom-0" : "relative md:static"}`}
                 style={{
                     zIndex: 10,
                     backgroundColor: windowWidth !== null && windowWidth < 768 ? "white" : "transparent",
-                    transform: `translateY(${translateY}px)`, // apply the offset
+                    transform: `translateY(${translateY}px)`,
                     transition: "transform 0.2s ease-in-out",
                 }}
             >
@@ -207,7 +222,7 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
                         onClick={() => sendMessage(message)}
                         disabled={message.trim() === ""}
                         className={`rounded-full w-10 h-10 flex items-center justify-center 
-                ${message.trim() === ""
+                            ${message.trim() === ""
                                 ? "bg-gray-300 text-gray-600 cursor-not-allowed"
                                 : "bg-black text-white hover:bg-gray-800"
                             }`}
