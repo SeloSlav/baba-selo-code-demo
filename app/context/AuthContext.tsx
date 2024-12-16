@@ -8,10 +8,10 @@ import {
   signOut,
 } from "firebase/auth";
 import { auth } from "../firebase/firebase";
-import { useRouter } from "next/navigation"; // Import Next.js router
-import { ProfileMenu } from "../components/ProfileMenu"; // Import ProfileMenu
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"; // Import FontAwesome
-import { faUserCircle } from "@fortawesome/free-solid-svg-icons"; // Import user icon
+import { useRouter, usePathname } from "next/navigation"; // Import Next.js router & usePathname
+import { ProfileMenu } from "../components/ProfileMenu"; 
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"; 
+import { faUserCircle } from "@fortawesome/free-solid-svg-icons"; 
 
 interface AuthContextType {
   user: any;
@@ -25,28 +25,32 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false); // ProfileMenu state
-  const profileMenuRef = useRef<HTMLDivElement | null>(null); // Ref for the ProfileMenu
-  const router = useRouter(); // Initialize router
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false); 
+  const profileMenuRef = useRef<HTMLDivElement | null>(null); 
+  const router = useRouter(); 
+  const pathname = usePathname();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
       setLoading(false);
 
-      // Redirect to the base path if user is logged in
-      if (user) {
-        router.push("/"); // Redirect to the app
+      // Only redirect to home if user is logged in AND currently on '/login' or '/'
+      // This ensures that if the user is already on a page (like '/recipe/[id]'),
+      // they won't be kicked back to home, preserving their intended UX.
+      if (currentUser && (pathname === "/login" || pathname === "/")) {
+        router.push("/");
       }
     });
 
     return () => unsubscribe();
-  }, [router]);
+  }, [router, pathname]);
 
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
+      // After successful login, `onAuthStateChanged` will handle redirection if needed.
     } catch (error) {
       console.error("Error signing in with Google:", error);
     }
@@ -54,9 +58,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const logOut = async () => {
     try {
-      await signOut(auth); // Sign out using Firebase
+      await signOut(auth);
       console.log("User successfully logged out");
-      router.push("/login"); // Redirect to login page
+      router.push("/login");
     } catch (error) {
       console.error("Error logging out:", error);
     }
@@ -70,14 +74,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setIsProfileMenuOpen(false);
   };
 
-  // Close the menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
         profileMenuRef.current &&
         !profileMenuRef.current.contains(event.target as Node)
       ) {
-        closeProfileMenu(); // Close the menu
+        closeProfileMenu();
       }
     };
 
@@ -91,7 +94,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <AuthContext.Provider value={{ user, signInWithGoogle, logOut, loading }}>
-      {/* Global Profile Menu Button */}
       {user && (
         <button
           onClick={toggleProfileMenu}
@@ -101,7 +103,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         </button>
       )}
 
-      {/* Global Profile Menu */}
       <ProfileMenu
         isOpen={isProfileMenuOpen}
         onClose={closeProfileMenu}
