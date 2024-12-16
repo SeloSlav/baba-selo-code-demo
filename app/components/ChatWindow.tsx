@@ -213,6 +213,7 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
                         paddingRight: "1rem",
                         wordBreak: "break-word",
                         overflowWrap: "break-word",
+                        touchAction: "none"
                     }}
                 />
                 <div className="flex items-center justify-between bg-gray-100 p-2 rounded-b-3xl">
