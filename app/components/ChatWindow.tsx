@@ -81,7 +81,7 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
     const sendMessage = async (msg: string) => {
         const trimmedMessage = msg.trim();
         if (trimmedMessage === "") return;
-
+    
         const updatedMessages: Message[] = [
             ...messages,
             { role: "user", content: trimmedMessage }
@@ -94,14 +94,14 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
         }
 
         setLoading(true);
-
+    
         try {
             const response = await fetch("/api/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ messages: updatedMessages }),
             });
-
+    
             const data = await response.json();
             if (data.assistantMessage) {
                 setMessages((prev) => [
@@ -167,7 +167,7 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
                     // Add bottom padding so last message is visible above the input.
                     paddingBottom: `${bottomPadding + additionalPadding}px`,
                     // Disable scrolling if keyboard is open (translateY < 0)
-                    overflowY: translateY < 0 ? 'hidden' : 'auto'
+                    overflowY: 'auto'
                 }}
             >
                 <div className="flex justify-center mb-6">
@@ -192,10 +192,9 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
                 className={`w-full max-w-2xl mx-auto px-4 md:px-0 ${windowWidth !== null && windowWidth < 768 ? "fixed left-0 bottom-0" : "relative md:static"}`}
                 style={{
                     zIndex: 10,
-                    backgroundColor: windowWidth !== null && windowWidth < 768 ? "white" : "transparent",
+                    backgroundColor: "white",
                     transform: `translateY(${translateY}px)`,
                     transition: "transform 0.2s ease-in-out",
-                    touchAction: "none", // Add this line
                 }}
             >
                 <textarea

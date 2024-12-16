@@ -538,33 +538,6 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
                                         >
                                             🍎 Get Calorie/Macro Info
                                         </button>
-                                        {/* <button
-                                            className="p-2 bg-blue-50 rounded-md hover:bg-blue-100 text-black"
-                                            onClick={async () => {
-                                                setLoading(true);
-                                                try {
-                                                    const response = await fetch("/api/originStory", {
-                                                        method: "POST",
-                                                        headers: { "Content-Type": "application/json" },
-                                                        body: JSON.stringify({ recipe: msg.content }),
-                                                    });
-
-                                                    if (response.ok) {
-                                                        const data = await response.json();
-                                                        onAssistantResponse(data.story || "No origin story available.");
-                                                    } else {
-                                                        onAssistantResponse("Failed to fetch origin story.");
-                                                    }
-                                                } catch (error) {
-                                                    console.error("Error fetching origin story:", error);
-                                                    onAssistantResponse("Error: Unable to fetch origin story.");
-                                                } finally {
-                                                    setLoading(false); // Ensure loading is stopped no matter what happens
-                                                }
-                                            }}
-                                        >
-                                            📜 Tell Me About Its Origin Story
-                                        </button> */}
                                     </div>
 
                                 </div>
