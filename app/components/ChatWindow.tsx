@@ -23,6 +23,9 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
     const [loading, setLoading] = useState<boolean>(false);
     const [windowWidth, setWindowWidth] = useState<number | null>(null);
 
+    // State to hold translate offset when keyboard is open
+    const [translateY, setTranslateY] = useState(0);
+
     useImperativeHandle(ref, () => ({
         focusInput: () => {
             inputRef.current?.focus();
@@ -41,6 +44,35 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
         return () => window.removeEventListener("resize", handleResize);
     }, []);
 
+    // Listen for viewport changes to adjust the chat input area for mobile keyboards
+    useEffect(() => {
+        if (typeof window !== "undefined" && "visualViewport" in window) {
+            const viewport = window.visualViewport;
+
+            const handleVisualViewportChange = () => {
+                if (!viewport) return;
+                // The amount of space the keyboard is taking up can be approximated by how
+                // much the viewport height is reduced compared to the layout viewport.
+                const offset = window.innerHeight - viewport.height;
+
+                // If offset > 0, keyboard is open. Translate up by `offset`.
+                // If offset ≤ 0, no keyboard or no need to shift.
+                setTranslateY(offset > 0 ? -offset : 0);
+            };
+
+            viewport.addEventListener("resize", handleVisualViewportChange);
+            viewport.addEventListener("scroll", handleVisualViewportChange);
+
+            // Initial call
+            handleVisualViewportChange();
+
+            return () => {
+                viewport.removeEventListener("resize", handleVisualViewportChange);
+                viewport.removeEventListener("scroll", handleVisualViewportChange);
+            };
+        }
+    }, []);
+
     const sendMessage = async (msg: string) => {
         const trimmedMessage = msg.trim();
         if (trimmedMessage === "") return;
@@ -48,41 +80,41 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
         // Add user's message to the conversation
         const updatedMessages: Message[] = [
             ...messages,
-            { role: "user", content: trimmedMessage } // Explicitly typed as Message
+            { role: "user", content: trimmedMessage }
         ];
-        setMessages(updatedMessages); // Update the state with the new message
+        setMessages(updatedMessages);
         setMessage("");
-    
+
         if (inputRef.current) {
             inputRef.current.style.height = "auto";
         }
-    
+
         setLoading(true);
     
         try {
             const response = await fetch("/api/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ messages: updatedMessages }), // Send the updated conversation history
+                body: JSON.stringify({ messages: updatedMessages }), 
             });
     
             const data = await response.json();
             if (data.assistantMessage) {
                 setMessages((prev) => [
                     ...prev,
-                    { role: "assistant", content: data.assistantMessage } // Explicitly typed as Message
+                    { role: "assistant", content: data.assistantMessage }
                 ]);
             } else {
                 setMessages((prev) => [
                     ...prev,
-                    { role: "assistant", content: "I couldn't understand." } // Explicitly typed as Message
+                    { role: "assistant", content: "I couldn't understand." }
                 ]);
             }
         } catch (error) {
             console.error("Error sending message:", error);
             setMessages((prev) => [
                 ...prev,
-                { role: "assistant", content: "Error: Unable to get response." } // Explicitly typed as Message
+                { role: "assistant", content: "Error: Unable to get response." }
             ]);
         } finally {
             setLoading(false);
@@ -134,17 +166,18 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
                     loading={loading}
                     setLoading={setLoading}
                     onSuggestionClick={onSuggestionClick}
-                    onAssistantResponse={onAssistantResponse} // Pass the function here
+                    onAssistantResponse={onAssistantResponse}
                 />
             </div>
 
             {/* Start chat input area */}
             <div
-                className={`relative md:static w-full max-w-2xl mx-auto px-4 md:px-0 ${windowWidth !== null && windowWidth < 768 ? "absolute bottom-0 left-0 w-full" : ""
-                    }`}
+                className={`w-full max-w-2xl mx-auto px-4 md:px-0 ${windowWidth !== null && windowWidth < 768 ? "fixed left-0 bottom-0" : "relative md:static"}`}
                 style={{
                     zIndex: 10,
                     backgroundColor: windowWidth !== null && windowWidth < 768 ? "white" : "transparent",
+                    transform: `translateY(${translateY}px)`, // apply the offset
+                    transition: "transform 0.2s ease-in-out",
                 }}
             >
                 <textarea
@@ -188,7 +221,6 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
                 </p>
             </div>
             {/* End chat input area */}
-
         </div>
     );
 });

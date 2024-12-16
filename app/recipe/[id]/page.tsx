@@ -121,7 +121,7 @@ const RecipeDetails = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          prompt: `A beautiful and creative dish representation for ${recipe.recipeTitle}`,
+          prompt: `A rustic dish representation for ${recipe.recipeTitle}`,
           recipeId: id,
         }),
       });
