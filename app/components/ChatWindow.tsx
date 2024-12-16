@@ -195,6 +195,8 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
                     backgroundColor: "white",
                     transform: `translateY(${translateY}px)`,
                     transition: "transform 0.2s ease-in-out",
+                    overflow: "hidden",     // Prevent scrolling on this div
+                    touchAction: "none"     // Prevent touch-based scrolling
                 }}
             >
                 <textarea
