@@ -180,7 +180,8 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
                     backgroundColor: windowWidth !== null && windowWidth < 768 ? "white" : "transparent",
                     // Only apply the translateY on mobile
                     transform: windowWidth !== null && windowWidth < 768 ? `translateY(${translateY}px)` : "none",
-                    transition: "transform 0.2s ease-in-out"
+                    transition: "transform 0.2s ease-in-out",
+                    touchAction: "none"
                 }}
             >
                 <textarea
@@ -197,6 +198,7 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
                         paddingRight: "1rem",
                         wordBreak: "break-word",
                         overflowWrap: "break-word",
+                        touchAction: "none"
                     }}
                 />
                 <div className="flex items-center justify-between bg-gray-100 p-2 rounded-b-3xl">
