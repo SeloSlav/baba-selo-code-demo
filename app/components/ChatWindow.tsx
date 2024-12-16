@@ -16,8 +16,6 @@ interface ChatWindowProps {
 
 export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) => {
     const inputRef = useRef<HTMLTextAreaElement>(null);
-    const scrollableRef = useRef<HTMLDivElement>(null);
-
     const [message, setMessage] = useState<string>("");
     const [messages, setMessages] = useState<Message[]>([
         { role: "assistant", content: "Hello! Ask me anything dear." },
@@ -25,17 +23,13 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
     const [loading, setLoading] = useState<boolean>(false);
     const [windowWidth, setWindowWidth] = useState<number | null>(null);
 
-    // Offset state for keyboard push-up
-    const [translateY, setTranslateY] = useState(0);
-
     useImperativeHandle(ref, () => ({
         focusInput: () => {
             inputRef.current?.focus();
         },
-        inputRef,
+        inputRef, // Expose inputRef for setting the value
     }));
 
-    // Handle window resize
     useEffect(() => {
         const handleResize = () => {
             if (typeof window !== "undefined") {
@@ -47,83 +41,54 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
         return () => window.removeEventListener("resize", handleResize);
     }, []);
 
-    // Listen for visualViewport changes (to handle keyboard on mobile)
-    useEffect(() => {
-        if (typeof window !== "undefined" && "visualViewport" in window) {
-            const viewport = window.visualViewport;
-
-            const handleVisualViewportChange = () => {
-                if (!viewport) return;
-                const offset = window.innerHeight - viewport.height;
-                setTranslateY(offset > 0 ? -offset : 0);
-            };
-
-            viewport.addEventListener("resize", handleVisualViewportChange);
-            viewport.addEventListener("scroll", handleVisualViewportChange);
-
-            // Initial call
-            handleVisualViewportChange();
-
-            return () => {
-                viewport.removeEventListener("resize", handleVisualViewportChange);
-                viewport.removeEventListener("scroll", handleVisualViewportChange);
-            };
-        }
-    }, []);
-
-    // Always scroll to bottom when messages change
-    useEffect(() => {
-        if (scrollableRef.current) {
-            scrollableRef.current.scrollTop = scrollableRef.current.scrollHeight;
-        }
-    }, [messages]);
-
     const sendMessage = async (msg: string) => {
         const trimmedMessage = msg.trim();
         if (trimmedMessage === "") return;
     
+        // Add user's message to the conversation
         const updatedMessages: Message[] = [
             ...messages,
-            { role: "user", content: trimmedMessage }
+            { role: "user", content: trimmedMessage } // Explicitly typed as Message
         ];
-        setMessages(updatedMessages);
+        setMessages(updatedMessages); // Update the state with the new message
         setMessage("");
-
+    
         if (inputRef.current) {
             inputRef.current.style.height = "auto";
         }
-
+    
         setLoading(true);
     
         try {
             const response = await fetch("/api/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ messages: updatedMessages }),
+                body: JSON.stringify({ messages: updatedMessages }), // Send the updated conversation history
             });
     
             const data = await response.json();
             if (data.assistantMessage) {
                 setMessages((prev) => [
                     ...prev,
-                    { role: "assistant", content: data.assistantMessage }
+                    { role: "assistant", content: data.assistantMessage } // Explicitly typed as Message
                 ]);
             } else {
                 setMessages((prev) => [
                     ...prev,
-                    { role: "assistant", content: "I couldn't understand." }
+                    { role: "assistant", content: "I couldn't understand." } // Explicitly typed as Message
                 ]);
             }
         } catch (error) {
             console.error("Error sending message:", error);
             setMessages((prev) => [
                 ...prev,
-                { role: "assistant", content: "Error: Unable to get response." }
+                { role: "assistant", content: "Error: Unable to get response." } // Explicitly typed as Message
             ]);
         } finally {
             setLoading(false);
         }
     };
+    
 
     const onSuggestionClick = (suggestion: string) => {
         sendMessage(suggestion);
@@ -153,23 +118,9 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
     const sidebarMarginClass =
         isSidebarOpen && windowWidth !== null && windowWidth >= 768 ? "ml-16" : "ml-0";
 
-    // Base bottom padding for the messages container (enough for input)
-    // Add extra padding equal to the keyboard offset to ensure messages are never hidden.
-    const bottomPadding = (windowWidth !== null && windowWidth < 768) ? 175 : 0; // base padding (enough space for input)
-    const additionalPadding = Math.max(0, -translateY); // additional for keyboard offset
-
     return (
         <div className="flex flex-col h-screen w-full">
-            <div
-                ref={scrollableRef}
-                className={`flex-grow overflow-y-auto p-6 transition-all duration-300 ${sidebarMarginClass}`}
-                style={{
-                    // Add bottom padding so last message is visible above the input.
-                    paddingBottom: `${bottomPadding + additionalPadding}px`,
-                    // Disable scrolling if keyboard is open (translateY < 0)
-                    overflowY: 'auto'
-                }}
-            >
+            <div className={`flex-grow overflow-y-auto p-6 transition-all duration-300 ${sidebarMarginClass}`}>
                 <div className="flex justify-center mb-6">
                     <img src="/baba.png" alt="Baba" className="w-32 h-32" />
                 </div>
@@ -183,20 +134,17 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
                     loading={loading}
                     setLoading={setLoading}
                     onSuggestionClick={onSuggestionClick}
-                    onAssistantResponse={onAssistantResponse}
+                    onAssistantResponse={onAssistantResponse} // Pass the function here
                 />
             </div>
 
-            {/* Chat input area */}
+            {/* Start chat input area */}
             <div
-                className={`w-full max-w-2xl mx-auto px-4 md:px-0 ${windowWidth !== null && windowWidth < 768 ? "fixed left-0 bottom-0" : "relative md:static"}`}
+                className={`relative md:static w-full max-w-2xl mx-auto px-4 md:px-0 ${windowWidth !== null && windowWidth < 768 ? "absolute bottom-0 left-0 w-full" : ""
+                    }`}
                 style={{
                     zIndex: 10,
-                    backgroundColor: "white",
-                    transform: `translateY(${translateY}px)`,
-                    transition: "transform 0.2s ease-in-out",
-                    overflow: "hidden",     // Prevent scrolling on this div
-                    touchAction: "none"     // Prevent touch-based scrolling
+                    backgroundColor: windowWidth !== null && windowWidth < 768 ? "white" : "transparent",
                 }}
             >
                 <textarea
@@ -213,7 +161,6 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
                         paddingRight: "1rem",
                         wordBreak: "break-word",
                         overflowWrap: "break-word",
-                        touchAction: "none"
                     }}
                 />
                 <div className="flex items-center justify-between bg-gray-100 p-2 rounded-b-3xl">
@@ -227,7 +174,7 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
                         onClick={() => sendMessage(message)}
                         disabled={message.trim() === ""}
                         className={`rounded-full w-10 h-10 flex items-center justify-center 
-                            ${message.trim() === ""
+                ${message.trim() === ""
                                 ? "bg-gray-300 text-gray-600 cursor-not-allowed"
                                 : "bg-black text-white hover:bg-gray-800"
                             }`}
@@ -241,6 +188,7 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
                 </p>
             </div>
             {/* End chat input area */}
+
         </div>
     );
 });
