@@ -81,7 +81,7 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
     const sendMessage = async (msg: string) => {
         const trimmedMessage = msg.trim();
         if (trimmedMessage === "") return;
-    
+
         const updatedMessages: Message[] = [
             ...messages,
             { role: "user", content: trimmedMessage }
@@ -94,14 +94,14 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
         }
 
         setLoading(true);
-    
+
         try {
             const response = await fetch("/api/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ messages: updatedMessages }),
             });
-    
+
             const data = await response.json();
             if (data.assistantMessage) {
                 setMessages((prev) => [
@@ -195,6 +195,7 @@ export const ChatWindow = forwardRef(({ isSidebarOpen }: ChatWindowProps, ref) =
                     backgroundColor: windowWidth !== null && windowWidth < 768 ? "white" : "transparent",
                     transform: `translateY(${translateY}px)`,
                     transition: "transform 0.2s ease-in-out",
+                    touchAction: "none", // Add this line
                 }}
             >
                 <textarea
