@@ -2,70 +2,75 @@ import "./globals.css";
 import { AuthProvider } from "./context/AuthContext"; // Ensure you have the AuthProvider
 
 export const metadata = {
-
   title: "Baba Selo - Your Magical Recipe Companion",
 
-  description: "Discover and save amazing recipes with Baba Selo's magical guidance.",
+  description:
+    "Discover and save amazing recipes with Baba Selo's magical guidance.",
+
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: "no",
+  },
 
   icons: {
+    icon: [
+      {
+        rel: "icon",
+        type: "image/png",
+        sizes: "96x96",
+        url: "/favicon-96x96.png",
+      },
 
-      icon: [
+      { rel: "icon", type: "image/svg+xml", url: "/favicon.svg" },
+    ],
 
-          { rel: "icon", type: "image/png", sizes: "96x96", url: "/favicon-96x96.png" },
-
-          { rel: "icon", type: "image/svg+xml", url: "/favicon.svg" },
-
-      ],
-
-      apple: "/apple-touch-icon.png",
-
+    apple: "/apple-touch-icon.png",
   },
 
   manifest: "/site.webmanifest",
 
   openGraph: {
+    title: "Baba Selo - A Recipe Wonderland",
 
-      title: "Baba Selo - A Recipe Wonderland",
+    description:
+      "Discover and save amazing recipes with Baba Selo's magical guidance.",
 
-      description: "Discover and save amazing recipes with Baba Selo's magical guidance.",
+    url: "https://babaselo.com",
 
-      url: "https://babaselo.com",
+    type: "website",
 
-      type: "website",
+    images: [
+      {
+        url: "https://babaselo.com/og-image.jpg",
 
-      images: [
+        width: 1200,
 
-          {
+        height: 630,
 
-              url: "https://babaselo.com/og-image.jpg",
-
-              width: 1200,
-
-              height: 630,
-
-              alt: "Baba Selo Recipe Preview",
-
-          },
-
-      ],
-
+        alt: "Baba Selo Recipe Preview",
+      },
+    ],
   },
 
   twitter: {
+    card: "summary_large_image",
 
-      card: "summary_large_image",
+    title: "Baba Selo - A Recipe Wonderland",
 
-      title: "Baba Selo - A Recipe Wonderland",
+    description:
+      "Discover and save amazing recipes with Baba Selo's magical guidance.",
 
-      description: "Discover and save amazing recipes with Baba Selo's magical guidance.",
-
-      images: ["https://babaselo.com/twitter-image.jpg"],
-
+    images: ["https://babaselo.com/twitter-image.jpg"],
   },
-
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
       <body>
