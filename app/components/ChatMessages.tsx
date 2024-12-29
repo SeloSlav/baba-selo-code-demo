@@ -170,22 +170,18 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
     };
 
     const handleSaveRecipe = async (msg: string, classification: RecipeClassification | null) => {
-        // Save recipe and then scroll to the bottom
-        // Scroll to the bottom
-        setLoading(true); // Start loading
-        // if (bottomRef.current) {
-        //     bottomRef.current.scrollIntoView({ behavior: "smooth" });
-        // }
+        setLoading(true);
 
         try {
-            const { title, ingredients, directions } = parseRecipe(msg);  // Parse the title from the message
+            const { title } = parseRecipe(msg);
 
-            // Save the recipe
+            // 1. Generate the docId on the client side
+            const docId = userId + "-" + Date.now();
+
+            // 2. Pass it to /api/saveRecipe
             const response = await fetch("/api/saveRecipe", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     recipeContent: msg,
                     userId,
@@ -193,25 +189,28 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
                     cookingDifficulty: classification?.difficulty || "Medium",
                     cookingTime: classification?.cooking_time || "2 hours",
                     diet: classification?.diet || ["gluten-free", "paleo"],
+                    docId, // <--- pass docId to the server
                 }),
             });
 
             if (response.ok) {
-                const data = await response.json();
-
-                // Append a new message with the recipe title
-                onAssistantResponse(`Your ${title} recipe has been tucked away in the kitchen vault, ready for use!`);
-
+                // 3. Immediately link the user to that same docId
+                onAssistantResponse(
+                    `Your <a href="/recipe/${docId}" target="_blank" rel="noopener noreferrer" class="underline text-blue-600"> ${title}</a> recipe has been tucked away in the kitchen vault, ready for use!`
+                );
             } else {
                 const errorData = await response.json();
                 console.error("Failed to save recipe:", errorData.error);
+                onAssistantResponse("Sorry, something went wrong saving the recipe.");
             }
         } catch (error) {
             console.error("Error saving recipe:", error);
+            onAssistantResponse("Sorry, something went wrong saving the recipe.");
         } finally {
-            setLoading(false); // Stop loading
+            setLoading(false);
         }
     };
+
 
     const isCalorieInfo = (data: any) => {
         return (
@@ -378,181 +377,11 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
             {restMessages.map((msg, index) => {
                 const actualIndex = index + 1;
 
-                if (msg.role === "assistant" && isCalorieInfo(msg.content)) {
-                    // Pass raw API response to renderNutritionInfo
-                    return (
-                        <div key={actualIndex} className="flex items-start space-x-2">
-                            {renderNutritionInfo(msg.content)}
-                        </div>
-                    );
-                }
+                // Debug: check exactly how the messages appear
+                console.log("[DEBUG] Rendering message =>", msg);
 
-                if (msg.role === "assistant" && isAboutSeloOliveOil(msg.content)) {
-                    return (
-                        <div key={actualIndex} className="flex items-start space-x-2">
-                            <div className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl">
-                                {renderMarkdown(msg.content)} {/* Render content */}
-                                {renderDiscountButton()} {/* Render the discount button */}
-                            </div>
-                        </div>
-                    );
-                }
-
-                if (msg.role === "assistant") {
-                    if (isSelo(msg.content)) {
-                        return (
-                            <div key={actualIndex} className="flex items-start space-x-2">
-                                <div className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl">
-                                    {linkifyLastSelo(msg.content)} {/* Linkify only the last instance */}
-                                </div>
-                            </div>
-                        );
-                    }
-                    if (isRecipe(msg.content)) {
-                        const { title, ingredients, directions } = parseRecipe(msg.content);
-                        const classification = recipeClassification[actualIndex];
-
-                        let foundOliveOilInIngredients = false;
-                        let foundOliveOilInDirections = false;
-
-                        return (
-                            <div key={actualIndex} className="flex items-start space-x-2">
-                                <div className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl">
-                                    <div className="text-xl mb-2">{title}</div>
-
-                                    <div className="font-semibold mb-1">Ingredients</div>
-                                    <ul className="list-disc list-inside mb-3">
-                                        {ingredients.map((ing, i) => {
-                                            const lowerIng = ing.toLowerCase();
-                                            if (!foundOliveOilInIngredients && lowerIng.includes("olive oil")) {
-                                                foundOliveOilInIngredients = true;
-                                                return <li key={i}>{linkifyOliveOil(ing)}</li>;
-                                            } else {
-                                                return <li key={i}>{ing}</li>;
-                                            }
-                                        })}
-                                    </ul>
-
-                                    <div className="font-semibold mb-1">Directions</div>
-                                    <ol className="list-decimal list-inside mb-3">
-                                        {directions.map((dir, i) => {
-                                            const lowerDir = dir.toLowerCase();
-                                            if (!foundOliveOilInDirections && lowerDir.includes("olive oil")) {
-                                                foundOliveOilInDirections = true;
-                                                return <li key={i}>{linkifyOliveOil(dir)}</li>;
-                                            } else {
-                                                return <li key={i}>{dir}</li>;
-                                            }
-                                        })}
-                                    </ol>
-
-                                    {classification && (
-                                        <div className="mb-3 flex flex-wrap items-center gap-2">
-                                            {classification.diet && classification.diet.length > 0 && (
-                                                <div className="flex items-center bg-white border border-gray-300 shadow-sm rounded-full px-3 py-1">
-                                                    <span className="font-semibold mr-1">🍲</span>
-                                                    <span>{classification.diet.map(d => d.charAt(0).toUpperCase() + d.slice(1)).join(", ")}</span>
-                                                </div>
-                                            )}
-                                            {classification.cuisine && (
-                                                <div className="flex items-center bg-white border border-gray-300 shadow-sm rounded-full px-3 py-1">
-                                                    <span className="font-semibold mr-1">🍽️</span>
-                                                    <span>{classification.cuisine.charAt(0).toUpperCase() + classification.cuisine.slice(1)}</span>
-                                                </div>
-                                            )}
-                                            {classification.cooking_time && (
-                                                <div className="flex items-center bg-white border border-gray-300 shadow-sm rounded-full px-3 py-1">
-                                                    <span className="font-semibold mr-1">⏲️</span>
-                                                    <span>{classification.cooking_time}</span>
-                                                </div>
-                                            )}
-                                            {classification.difficulty && (
-                                                <div className="flex items-center bg-white border border-gray-300 shadow-sm rounded-full px-3 py-1">
-                                                    <span className="font-semibold mr-1">🧩</span>
-                                                    <span>{classification.difficulty.charAt(0).toUpperCase() + classification.difficulty.slice(1)}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-
-
-                                    {/* Row of action buttons */}
-                                    <div className="flex flex-wrap gap-2 mt-3">
-                                        <button
-                                            className="p-2 bg-black rounded-md hover:bg-gray-600 text-white"
-                                            onClick={() => handleSaveRecipe(msg.content, classification)} // Call handleSave
-                                        >
-                                            📝 Save Recipe
-                                        </button>
-                                        <button
-                                            className="p-2 bg-blue-50 rounded-md hover:bg-blue-100 text-black"
-                                            onClick={async () => {
-                                                setLoading(true);
-                                                try {
-                                                    const response = await fetch("/api/dishPairing", {
-                                                        method: "POST",
-                                                        headers: { "Content-Type": "application/json" },
-                                                        body: JSON.stringify({ recipe: msg.content }),
-                                                    });
-
-                                                    if (response.ok) {
-                                                        const data = await response.json();
-                                                        onAssistantResponse(data.suggestion || "No pairing suggestion available.");
-                                                    } else {
-                                                        onAssistantResponse("Failed to fetch dish pairing.");
-                                                    }
-                                                } catch (error) {
-                                                    console.error("Error fetching dish pairing:", error);
-                                                    onAssistantResponse("Error: Unable to fetch dish pairing.");
-                                                } finally {
-                                                    setLoading(false); // Ensure loading is stopped no matter what happens
-                                                }
-                                            }}
-                                        >
-                                            🍷 Get Dish Pairing
-                                        </button>
-                                        <button
-                                            className="p-2 bg-blue-50 rounded-md hover:bg-blue-100 text-black"
-                                            onClick={async () => {
-                                                setLoading(true);
-                                                try {
-                                                    const response = await fetch("/api/macroInfo", {
-                                                        method: "POST",
-                                                        headers: { "Content-Type": "application/json" },
-                                                        body: JSON.stringify({ recipe: msg.content }),
-                                                    });
-
-                                                    if (response.ok) {
-                                                        const data = await response.json();
-                                                        onAssistantResponse(data.macros || "No macro info available.");
-                                                    } else {
-                                                        onAssistantResponse("Failed to fetch calorie/macro info.");
-                                                    }
-                                                } catch (error) {
-                                                    console.error("Error fetching calorie/macro info:", error);
-                                                    onAssistantResponse("Error: Unable to fetch calorie/macro info.");
-                                                } finally {
-                                                    setLoading(false); // Ensure loading is stopped no matter what happens
-                                                }
-                                            }}
-                                        >
-                                            🍎 Get Calorie/Macro Info
-                                        </button>
-                                    </div>
-
-                                </div>
-                            </div>
-                        );
-                    } else {
-                        return (
-                            <div key={actualIndex} className="flex items-start space-x-2">
-                                <div className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl">
-                                    {renderMarkdown(msg.content)} {/* Use the Markdown renderer */}
-                                </div>
-                            </div>
-                        );
-                    }
-                } else {
+                // 1) User messages
+                if (msg.role === "user") {
                     return (
                         <div key={actualIndex} className="flex justify-end">
                             <div className="bg-[#0284FE] text-white px-5 py-2.5 rounded-3xl max-w-xs whitespace-pre-line">
@@ -561,7 +390,209 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
                         </div>
                     );
                 }
+
+                // 2) If it's an assistant message that literally has <a> tags
+                if (msg.role === "assistant" && /<a .*?<\/a>/i.test(msg.content)) {
+                    return (
+                        <div key={actualIndex} className="flex items-start space-x-2">
+                            <div
+                                className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl"
+                                dangerouslySetInnerHTML={{ __html: msg.content }}
+                            />
+                        </div>
+                    );
+                }
+
+                // 3) If it's an assistant message with calorie info
+                if (msg.role === "assistant" && isCalorieInfo(msg.content)) {
+                    return (
+                        <div key={actualIndex} className="flex items-start space-x-2">
+                            {renderNutritionInfo(msg.content)}
+                        </div>
+                    );
+                }
+
+                // 4) If it's an assistant message that specifically mentions "Selo olive oil"
+                //    We'll render the discount button
+                if (msg.role === "assistant" && isAboutSeloOliveOil(msg.content)) {
+                    return (
+                        <div key={actualIndex} className="flex items-start space-x-2">
+                            <div className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl">
+                                {renderMarkdown(msg.content)}
+                                {renderDiscountButton()}
+                            </div>
+                        </div>
+                    );
+                }
+
+                // 5) If it's an assistant message that includes "selo olive oil"
+                if (msg.role === "assistant" && isSelo(msg.content)) {
+                    return (
+                        <div key={actualIndex} className="flex items-start space-x-2">
+                            <div className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl">
+                                {linkifyLastSelo(msg.content)}
+                            </div>
+                        </div>
+                    );
+                }
+
+                // 6) If it's recognized as a recipe
+                if (msg.role === "assistant" && isRecipe(msg.content)) {
+                    const { title, ingredients, directions } = parseRecipe(msg.content);
+                    const classification = recipeClassification[actualIndex];
+
+                    let foundOliveOilInIngredients = false;
+                    let foundOliveOilInDirections = false;
+
+                    return (
+                        <div key={actualIndex} className="flex items-start space-x-2">
+                            <div className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl">
+                                <div className="text-xl mb-2">{title}</div>
+
+                                <div className="font-semibold mb-1">Ingredients</div>
+                                <ul className="list-disc list-inside mb-3">
+                                    {ingredients.map((ing, i) => {
+                                        const lowerIng = ing.toLowerCase();
+                                        if (!foundOliveOilInIngredients && lowerIng.includes("olive oil")) {
+                                            foundOliveOilInIngredients = true;
+                                            return <li key={i}>{linkifyOliveOil(ing)}</li>;
+                                        }
+                                        return <li key={i}>{ing}</li>;
+                                    })}
+                                </ul>
+
+                                <div className="font-semibold mb-1">Directions</div>
+                                <ol className="list-decimal list-inside mb-3">
+                                    {directions.map((dir, i) => {
+                                        const lowerDir = dir.toLowerCase();
+                                        if (!foundOliveOilInDirections && lowerDir.includes("olive oil")) {
+                                            foundOliveOilInDirections = true;
+                                            return <li key={i}>{linkifyOliveOil(dir)}</li>;
+                                        }
+                                        return <li key={i}>{dir}</li>;
+                                    })}
+                                </ol>
+
+                                {classification && (
+                                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                                        {classification.diet && classification.diet.length > 0 && (
+                                            <div className="flex items-center bg-white border border-gray-300 shadow-sm rounded-full px-3 py-1">
+                                                <span className="font-semibold mr-1">🍲</span>
+                                                <span>
+                                                    {classification.diet
+                                                        .map(d => d.charAt(0).toUpperCase() + d.slice(1))
+                                                        .join(", ")}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {classification.cuisine && (
+                                            <div className="flex items-center bg-white border border-gray-300 shadow-sm rounded-full px-3 py-1">
+                                                <span className="font-semibold mr-1">🍽️</span>
+                                                <span>
+                                                    {classification.cuisine.charAt(0).toUpperCase() +
+                                                        classification.cuisine.slice(1)}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {classification.cooking_time && (
+                                            <div className="flex items-center bg-white border border-gray-300 shadow-sm rounded-full px-3 py-1">
+                                                <span className="font-semibold mr-1">⏲️</span>
+                                                <span>{classification.cooking_time}</span>
+                                            </div>
+                                        )}
+                                        {classification.difficulty && (
+                                            <div className="flex items-center bg-white border border-gray-300 shadow-sm rounded-full px-3 py-1">
+                                                <span className="font-semibold mr-1">🧩</span>
+                                                <span>
+                                                    {classification.difficulty.charAt(0).toUpperCase() +
+                                                        classification.difficulty.slice(1)}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Action buttons */}
+                                <div className="flex flex-wrap gap-2 mt-3">
+                                    <button
+                                        className="p-2 bg-black rounded-md hover:bg-gray-600 text-white"
+                                        onClick={() => handleSaveRecipe(msg.content, classification)}
+                                    >
+                                        📝 Save Recipe
+                                    </button>
+                                    <button
+                                        className="p-2 bg-blue-50 rounded-md hover:bg-blue-100 text-black"
+                                        onClick={async () => {
+                                            setLoading(true);
+                                            try {
+                                                const response = await fetch("/api/dishPairing", {
+                                                    method: "POST",
+                                                    headers: { "Content-Type": "application/json" },
+                                                    body: JSON.stringify({ recipe: msg.content }),
+                                                });
+                                                if (response.ok) {
+                                                    const data = await response.json();
+                                                    onAssistantResponse(data.suggestion || "No pairing suggestion available.");
+                                                } else {
+                                                    onAssistantResponse("Failed to fetch dish pairing.");
+                                                }
+                                            } catch (error) {
+                                                console.error("Error fetching dish pairing:", error);
+                                                onAssistantResponse("Error: Unable to fetch dish pairing.");
+                                            } finally {
+                                                setLoading(false);
+                                            }
+                                        }}
+                                    >
+                                        🍷 Get Dish Pairing
+                                    </button>
+                                    <button
+                                        className="p-2 bg-blue-50 rounded-md hover:bg-blue-100 text-black"
+                                        onClick={async () => {
+                                            setLoading(true);
+                                            try {
+                                                const response = await fetch("/api/macroInfo", {
+                                                    method: "POST",
+                                                    headers: { "Content-Type": "application/json" },
+                                                    body: JSON.stringify({ recipe: msg.content }),
+                                                });
+                                                if (response.ok) {
+                                                    const data = await response.json();
+                                                    onAssistantResponse(data.macros || "No macro info available.");
+                                                } else {
+                                                    onAssistantResponse("Failed to fetch calorie/macro info.");
+                                                }
+                                            } catch (error) {
+                                                console.error("Error fetching calorie/macro info:", error);
+                                                onAssistantResponse("Error: Unable to fetch calorie/macro info.");
+                                            } finally {
+                                                setLoading(false);
+                                            }
+                                        }}
+                                    >
+                                        🍎 Get Calorie/Macro Info
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                }
+
+                // 7) Otherwise, normal assistant message
+                if (msg.role === "assistant") {
+                    return (
+                        <div key={actualIndex} className="flex items-start space-x-2">
+                            <div className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl">
+                                {renderMarkdown(msg.content)}
+                            </div>
+                        </div>
+                    );
+                }
+
+                // 8) Fallback
+                return null;
             })}
+
 
             {loading && (
                 <div className="flex items-start space-x-2">
