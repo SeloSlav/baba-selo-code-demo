@@ -34,7 +34,7 @@ export async function POST(req) {
     });
 
     const data = await response.json();
-    console.log("OpenAI API raw response:", data); // Debug raw response
+    // console.log("OpenAI API raw response:", data); // Debug raw response
 
     if (!response.ok || !data.choices || !data.choices[0] || !data.choices[0].message || !data.choices[0].message.content) {
       console.error("Unexpected OpenAI API response structure:", data);
@@ -47,7 +47,7 @@ export async function POST(req) {
       // Remove triple backticks and "json" tag if present
       rawContent = rawContent.replace(/^```json\s*|```$/g, "").trim();
       const nutritionData = JSON.parse(rawContent); // Parse as JSON
-      console.log("Parsed nutrition data:", nutritionData); // Debug parsed data
+      // console.log("Parsed nutrition data:", nutritionData); // Debug parsed data
       return NextResponse.json({
         macros: nutritionData,
       });

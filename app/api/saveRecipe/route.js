@@ -60,16 +60,16 @@ export async function POST(req) {
         };
 
         // Log the received data and final recipe object for confirmation
-        console.log("Received Data:");
-        console.log("Recipe Content:", recipeContent);
-        console.log("User ID:", userId);
-        console.log("Cuisine Type:", cuisineType);
-        console.log("Cooking Difficulty:", cookingDifficulty);
-        console.log("Cooking Time:", cookingTime);
-        console.log("Diet:", diet);
-        console.log("Parsed Recipe:", parsedRecipe);
-        console.log("Final Recipe Object:", newRecipe);
-        console.log("docId:", docId);
+        // console.log("Received Data:");
+        // console.log("Recipe Content:", recipeContent);
+        // console.log("User ID:", userId);
+        // console.log("Cuisine Type:", cuisineType);
+        // console.log("Cooking Difficulty:", cookingDifficulty);
+        // console.log("Cooking Time:", cookingTime);
+        // console.log("Diet:", diet);
+        // console.log("Parsed Recipe:", parsedRecipe);
+        // console.log("Final Recipe Object:", newRecipe);
+        // console.log("docId:", docId);
 
         // Use the docId provided by the client
         const recipeDocRef = doc(db, "recipes", docId);

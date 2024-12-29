@@ -5,7 +5,7 @@ dotenv.config();
 
 export async function GET() {
 
-    console.log('API Key:', process.env.ELEVENLABS_API_KEY);
+    // console.log('API Key:', process.env.ELEVENLABS_API_KEY);
 
     try {
         const response = await fetch('https://api.elevenlabs.io/v1/convai/conversations', {

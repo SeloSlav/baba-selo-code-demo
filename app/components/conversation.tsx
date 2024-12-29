@@ -23,20 +23,20 @@ export function ConversationComponent() {
   const startConversation = useCallback(async () => {
     try {
       // Request microphone access
-      console.log('Requesting microphone access...');
+      // console.log('Requesting microphone access...');
       await navigator.mediaDevices.getUserMedia({ audio: true });
-      console.log('Microphone access granted.');
+      // console.log('Microphone access granted.');
       setMicrophoneEnabled(true);
       
       // Start the conversation
-      console.log('Starting conversation session...');
+      // console.log('Starting conversation session...');
       await startSession({
         agentId: 'tRQ8VBuYOhpOecaDuGiX', // Replace with your actual Agent ID
         onConnect: () => console.log('Connected to conversation.'),
         onDisconnect: () => console.log('Disconnected from conversation.'),
         onMessage: (message) => {
 
-          console.log('Raw data received:', message);
+          // console.log('Raw data received:', message);
 
           if (message.source === 'ai') {
             setTranscript((prevTranscript) => [
@@ -81,7 +81,7 @@ export function ConversationComponent() {
 
   // Handle stopping the conversation
   const stopConversation = useCallback(async () => {
-    console.log('Ending conversation session...');
+    // console.log('Ending conversation session...');
     await endSession();
     setMicrophoneEnabled(false);
   }, [endSession]);

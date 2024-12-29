@@ -72,7 +72,7 @@ const RecipeDetails = () => {
           setCheckedDirections(new Array(directions.length).fill(false));
           setCheckedIngredients(new Array(ingredients.length).fill(false));
         } else {
-          console.log("No such recipe!");
+          // console.log("No such recipe!");
         }
       } catch (error) {
         console.error("Error fetching recipe:", error);

@@ -385,13 +385,13 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
                 const isAssistant = msg.role === "assistant";
 
                 // Debug: check exactly how the messages appear
-                console.log("[DEBUG] Rendering message =>", msg);
+                // console.log("[DEBUG] Rendering message =>", msg);
 
                 // We'll only attach the `ref` to the last assistant message
                 const messageRef = isAssistant && isLastItem ? lastAssistantRef : null;
 
                 // [DEBUG] So you can see which message is "last assistant"
-                console.log("Rendering message index:", actualIndex, "isAssistant:", isAssistant, "isLastItem:", isLastItem);
+                // console.log("Rendering message index:", actualIndex, "isAssistant:", isAssistant, "isLastItem:", isLastItem);
 
                 // 1) User messages
                 if (msg.role === "user") {
@@ -583,7 +583,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
                                             }
                                         }}
                                     >
-                                        🍎 Get Calorie/Macro Info
+                                        🍎 Get Nutritional Info
                                     </button>
                                 </div>
                             </div>
@@ -605,7 +605,6 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
                 // 8) Fallback
                 return null;
             })}
-
 
             {loading && (
                 <div className="flex items-start space-x-2">

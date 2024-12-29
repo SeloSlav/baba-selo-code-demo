@@ -10,6 +10,8 @@ import React, {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPaperclip, faArrowUp } from "@fortawesome/free-solid-svg-icons";
 import { ChatMessages } from "./ChatMessages";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { getFirestore, doc, getDoc } from "firebase/firestore";
 
 interface Message {
   role: "user" | "assistant";
@@ -31,12 +33,53 @@ export const ChatWindow = forwardRef(
     const [windowWidth, setWindowWidth] = useState<number | null>(null);
     const [translateY, setTranslateY] = useState(0);
 
+    // Firebase state
+    const [preferredCookingOil, setPreferredCookingOil] = useState<string | null>(null);
+    const [dietaryPreferences, setDietaryPreferences] = useState<string[]>([]);
+
     useImperativeHandle(ref, () => ({
       focusInput: () => {
         inputRef.current?.focus();
       },
       inputRef, // Expose inputRef for setting the value
     }));
+
+    useEffect(() => {
+      const fetchUserPreferences = async () => {
+        const auth = getAuth();
+        const firestore = getFirestore();
+    
+        onAuthStateChanged(auth, async (user) => {
+          if (user) {
+            try {
+              const userDocRef = doc(firestore, "users", user.uid);
+              // console.log("Current User ID:", user.uid); // Log the user ID
+              const userDoc = await getDoc(userDocRef);
+              if (userDoc.exists()) {
+                const data = userDoc.data();
+                // console.log("Fetched user preferences:", data);
+                setPreferredCookingOil(data?.preferredCookingOil || "olive oil");
+                setDietaryPreferences(data?.dietaryPreferences || []);
+              } else {
+                console.warn("User preferences document does not exist.");
+                setPreferredCookingOil("olive oil");
+                setDietaryPreferences([]);
+              }
+            } catch (error) {
+              console.error("Error fetching user preferences:", error);
+              setPreferredCookingOil("olive oil");
+              setDietaryPreferences([]);
+            }
+          } else {
+            console.warn("No user logged in.");
+            setPreferredCookingOil("olive oil");
+            setDietaryPreferences([]);
+          }
+        });
+      };
+    
+      fetchUserPreferences();
+    }, []);
 
     useEffect(() => {
       const handleResize = () => {
@@ -99,7 +142,11 @@ export const ChatWindow = forwardRef(
         const response = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: updatedMessages }), // Send the updated conversation history
+          body: JSON.stringify({
+            messages: updatedMessages,
+            preferredCookingOil,
+            dietaryPreferences,
+          }), // Include preferences in the API call
         });
 
         const data = await response.json();
@@ -111,7 +158,7 @@ export const ChatWindow = forwardRef(
         } else {
           setMessages((prev) => [
             ...prev,
-            { role: "assistant", content: "I couldn't understand." }, // Explicitly typed as Message
+            { role: "assistant", content: "Ah, my head! It\'s like I\'ve been up all night making sarma for a village wedding. Try refreshing the page, darling—I\'ll do better next time!." }, // Explicitly typed as Message
           ]);
         }
       } catch (error) {
@@ -187,11 +234,10 @@ export const ChatWindow = forwardRef(
 
         {/* Start chat input area */}
         <div
-          className={`w-full max-w-2xl mx-auto px-4 md:px-0 ${
-            windowWidth !== null && windowWidth < 768
-              ? "fixed bottom-0 left-0 right-0"
-              : "relative md:static"
-          }`}
+          className={`w-full max-w-2xl mx-auto px-4 md:px-0 ${windowWidth !== null && windowWidth < 768
+            ? "fixed bottom-0 left-0 right-0"
+            : "relative md:static"
+            }`}
           style={{
             zIndex: 1000,
             backgroundColor:
@@ -232,10 +278,9 @@ export const ChatWindow = forwardRef(
               onClick={() => sendMessage(message)}
               disabled={message.trim() === ""}
               className={`rounded-full w-10 h-10 flex items-center justify-center
-                ${
-                  message.trim() === ""
-                    ? "bg-gray-300 text-gray-600 cursor-not-allowed"
-                    : "bg-black text-white hover:bg-gray-800"
+                ${message.trim() === ""
+                  ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                  : "bg-black text-white hover:bg-gray-800"
                 }`}
               title={message.trim() === "" ? "Message is empty" : ""}
             >

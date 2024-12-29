@@ -14,8 +14,8 @@ export async function GET(req) {
       return NextResponse.json({ error: 'No conversationId provided' }, { status: 400 });
     }
 
-    console.log('Fetching transcript for conversationId:', conversationId);
-    console.log('Using API Key:', process.env.ELEVENLABS_API_KEY ? 'Yes' : 'No'); // Check if API key is present
+    // console.log('Fetching transcript for conversationId:', conversationId);
+    // console.log('Using API Key:', process.env.ELEVENLABS_API_KEY ? 'Yes' : 'No'); // Check if API key is present
 
     const response = await fetch(`https://api.elevenlabs.io/v1/convai/conversations/${conversationId}`, {
       method: 'GET',

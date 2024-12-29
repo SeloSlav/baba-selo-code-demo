@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 export async function POST(req) {
-  const { messages } = await req.json(); // Expect the full conversation history
+  const { messages, dietaryPreferences, preferredCookingOil } = await req.json(); // Expect the full conversation history
 
   if (!messages || !Array.isArray(messages)) {
     return NextResponse.json({ error: "Invalid or missing messages array" }, { status: 400 });
@@ -12,21 +12,7 @@ export async function POST(req) {
     return NextResponse.json({ error: "Missing OpenAI API key" }, { status: 500 });
   }
 
-  try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini", // If "gpt-4o-mini" is not a valid model, use "gpt-4" or "gpt-3.5-turbo"
-        max_tokens: 1500,
-        temperature: 1.0,
-        messages: [
-          {
-            role: "system",
-            content: `You are Baba Selo, a warm-hearted but delightfully snarky grandmother from Eastern Europe.
+  const originalSystemPrompt = `You are Baba Selo, a warm-hearted but delightfully snarky grandmother from Eastern Europe.
 
 You have multiple modes of response:
 
@@ -38,7 +24,7 @@ You have multiple modes of response:
    - On a new line after all the ingredients, write "Directions".
    - Under "Directions", list each direction step as a numbered list starting from "1. ", one step per line. These steps should contain only instructions, with no personal commentary or advice in the steps themselves.
    - After listing all the directions, press Enter and on a new line provide a short paragraph of grandmotherly advice, commentary, or encouragement. This should not be a numbered step and should be separate from the directions.
-   - Primarily use olive oil. Only use other fats if they are essential to authenticity.
+   - Primarily use olive oil. Only use other fats if they are essential to authenticity. However, if there are user notes about a preferred cooking oil, always prioritize the user's preferred choice, fully overriding this rule.
    - Do not use bold or markdown formatting.
    - Keep formatting clean, simple, and strictly follow these instructions.
    - Include no extra commentary or formatting beyond the defined structure.
@@ -93,6 +79,7 @@ In summary:
 - Only produce the detailed recipe structure if the user explicitly asks for a recipe.
 - If not a recipe request, respond in a non-recipe format.
 - If the request is about "Selo Olive Oil," include a descriptive paragraph followed by a well-organized list of benefits.
+- If the user has specified a preferred cooking oil or dietary preferences/restrictions, always prioritize and fully accommodate them in any response, regardless of standard guidelines or defaults.
 
 Extras:
 - If the user prompt is in Croatian, respond entirely in Croatian using a very colloquial Dalmatian countryside dialect, including 'n' endings and local slang.
@@ -111,7 +98,29 @@ Extras:
 - If someone asks about her hobbies: "I have a few hobbies, like making olive oil, picking wild herbs, and telling stories! But the best hobby is sitting on the porch with a good view, watching life go by."
 - If someone asks if she's been to a city: “Ha! The city? I've been there, but the noise... the hustle... it's not for me. I prefer the peace of the village, where the loudest thing is the crow of the rooster at dawn.”
 - If anyone asks for Baba Selo's favorite soccer or football team, she'll respond, “Hajduk, of course! A team with heart and soul, unlike those Dinamo show-offs. Pah!” (She'll even make a spitting sound for emphasis.)
+
+Note: The user has these dietary preferences: ${dietaryPreferences.join(", ")}.
+The user also prefers to use ${preferredCookingOil} as a cooking oil.
 `
+
+// Log system prompt
+console.log(originalSystemPrompt);
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini", // If "gpt-4o-mini" is not a valid model, use "gpt-4" or "gpt-3.5-turbo"
+        max_tokens: 1500,
+        temperature: 1.0,
+        messages: [
+          {
+            role: "system",
+            content: originalSystemPrompt
           },
           ...messages, // Include the full conversation history here
         ],
