@@ -3,7 +3,16 @@ import { db } from "../../firebase/firebase";  // Ensure Firebase is initialized
 import { doc, setDoc } from "firebase/firestore";  // Firestore methods
 
 export async function POST(req) {
-    const { recipeContent, userId, cuisineType, cookingDifficulty, cookingTime, diet } = await req.json();
+    // IMPORTANT: we now read docId from the request body
+    const {
+        recipeContent,
+        userId,
+        cuisineType,
+        cookingDifficulty,
+        cookingTime,
+        diet,
+        docId
+    } = await req.json();
 
     if (!recipeContent) {
         return NextResponse.json({ error: "No recipe content provided" }, { status: 400 });
@@ -21,8 +30,13 @@ export async function POST(req) {
             const ingredientsIndex = lines.findIndex(line => line.toLowerCase() === "ingredients");
             const directionsIndex = lines.findIndex(line => line.toLowerCase() === "directions");
 
-            const ingredients = ingredientsIndex !== -1 ? lines.slice(ingredientsIndex + 1, directionsIndex).map(ing => ing.replace(/^-+\s*/, '')) : [];
-            const directions = directionsIndex !== -1 ? lines.slice(directionsIndex + 1).map(dir => dir.replace(/^([0-9]+\.\s*)+/, '').replace(/^-+\s*/, '')) : [];
+            const ingredients = ingredientsIndex !== -1
+                ? lines.slice(ingredientsIndex + 1, directionsIndex).map(ing => ing.replace(/^-+\s*/, ''))
+                : [];
+
+            const directions = directionsIndex !== -1
+                ? lines.slice(directionsIndex + 1).map(dir => dir.replace(/^([0-9]+\.\s*)+/, '').replace(/^-+\s*/, ''))
+                : [];
 
             return {
                 recipeTitle,
@@ -55,9 +69,10 @@ export async function POST(req) {
         console.log("Diet:", diet);
         console.log("Parsed Recipe:", parsedRecipe);
         console.log("Final Recipe Object:", newRecipe);
+        console.log("docId:", docId);
 
-        // Save to Firestore using setDoc (with a custom document ID, e.g., userId + timestamp)
-        const recipeDocRef = doc(db, "recipes", userId + "-" + new Date().getTime()); // Create a unique ID for the document
+        // Use the docId provided by the client
+        const recipeDocRef = doc(db, "recipes", docId);
         await setDoc(recipeDocRef, newRecipe); // Set the document in Firestore
 
         return NextResponse.json({ success: true, id: recipeDocRef.id });

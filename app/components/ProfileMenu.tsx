@@ -57,8 +57,10 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
                 </li>
                 <hr />
                 <li className="flex items-center px-4 py-2 rounded-md hover:bg-gray-100 cursor-pointer">
+                <Link href="/upgrade" className="flex items-center w-full">
                     <FontAwesomeIcon icon={faStarOfLife} className="text-[#5d5d5d] mr-3" />
                     <span>Upgrade Plan</span>
+                    </Link>
                 </li>
                 <hr />
                 <li
