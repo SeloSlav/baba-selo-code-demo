@@ -270,8 +270,9 @@ const RecipeDetails = () => {
           )}
         </div>
       ) : (
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="typing-indicator flex space-x-2 mt-4">
+        <div className="flex flex-col items-center justify-center min-h-screen">
+          <img src="/baba-removebg.png" alt="Baba" className="w-32 h-32 mb-6" />
+          <div className="typing-indicator flex space-x-2">
             <div className="dot bg-gray-400 rounded-full w-6 h-6"></div>
             <div className="dot bg-gray-400 rounded-full w-6 h-6"></div>
             <div className="dot bg-gray-400 rounded-full w-6 h-6"></div>
