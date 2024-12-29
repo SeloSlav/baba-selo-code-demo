@@ -273,9 +273,14 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
         }
     }, [messages]);
 
+    // Create a ref to point to the last assistant message
+    const lastAssistantRef = useRef<HTMLDivElement | null>(null);
+
+    // Instead of scrolling to the bottomRef, we scroll the last assistant message into view:
     useEffect(() => {
-        // Scroll to the bottom when messages change
-        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+        if (lastAssistantRef.current) {
+            lastAssistantRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
     }, [messages]);
 
     const [firstMessage, ...restMessages] = messages;
@@ -376,9 +381,17 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
 
             {restMessages.map((msg, index) => {
                 const actualIndex = index + 1;
+                const isLastItem = actualIndex === restMessages.length; // Are we on the very last message in restMessages?
+                const isAssistant = msg.role === "assistant";
 
                 // Debug: check exactly how the messages appear
                 console.log("[DEBUG] Rendering message =>", msg);
+
+                // We'll only attach the `ref` to the last assistant message
+                const messageRef = isAssistant && isLastItem ? lastAssistantRef : null;
+
+                // [DEBUG] So you can see which message is "last assistant"
+                console.log("Rendering message index:", actualIndex, "isAssistant:", isAssistant, "isLastItem:", isLastItem);
 
                 // 1) User messages
                 if (msg.role === "user") {
@@ -394,7 +407,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
                 // 2) If it's an assistant message that literally has <a> tags
                 if (msg.role === "assistant" && /<a .*?<\/a>/i.test(msg.content)) {
                     return (
-                        <div key={actualIndex} className="flex items-start space-x-2">
+                        <div key={actualIndex} ref={messageRef} className="flex items-start space-x-2">
                             <div
                                 className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl"
                                 dangerouslySetInnerHTML={{ __html: msg.content }}
@@ -406,7 +419,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
                 // 3) If it's an assistant message with calorie info
                 if (msg.role === "assistant" && isCalorieInfo(msg.content)) {
                     return (
-                        <div key={actualIndex} className="flex items-start space-x-2">
+                        <div key={actualIndex} ref={messageRef} className="flex items-start space-x-2">
                             {renderNutritionInfo(msg.content)}
                         </div>
                     );
@@ -416,7 +429,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
                 //    We'll render the discount button
                 if (msg.role === "assistant" && isAboutSeloOliveOil(msg.content)) {
                     return (
-                        <div key={actualIndex} className="flex items-start space-x-2">
+                        <div key={actualIndex} ref={messageRef} className="flex items-start space-x-2">
                             <div className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl">
                                 {renderMarkdown(msg.content)}
                                 {renderDiscountButton()}
@@ -428,7 +441,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
                 // 5) If it's an assistant message that includes "selo olive oil"
                 if (msg.role === "assistant" && isSelo(msg.content)) {
                     return (
-                        <div key={actualIndex} className="flex items-start space-x-2">
+                        <div key={actualIndex} ref={messageRef} className="flex items-start space-x-2">
                             <div className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl">
                                 {linkifyLastSelo(msg.content)}
                             </div>
@@ -445,7 +458,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
                     let foundOliveOilInDirections = false;
 
                     return (
-                        <div key={actualIndex} className="flex items-start space-x-2">
+                        <div key={actualIndex} ref={messageRef} className="flex items-start space-x-2">
                             <div className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl">
                                 <div className="text-xl mb-2">{title}</div>
 
@@ -581,7 +594,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
                 // 7) Otherwise, normal assistant message
                 if (msg.role === "assistant") {
                     return (
-                        <div key={actualIndex} className="flex items-start space-x-2">
+                        <div key={actualIndex} ref={messageRef} className="flex items-start space-x-2">
                             <div className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl">
                                 {renderMarkdown(msg.content)}
                             </div>
