@@ -203,7 +203,7 @@ export const ChatWindow = forwardRef(
 
     const sidebarMarginClass =
       isSidebarOpen && windowWidth !== null && windowWidth >= 768
-        ? "ml-0" // Set to ml-16 or larger to shift content right when sidebar is open
+        ? "ml-0"
         : "ml-0";
 
     // Base bottom padding for the messages container (enough for input)

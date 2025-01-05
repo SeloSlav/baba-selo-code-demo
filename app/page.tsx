@@ -36,7 +36,7 @@ const Home = () => {
   const isMobileOverlay = windowWidth !== null && windowWidth < 768;
   const sidebarClass =
     isSidebarOpen && windowWidth !== null && windowWidth >= 768
-      ? "ml-0"
+      ? "ml-64" // How much should the cental UI slide to the right when the sidebar is opened
       : "ml-0";
 
   return (
