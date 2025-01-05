@@ -352,7 +352,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
     ];
 
     return (
-        <div className="w-full max-w-2xl mx-auto space-y-4">
+        <div className="w-full max-w-2xl mx-auto px-0 md:px-4 space-y-4">
 
             {/* Suggestion Buttons shown only once, after the first assistant message */}
             {firstMessage && firstMessage.role === "assistant" && (

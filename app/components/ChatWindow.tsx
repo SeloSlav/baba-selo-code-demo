@@ -223,7 +223,7 @@ export const ChatWindow = forwardRef(
     return (
       <div className="flex flex-col h-screen w-full">
         <div
-          className={`flex-grow overflow-y-auto p-6 transition-all duration-300 ${sidebarMarginClass}`}
+          className={`flex-grow overflow-y-auto ml-4 p-6 transition-all duration-300 ${sidebarMarginClass}`}
           style={{
             paddingBottom: `${bottomPadding + additionalPadding}px`,
           }}
