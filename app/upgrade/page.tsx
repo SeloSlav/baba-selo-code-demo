@@ -51,9 +51,12 @@ export default function UpgradePlan() {
                     </p>
 
                     {/* Action button */}
-                    <button className="w-full py-2 mt-auto mb-4 bg-black text-white text-sm rounded-full hover:bg-[#212121] transition-colors">
+                    <a 
+                        href="mailto:martin@selooils.com?subject=I'm%20very%20interested%20in%20getting%20Pro&body=Just%20sending%20this%20message%20as%20is%20will%20give%20me%20an%20idea%20of%20how%20many%20people%20are%20interested."
+                        className="w-full py-2 mt-auto mb-4 bg-black text-white text-sm rounded-full hover:bg-[#212121] transition-colors text-center"
+                    >
                         Get Pro
-                    </button>
+                    </a>
 
                     {/* Feature list */}
                     <ul className="flex-1 space-y-2 text-sm text-gray-700 mb-6">
