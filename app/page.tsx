@@ -36,7 +36,7 @@ const Home = () => {
   const isMobileOverlay = windowWidth !== null && windowWidth < 768;
   const sidebarClass =
     isSidebarOpen && windowWidth !== null && windowWidth >= 768
-      ? "ml-64"
+      ? "ml-0"
       : "ml-0";
 
   return (

@@ -12,6 +12,7 @@ import { faPaperclip, faArrowUp } from "@fortawesome/free-solid-svg-icons";
 import { ChatMessages } from "./ChatMessages";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
+import { ImageUploadPopup } from "./ImageUploadPopup";
 
 interface Message {
   role: "user" | "assistant";
@@ -37,6 +38,9 @@ export const ChatWindow = forwardRef(
     const [preferredCookingOil, setPreferredCookingOil] = useState<string | null>(null);
     const [dietaryPreferences, setDietaryPreferences] = useState<string[]>([]);
 
+    // Modal state for our new ImageUploadPopup
+    const [isImageUploadOpen, setIsImageUploadOpen] = useState(false);
+
     useImperativeHandle(ref, () => ({
       focusInput: () => {
         inputRef.current?.focus();
@@ -48,7 +52,7 @@ export const ChatWindow = forwardRef(
       const fetchUserPreferences = async () => {
         const auth = getAuth();
         const firestore = getFirestore();
-    
+
         onAuthStateChanged(auth, async (user) => {
           if (user) {
             try {
@@ -77,7 +81,7 @@ export const ChatWindow = forwardRef(
           }
         });
       };
-    
+
       fetchUserPreferences();
     }, []);
 
@@ -199,13 +203,22 @@ export const ChatWindow = forwardRef(
 
     const sidebarMarginClass =
       isSidebarOpen && windowWidth !== null && windowWidth >= 768
-        ? "ml-16"
+        ? "ml-0" // Set to ml-16 or larger to shift content right when sidebar is open
         : "ml-0";
 
     // Base bottom padding for the messages container (enough for input)
     // Add extra padding equal to the keyboard offset to ensure messages are never hidden.
     const bottomPadding = windowWidth !== null && windowWidth < 768 ? 175 : 0; // base padding (enough space for input)
     const additionalPadding = Math.max(0, -translateY); // additional for keyboard offset
+
+    // Submit callback for our image popup
+    const handleImageSubmit = (file: File | null) => {
+      // For now, we'll just log the file
+      if (file) {
+        console.log("User selected file:", file);
+        // You can pass this file to your backend or handle it as needed.
+      }
+    };
 
     return (
       <div className="flex flex-col h-screen w-full">
@@ -257,7 +270,7 @@ export const ChatWindow = forwardRef(
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             placeholder="Chat with Baba Selo"
-            className="w-full p-3 rounded-t-3xl focus:outline-none resize-none text-black bg-gray-100 placeholder-gray-400 custom-scrollbar"
+            className="w-full p-3 mt-1 rounded-t-3xl focus:outline-none resize-none text-black bg-gray-100 placeholder-gray-400 custom-scrollbar"
             style={{
               minHeight: "3rem",
               maxHeight: "8.75rem",
@@ -268,9 +281,10 @@ export const ChatWindow = forwardRef(
             }}
           />
           <div className="flex items-center justify-between bg-gray-100 p-2 rounded-b-3xl">
-            <button
+          <button
               className="p-2 bg-gray-200 rounded-md hover:bg-gray-300 flex items-center justify-center"
               style={{ background: "transparent" }}
+              onClick={() => setIsImageUploadOpen(true)} // <-- Open the popup
             >
               <FontAwesomeIcon icon={faPaperclip} className="text-black" />
             </button>
@@ -293,6 +307,13 @@ export const ChatWindow = forwardRef(
           </p>
         </div>
         {/* End chat input area */}
+
+        {/* Our Image Upload Popup */}
+        <ImageUploadPopup
+          isOpen={isImageUploadOpen}
+          onClose={() => setIsImageUploadOpen(false)}
+          onSubmit={handleImageSubmit}
+        />
       </div>
     );
   },

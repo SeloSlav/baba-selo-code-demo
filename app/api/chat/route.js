@@ -104,7 +104,7 @@ The user also prefers to use ${preferredCookingOil} as a cooking oil.
 `
 
 // Log system prompt
-console.log(originalSystemPrompt);
+// console.log(originalSystemPrompt);
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
