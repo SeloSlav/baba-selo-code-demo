@@ -267,26 +267,83 @@ export const ChatWindow = forwardRef(
       <div className="flex flex-col h-screen w-full">
         <div
           ref={messagesContainerRef}
-          className={`flex-grow overflow-y-auto ml-4 p-6 transition-all duration-300 ${sidebarMarginClass} ${isImageUploadOpen ? 'pointer-events-none opacity-50' : ''}`}
-          style={{
-            paddingBottom: windowWidth !== null && windowWidth < 768 ? '80px' : '0',
-          }}
+          className={`flex-grow overflow-y-auto ml-4 transition-all duration-300 ${sidebarMarginClass} ${isImageUploadOpen ? 'pointer-events-none opacity-50' : ''}`}
         >
-          <div className="flex justify-center mb-6">
-            <img src="/baba.png" alt="Baba" className="w-32 h-32" />
-          </div>
+          <div className="p-6">
+            <div className="flex justify-center mb-6">
+              <img src="/baba.png" alt="Baba" className="w-32 h-32" />
+            </div>
 
-          <div className="text-center text-2xl font-semibold mb-4">
-            Ask me anything, dear.
-          </div>
+            <div className="text-center text-2xl font-semibold mb-4">
+              Ask me anything, dear.
+            </div>
 
-          <ChatMessages
-            messages={messages}
-            loading={loading}
-            setLoading={setLoading}
-            onSuggestionClick={onSuggestionClick}
-            onAssistantResponse={onAssistantResponse}
-          />
+            <ChatMessages
+              messages={messages}
+              loading={loading}
+              setLoading={setLoading}
+              onSuggestionClick={onSuggestionClick}
+              onAssistantResponse={onAssistantResponse}
+            />
+
+            {/* Chat input area for mobile */}
+            {windowWidth !== null && windowWidth < 768 && (
+              <div
+                className={`w-full max-w-2xl mx-auto mt-4 ${isImageUploadOpen ? 'pointer-events-none opacity-50' : ''}`}
+              >
+                <textarea
+                  ref={inputRef}
+                  value={message}
+                  onChange={handleInputChange}
+                  onKeyDown={handleKeyDown}
+                  onFocus={() => {
+                    handleInputFocus();
+                    if (windowWidth !== null && windowWidth < 768) {
+                      requestAnimationFrame(() => {
+                        scrollToBottom();
+                      });
+                    }
+                  }}
+                  onBlur={handleInputBlur}
+                  placeholder="Chat with Baba Selo"
+                  className="w-full p-3 mt-1 rounded-t-3xl focus:outline-none resize-none text-black bg-gray-100 placeholder-gray-400 custom-scrollbar"
+                  style={{
+                    minHeight: "3rem",
+                    maxHeight: "8.75rem",
+                    overflowY: message.split("\n").length > 5 ? "auto" : "hidden",
+                    paddingRight: "1rem",
+                    wordBreak: "break-word",
+                    overflowWrap: "break-word",
+                  }}
+                />
+                <div className="flex items-center justify-between bg-gray-100 p-2 rounded-b-3xl">
+                  <button
+                    className="p-2 bg-gray-200 rounded-md hover:bg-gray-300 flex items-center justify-center"
+                    style={{ background: "transparent" }}
+                    onClick={() => setIsImageUploadOpen(true)}
+                  >
+                    <FontAwesomeIcon icon={faPaperclip} className="text-black" />
+                  </button>
+                  <button
+                    onClick={() => sendMessage(message)}
+                    disabled={message.trim() === ""}
+                    className={`rounded-full w-10 h-10 flex items-center justify-center
+                      ${message.trim() === ""
+                        ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                        : "bg-black text-white hover:bg-gray-800"
+                      }`}
+                    title={message.trim() === "" ? "Message is empty" : ""}
+                  >
+                    <FontAwesomeIcon icon={faArrowUp} />
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 text-center mt-2 mb-2">
+                  Baba Selo is wise, but even I can mix things up. Double-check,
+                  dear—better safe than sorry!
+                </p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Scroll to bottom button - mobile only */}
@@ -299,68 +356,56 @@ export const ChatWindow = forwardRef(
           </button>
         )}
 
-        {/* Chat input area */}
-        <div
-          className={`w-full max-w-2xl mx-auto px-4 md:px-0 ${isImageUploadOpen ? 'pointer-events-none opacity-50' : ''}`}
-          style={{
-            position: windowWidth !== null && windowWidth < 768 ? 'relative' : 'relative',
-            backgroundColor: windowWidth !== null && windowWidth < 768 ? 'white' : 'transparent',
-            zIndex: 1000,
-            marginTop: windowWidth !== null && windowWidth < 768 ? '-20px' : '0',
-          }}
-        >
-          <textarea
-            ref={inputRef}
-            value={message}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            onFocus={() => {
-              handleInputFocus();
-              if (windowWidth !== null && windowWidth < 768) {
-                // Ensure we scroll to bottom when input is focused
-                requestAnimationFrame(() => {
-                  scrollToBottom();
-                });
-              }
-            }}
-            onBlur={handleInputBlur}
-            placeholder="Chat with Baba Selo"
-            className="w-full p-3 mt-1 rounded-t-3xl focus:outline-none resize-none text-black bg-gray-100 placeholder-gray-400 custom-scrollbar"
-            style={{
-              minHeight: "3rem",
-              maxHeight: "8.75rem",
-              overflowY: message.split("\n").length > 5 ? "auto" : "hidden",
-              paddingRight: "1rem",
-              wordBreak: "break-word",
-              overflowWrap: "break-word",
-            }}
-          />
-          <div className="flex items-center justify-between bg-gray-100 p-2 rounded-b-3xl">
-            <button
-              className="p-2 bg-gray-200 rounded-md hover:bg-gray-300 flex items-center justify-center"
-              style={{ background: "transparent" }}
-              onClick={() => setIsImageUploadOpen(true)}
-            >
-              <FontAwesomeIcon icon={faPaperclip} className="text-black" />
-            </button>
-            <button
-              onClick={() => sendMessage(message)}
-              disabled={message.trim() === ""}
-              className={`rounded-full w-10 h-10 flex items-center justify-center
-                ${message.trim() === ""
-                  ? "bg-gray-300 text-gray-600 cursor-not-allowed"
-                  : "bg-black text-white hover:bg-gray-800"
-                }`}
-              title={message.trim() === "" ? "Message is empty" : ""}
-            >
-              <FontAwesomeIcon icon={faArrowUp} />
-            </button>
+        {/* Chat input area for desktop */}
+        {windowWidth !== null && windowWidth >= 768 && (
+          <div
+            className={`w-full max-w-2xl mx-auto px-4 md:px-0 ${isImageUploadOpen ? 'pointer-events-none opacity-50' : ''}`}
+          >
+            <textarea
+              ref={inputRef}
+              value={message}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              onFocus={handleInputFocus}
+              onBlur={handleInputBlur}
+              placeholder="Chat with Baba Selo"
+              className="w-full p-3 mt-1 rounded-t-3xl focus:outline-none resize-none text-black bg-gray-100 placeholder-gray-400 custom-scrollbar"
+              style={{
+                minHeight: "3rem",
+                maxHeight: "8.75rem",
+                overflowY: message.split("\n").length > 5 ? "auto" : "hidden",
+                paddingRight: "1rem",
+                wordBreak: "break-word",
+                overflowWrap: "break-word",
+              }}
+            />
+            <div className="flex items-center justify-between bg-gray-100 p-2 rounded-b-3xl">
+              <button
+                className="p-2 bg-gray-200 rounded-md hover:bg-gray-300 flex items-center justify-center"
+                style={{ background: "transparent" }}
+                onClick={() => setIsImageUploadOpen(true)}
+              >
+                <FontAwesomeIcon icon={faPaperclip} className="text-black" />
+              </button>
+              <button
+                onClick={() => sendMessage(message)}
+                disabled={message.trim() === ""}
+                className={`rounded-full w-10 h-10 flex items-center justify-center
+                  ${message.trim() === ""
+                    ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                    : "bg-black text-white hover:bg-gray-800"
+                  }`}
+                title={message.trim() === "" ? "Message is empty" : ""}
+              >
+                <FontAwesomeIcon icon={faArrowUp} />
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 text-center mt-2 mb-2">
+              Baba Selo is wise, but even I can mix things up. Double-check,
+              dear—better safe than sorry!
+            </p>
           </div>
-          <p className="text-xs text-gray-500 text-center mt-2 mb-2">
-            Baba Selo is wise, but even I can mix things up. Double-check,
-            dear—better safe than sorry!
-          </p>
-        </div>
+        )}
 
         {/* Image Upload Popup */}
         <ImageUploadPopup
