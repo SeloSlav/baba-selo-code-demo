@@ -269,7 +269,7 @@ export const ChatWindow = forwardRef(
           ref={messagesContainerRef}
           className={`flex-grow overflow-y-auto ml-4 p-6 transition-all duration-300 ${sidebarMarginClass} ${isImageUploadOpen ? 'pointer-events-none opacity-50' : ''}`}
           style={{
-            paddingBottom: windowWidth !== null && windowWidth < 768 ? '160px' : '0',
+            paddingBottom: windowWidth !== null && windowWidth < 768 ? '80px' : '0',
           }}
         >
           <div className="flex justify-center mb-6">
@@ -306,6 +306,7 @@ export const ChatWindow = forwardRef(
             position: windowWidth !== null && windowWidth < 768 ? 'relative' : 'relative',
             backgroundColor: windowWidth !== null && windowWidth < 768 ? 'white' : 'transparent',
             zIndex: 1000,
+            marginTop: windowWidth !== null && windowWidth < 768 ? '-20px' : '0',
           }}
         >
           <textarea
@@ -316,7 +317,10 @@ export const ChatWindow = forwardRef(
             onFocus={() => {
               handleInputFocus();
               if (windowWidth !== null && windowWidth < 768) {
-                setTimeout(scrollToBottom, 100);
+                // Ensure we scroll to bottom when input is focused
+                requestAnimationFrame(() => {
+                  scrollToBottom();
+                });
               }
             }}
             onBlur={handleInputBlur}
