@@ -10,7 +10,8 @@ interface ImageUploadPopupProps {
   onSubmit: (file: File | null) => void;
 }
 
-const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB, adjust as needed
+// Increase to 10MB to handle typical mobile phone camera images
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 export const ImageUploadPopup: React.FC<ImageUploadPopupProps> = ({
   isOpen,
