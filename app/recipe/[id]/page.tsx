@@ -8,6 +8,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircle, faCheckCircle, faTrashCan } from "@fortawesome/free-regular-svg-icons"; // Import FontAwesome icons
 import { getAuth } from "firebase/auth"; // Import Firebase auth
 import Image from "next/image";
+import { RecipeChatBubble } from "../../components/RecipeChatBubble";
 
 interface Recipe {
   recipeTitle: string;
@@ -144,7 +145,7 @@ const RecipeDetails = () => {
   };
 
   return (
-    <div className="bg-gray-100 p-4">
+    <div className="container mx-auto px-4 py-8">
       {recipe ? (
         <div className="bg-white shadow-lg rounded-lg p-6 max-w-4xl mx-auto">
           {/* Recipe Image */}
@@ -268,6 +269,23 @@ const RecipeDetails = () => {
               </div>
             </>
           )}
+
+          {/* Add the chat bubble */}
+          <RecipeChatBubble 
+            recipeContent={`Title: ${recipe.recipeTitle}
+
+Cuisine Type: ${recipe.cuisineType}
+Cooking Time: ${recipe.cookingTime}
+Difficulty: ${recipe.cookingDifficulty}
+Diet: ${recipe.diet.join(', ')}
+
+Ingredients:
+${recipe.ingredients.map((ingredient, index) => `${index + 1}. ${ingredient}`).join('\n')}
+
+Directions:
+${recipe.directions.map((direction, index) => `${index + 1}. ${direction}`).join('\n')}
+`} 
+          />
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center min-h-screen">
