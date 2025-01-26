@@ -232,7 +232,44 @@ const RecipeDetails = () => {
             )}
           </div>
 
-          <h1 className="text-3xl font-bold mb-4">{recipe.recipeTitle}</h1>
+          <div className="relative group">
+            <h1 className="text-3xl font-bold mb-4">{recipe.recipeTitle}</h1>
+            {isOwner && (
+              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-5 transition-all duration-300 rounded-lg flex items-center justify-center">
+                <button
+                  onClick={async () => {
+                    try {
+                      const response = await fetch("/api/generateTitle", {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                          ingredients: recipe.ingredients,
+                          directions: recipe.directions,
+                          cuisineType: recipe.cuisineType,
+                          diet: recipe.diet,
+                          recipeId: id,
+                        }),
+                      });
+
+                      const data = await response.json();
+                      if (data.title) {
+                        const recipeDocRef = doc(db, "recipes", id as string);
+                        await updateDoc(recipeDocRef, { recipeTitle: data.title });
+                        setRecipe(prev => prev ? { ...prev, recipeTitle: data.title } : null);
+                      }
+                    } catch (error) {
+                      console.error("Error generating title:", error);
+                    }
+                  }}
+                  className="opacity-0 group-hover:opacity-100 bg-white text-gray-800 px-3 py-1 text-sm rounded-lg shadow-md hover:bg-gray-100 transition-all duration-200"
+                >
+                  Regenerate Title
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* Classification section */}
           <div className="mb-6 flex flex-wrap gap-4">

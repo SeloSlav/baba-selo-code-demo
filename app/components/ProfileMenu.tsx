@@ -36,7 +36,8 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
     return (
         <div
             ref={profileMenuRef}
-            className="absolute top-16 right-8 z-40 bg-white rounded-3xl shadow-lg w-60 border border-gray-300 p-3"
+            className="fixed md:absolute top-16 right-8 z-40 bg-white rounded-3xl shadow-lg w-60 border border-gray-300 p-3"
+            style={{ maxHeight: 'calc(100vh - 5rem)', overflowY: 'auto' }}
         >
             <ul className="space-y-1">
                 <li className="flex items-center px-4 py-2 rounded-md hover:bg-gray-100 cursor-pointer">
@@ -67,7 +68,7 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
                 <hr />
                 <li
                     className="flex items-center px-4 py-2 rounded-md hover:bg-gray-100 cursor-pointer"
-                    onClick={onLogout} // Call the logout handler
+                    onClick={onLogout}
                 >
                     <FontAwesomeIcon icon={faSignOut} className="text-[#5d5d5d] mr-3" />
                     <span>Log Out</span>
