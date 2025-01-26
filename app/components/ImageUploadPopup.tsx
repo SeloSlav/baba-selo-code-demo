@@ -89,22 +89,22 @@ export const ImageUploadPopup: React.FC<ImageUploadPopupProps> = ({
     if (error) return;
     // Pass the selected file to the parent callback
     onSubmit(selectedFile);
-    // For now, let’s also close the popup after submission
+    // For now, let's also close the popup after submission
     handleClose();
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black bg-opacity-50"
+        className="absolute inset-0 bg-black bg-opacity-75 backdrop-blur-sm"
         onClick={handleClose}
       ></div>
 
       {/* Modal Container */}
-      <div className="relative z-10 w-11/12 max-w-md bg-white rounded-lg shadow-lg p-4">
+      <div className="relative z-[10000] w-11/12 max-w-md bg-white rounded-lg shadow-lg p-4">
         {/* Close Icon */}
         <button
           className="absolute top-2 right-2 text-gray-600 hover:text-gray-800"

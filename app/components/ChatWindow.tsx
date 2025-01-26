@@ -212,18 +212,56 @@ export const ChatWindow = forwardRef(
     const additionalPadding = Math.max(0, -translateY); // additional for keyboard offset
 
     // Submit callback for our image popup
-    const handleImageSubmit = (file: File | null) => {
-      // For now, we'll just log the file
+    const handleImageSubmit = async (file: File | null) => {
       if (file) {
-        console.log("User selected file:", file);
-        // You can pass this file to your backend or handle it as needed.
+        setLoading(true);
+        try {
+          // Create a FormData object to send the file
+          const formData = new FormData();
+          formData.append('image', file);
+
+          const response = await fetch('/api/analyzeImage', {
+            method: 'POST',
+            body: formData,
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            setMessages(prev => [
+              ...prev,
+              { role: 'user', content: 'I uploaded an image for analysis.' },
+              { role: 'assistant', content: data.analysis }
+            ]);
+          } else {
+            console.error('API Error:', data);
+            const errorMessage = data.details 
+              ? `Sorry dear, something went wrong: ${data.details}`
+              : 'Sorry dear, I had trouble analyzing that image. Could you try uploading it again?';
+            
+            setMessages(prev => [
+              ...prev,
+              { role: 'user', content: 'I uploaded an image for analysis.' },
+              { role: 'assistant', content: errorMessage }
+            ]);
+          }
+        } catch (error) {
+          console.error('Error analyzing image:', error);
+          setMessages(prev => [
+            ...prev,
+            { role: 'user', content: 'I uploaded an image for analysis.' },
+            { role: 'assistant', content: 'Oh dear, something went wrong while analyzing the image. Could you try again?' }
+          ]);
+        } finally {
+          setLoading(false);
+        }
       }
     };
 
     return (
       <div className="flex flex-col h-screen w-full">
         <div
-          className={`flex-grow overflow-y-auto ml-4 p-6 transition-all duration-300 ${sidebarMarginClass}`}
+          className={`flex-grow overflow-y-auto ml-4 p-6 transition-all duration-300 ${sidebarMarginClass} ${isImageUploadOpen ? 'pointer-events-none opacity-50' : ''}`}
           style={{
             paddingBottom: `${bottomPadding + additionalPadding}px`,
           }}
@@ -247,10 +285,11 @@ export const ChatWindow = forwardRef(
 
         {/* Start chat input area */}
         <div
-          className={`w-full max-w-2xl mx-auto px-4 md:px-0 ${windowWidth !== null && windowWidth < 768
-            ? "fixed bottom-0 left-0 right-0"
-            : "relative md:static"
-            }`}
+          className={`w-full max-w-2xl mx-auto px-4 md:px-0 ${
+            windowWidth !== null && windowWidth < 768
+              ? "fixed bottom-0 left-0 right-0"
+              : "relative md:static"
+          } ${isImageUploadOpen ? 'pointer-events-none opacity-50' : ''}`}
           style={{
             zIndex: 1000,
             backgroundColor:
