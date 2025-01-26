@@ -214,7 +214,7 @@ export const RecipeChatBubble: React.FC<RecipeChatBubbleProps> = ({ recipeConten
                         className="w-full p-3 rounded-t-3xl focus:outline-none resize-none text-black bg-gray-100 placeholder-gray-400 custom-scrollbar"
                         style={{
                             minHeight: "2.5rem",
-                            maxHeight: "6rem",
+                            maxHeight: "5rem",
                             overflowY: message.split("\n").length > 3 ? "auto" : "hidden",
                             paddingRight: "1rem",
                             wordBreak: "break-word",
