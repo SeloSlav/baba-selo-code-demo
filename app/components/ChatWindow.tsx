@@ -261,10 +261,11 @@ export const ChatWindow = forwardRef(
 
     return (
       <div className="flex flex-col h-screen w-full">
+        {/* Chat messages area */}
         <div
-          className={`flex-grow overflow-y-auto ml-4 p-6 transition-all duration-300 ${sidebarMarginClass} ${isImageUploadOpen ? 'pointer-events-none opacity-50' : ''}`}
+          className={`flex-grow overflow-y-auto ml-4 p-6 pb-32 transition-all duration-300 ${sidebarMarginClass} ${isImageUploadOpen ? 'pointer-events-none opacity-50' : ''}`}
           style={{
-            paddingBottom: `${bottomPadding}px`,
+            paddingBottom: windowWidth !== null && windowWidth < 768 ? `calc(${bottomPadding}px + env(safe-area-inset-bottom, 0px))` : `${bottomPadding}px`,
           }}
         >
           <div className="flex justify-center mb-6">
@@ -280,11 +281,11 @@ export const ChatWindow = forwardRef(
             loading={loading}
             setLoading={setLoading}
             onSuggestionClick={onSuggestionClick}
-            onAssistantResponse={onAssistantResponse} // Pass the function here
+            onAssistantResponse={onAssistantResponse}
           />
         </div>
 
-        {/* Start chat input area */}
+        {/* Chat input area - always fixed on mobile */}
         <div
           className={`w-full max-w-2xl mx-auto px-4 md:px-0 ${
             windowWidth !== null && windowWidth < 768
@@ -295,7 +296,11 @@ export const ChatWindow = forwardRef(
             zIndex: 1000,
             backgroundColor: windowWidth !== null && windowWidth < 768 ? "white" : "transparent",
             transform: windowWidth !== null && windowWidth < 768 ? `translateY(${translateY}px)` : "none",
-            transition: "none", // Remove transition for smoother keyboard response
+            transition: "none",
+            position: windowWidth !== null && windowWidth < 768 ? "fixed" : "relative",
+            bottom: windowWidth !== null && windowWidth < 768 ? "0" : "auto",
+            left: windowWidth !== null && windowWidth < 768 ? "0" : "auto",
+            right: windowWidth !== null && windowWidth < 768 ? "0" : "auto",
           }}
         >
           <textarea
@@ -315,7 +320,7 @@ export const ChatWindow = forwardRef(
             }}
           />
           <div className="flex items-center justify-between bg-gray-100 p-2 rounded-b-3xl">
-          <button
+            <button
               className="p-2 bg-gray-200 rounded-md hover:bg-gray-300 flex items-center justify-center"
               style={{ background: "transparent" }}
               onClick={() => setIsImageUploadOpen(true)} // <-- Open the popup
