@@ -33,6 +33,7 @@ export const ChatWindow = forwardRef(
     const [loading, setLoading] = useState<boolean>(false);
     const [windowWidth, setWindowWidth] = useState<number | null>(null);
     const [translateY, setTranslateY] = useState(0);
+    const [isInputFocused, setIsInputFocused] = useState(false);
 
     // Firebase state
     const [preferredCookingOil, setPreferredCookingOil] = useState<string | null>(null);
@@ -101,17 +102,19 @@ export const ChatWindow = forwardRef(
         const handleVisualViewport = () => {
           if (!window.visualViewport) return;
           
-          // Calculate the offset based on the viewport height difference
-          const viewportHeight = window.visualViewport.height;
-          const windowHeight = window.innerHeight;
-          const offset = windowHeight - viewportHeight;
-          
-          // Apply transform immediately without animation for smoother keyboard response
-          document.documentElement.style.setProperty('--keyboard-offset', `${offset}px`);
-          setTranslateY(-offset);
+          // Only adjust position if input is focused
+          if (isInputFocused) {
+            const viewportHeight = window.visualViewport.height;
+            const windowHeight = window.innerHeight;
+            const offset = windowHeight - viewportHeight;
+            
+            // Apply transform immediately without animation
+            setTranslateY(-offset);
+          } else {
+            setTranslateY(0);
+          }
         };
 
-        // Add event listeners to visualViewport
         window.visualViewport?.addEventListener("resize", handleVisualViewport);
         window.visualViewport?.addEventListener("scroll", handleVisualViewport);
 
@@ -121,10 +124,9 @@ export const ChatWindow = forwardRef(
         return () => {
           window.visualViewport?.removeEventListener("resize", handleVisualViewport);
           window.visualViewport?.removeEventListener("scroll", handleVisualViewport);
-          document.documentElement.style.removeProperty('--keyboard-offset');
         };
       }
-    }, [windowWidth]);
+    }, [windowWidth, isInputFocused]);
 
     const sendMessage = async (msg: string) => {
       const trimmedMessage = msg.trim();
@@ -259,6 +261,14 @@ export const ChatWindow = forwardRef(
       }
     };
 
+    const handleInputFocus = () => {
+      setIsInputFocused(true);
+    };
+
+    const handleInputBlur = () => {
+      setIsInputFocused(false);
+    };
+
     return (
       <div className="flex flex-col h-screen w-full">
         <div
@@ -303,6 +313,8 @@ export const ChatWindow = forwardRef(
             value={message}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
+            onFocus={handleInputFocus}
+            onBlur={handleInputBlur}
             placeholder="Chat with Baba Selo"
             className="w-full p-3 mt-1 rounded-t-3xl focus:outline-none resize-none text-black bg-gray-100 placeholder-gray-400 custom-scrollbar"
             style={{
