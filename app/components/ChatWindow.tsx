@@ -8,7 +8,7 @@ import React, {
   useEffect,
 } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPaperclip, faArrowUp } from "@fortawesome/free-solid-svg-icons";
+import { faPaperclip, faArrowUp, faArrowDown } from "@fortawesome/free-solid-svg-icons";
 import { ChatMessages } from "./ChatMessages";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
@@ -34,6 +34,8 @@ export const ChatWindow = forwardRef(
     const [windowWidth, setWindowWidth] = useState<number | null>(null);
     const [translateY, setTranslateY] = useState(0);
     const [isInputFocused, setIsInputFocused] = useState(false);
+    const [showScrollButton, setShowScrollButton] = useState(false);
+    const messagesContainerRef = useRef<HTMLDivElement>(null);
 
     // Firebase state
     const [preferredCookingOil, setPreferredCookingOil] = useState<string | null>(null);
@@ -98,35 +100,27 @@ export const ChatWindow = forwardRef(
     }, []);
 
     useEffect(() => {
-      if (typeof window !== "undefined" && windowWidth !== null && windowWidth < 768) {
-        const handleVisualViewport = () => {
-          if (!window.visualViewport) return;
-          
-          const viewportHeight = window.visualViewport.height;
-          const windowHeight = window.innerHeight;
-          const offset = windowHeight - viewportHeight;
-          
-          // Always keep the input area above the keyboard when it's visible
-          if (offset > 0) {
-            setTranslateY(-offset);
-          } else {
-            // Only reset position if we're not focused
-            setTranslateY(isInputFocused ? 0 : 0);
-          }
-        };
+      const container = messagesContainerRef.current;
+      if (!container || windowWidth === null || windowWidth >= 768) return;
 
-        window.visualViewport?.addEventListener("resize", handleVisualViewport);
-        window.visualViewport?.addEventListener("scroll", handleVisualViewport);
+      const handleScroll = () => {
+        const { scrollTop, scrollHeight, clientHeight } = container;
+        const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+        setShowScrollButton(!isNearBottom);
+      };
 
-        // Initial calculation
-        handleVisualViewport();
+      container.addEventListener('scroll', handleScroll);
+      return () => container.removeEventListener('scroll', handleScroll);
+    }, [windowWidth]);
 
-        return () => {
-          window.visualViewport?.removeEventListener("resize", handleVisualViewport);
-          window.visualViewport?.removeEventListener("scroll", handleVisualViewport);
-        };
+    const scrollToBottom = () => {
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTo({
+          top: messagesContainerRef.current.scrollHeight,
+          behavior: 'smooth'
+        });
       }
-    }, [windowWidth, isInputFocused]);
+    };
 
     const sendMessage = async (msg: string) => {
       const trimmedMessage = msg.trim();
@@ -272,6 +266,7 @@ export const ChatWindow = forwardRef(
     return (
       <div className="flex flex-col h-screen w-full">
         <div
+          ref={messagesContainerRef}
           className={`flex-grow overflow-y-auto ml-4 p-6 transition-all duration-300 ${sidebarMarginClass} ${isImageUploadOpen ? 'pointer-events-none opacity-50' : ''}`}
           style={{
             paddingBottom: windowWidth !== null && windowWidth < 768 ? '160px' : '0',
@@ -294,20 +289,23 @@ export const ChatWindow = forwardRef(
           />
         </div>
 
+        {/* Scroll to bottom button - mobile only */}
+        {windowWidth !== null && windowWidth < 768 && showScrollButton && (
+          <button
+            onClick={scrollToBottom}
+            className="fixed left-1/2 -translate-x-1/2 bottom-8 bg-black text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg z-50"
+          >
+            <FontAwesomeIcon icon={faArrowDown} className="text-lg" />
+          </button>
+        )}
+
         {/* Chat input area */}
         <div
           className={`w-full max-w-2xl mx-auto px-4 md:px-0 ${isImageUploadOpen ? 'pointer-events-none opacity-50' : ''}`}
           style={{
-            position: windowWidth !== null && windowWidth < 768 ? 'fixed' : 'relative',
-            bottom: windowWidth !== null && windowWidth < 768 ? `${translateY}px` : 'auto',
-            left: windowWidth !== null && windowWidth < 768 ? '0' : 'auto',
-            right: windowWidth !== null && windowWidth < 768 ? '0' : 'auto',
+            position: windowWidth !== null && windowWidth < 768 ? 'relative' : 'relative',
             backgroundColor: windowWidth !== null && windowWidth < 768 ? 'white' : 'transparent',
             zIndex: 1000,
-            transform: windowWidth !== null && windowWidth < 768 ? 'translate3d(0,0,0)' : 'none',
-            transition: windowWidth !== null && windowWidth < 768 ? 'transform 0.1s ease-out' : 'none',
-            willChange: 'transform',
-            paddingBottom: windowWidth !== null && windowWidth < 768 ? 'env(safe-area-inset-bottom)' : '0',
           }}
         >
           <textarea
@@ -315,7 +313,12 @@ export const ChatWindow = forwardRef(
             value={message}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            onFocus={handleInputFocus}
+            onFocus={() => {
+              handleInputFocus();
+              if (windowWidth !== null && windowWidth < 768) {
+                setTimeout(scrollToBottom, 100);
+              }
+            }}
             onBlur={handleInputBlur}
             placeholder="Chat with Baba Selo"
             className="w-full p-3 mt-1 rounded-t-3xl focus:outline-none resize-none text-black bg-gray-100 placeholder-gray-400 custom-scrollbar"
