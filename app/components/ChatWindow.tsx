@@ -97,29 +97,31 @@ export const ChatWindow = forwardRef(
     }, []);
 
     useEffect(() => {
-      if (
-        typeof window !== "undefined" &&
-        "visualViewport" in window &&
-        windowWidth !== null &&
-        windowWidth < 768
-      ) {
-        const viewport = window.visualViewport;
-
-        const handleVisualViewportChange = () => {
-          if (!viewport) return;
-          const offset = window.innerHeight - viewport.height;
-          setTranslateY(offset > 0 ? -offset : 0);
+      if (typeof window !== "undefined" && windowWidth !== null && windowWidth < 768) {
+        const handleVisualViewport = () => {
+          if (!window.visualViewport) return;
+          
+          // Calculate the offset based on the viewport height difference
+          const viewportHeight = window.visualViewport.height;
+          const windowHeight = window.innerHeight;
+          const offset = windowHeight - viewportHeight;
+          
+          // Apply transform immediately without animation for smoother keyboard response
+          document.documentElement.style.setProperty('--keyboard-offset', `${offset}px`);
+          setTranslateY(-offset);
         };
 
-        viewport.addEventListener("resize", handleVisualViewportChange);
-        viewport.addEventListener("scroll", handleVisualViewportChange);
+        // Add event listeners to visualViewport
+        window.visualViewport?.addEventListener("resize", handleVisualViewport);
+        window.visualViewport?.addEventListener("scroll", handleVisualViewport);
 
-        // Initial call
-        handleVisualViewportChange();
+        // Initial calculation
+        handleVisualViewport();
 
         return () => {
-          viewport.removeEventListener("resize", handleVisualViewportChange);
-          viewport.removeEventListener("scroll", handleVisualViewportChange);
+          window.visualViewport?.removeEventListener("resize", handleVisualViewport);
+          window.visualViewport?.removeEventListener("scroll", handleVisualViewport);
+          document.documentElement.style.removeProperty('--keyboard-offset');
         };
       }
     }, [windowWidth]);
@@ -209,7 +211,6 @@ export const ChatWindow = forwardRef(
     // Base bottom padding for the messages container (enough for input)
     // Add extra padding equal to the keyboard offset to ensure messages are never hidden.
     const bottomPadding = windowWidth !== null && windowWidth < 768 ? 175 : 0; // base padding (enough space for input)
-    const additionalPadding = Math.max(0, -translateY); // additional for keyboard offset
 
     // Submit callback for our image popup
     const handleImageSubmit = async (file: File | null) => {
@@ -263,7 +264,7 @@ export const ChatWindow = forwardRef(
         <div
           className={`flex-grow overflow-y-auto ml-4 p-6 transition-all duration-300 ${sidebarMarginClass} ${isImageUploadOpen ? 'pointer-events-none opacity-50' : ''}`}
           style={{
-            paddingBottom: `${bottomPadding + additionalPadding}px`,
+            paddingBottom: `${bottomPadding}px`,
           }}
         >
           <div className="flex justify-center mb-6">
@@ -292,15 +293,9 @@ export const ChatWindow = forwardRef(
           } ${isImageUploadOpen ? 'pointer-events-none opacity-50' : ''}`}
           style={{
             zIndex: 1000,
-            backgroundColor:
-              windowWidth !== null && windowWidth < 768
-                ? "white"
-                : "transparent",
-            transform:
-              windowWidth !== null && windowWidth < 768
-                ? `translateY(${translateY}px)`
-                : "none",
-            transition: "transform 0.2s ease-in-out",
+            backgroundColor: windowWidth !== null && windowWidth < 768 ? "white" : "transparent",
+            transform: windowWidth !== null && windowWidth < 768 ? `translateY(${translateY}px)` : "none",
+            transition: "none", // Remove transition for smoother keyboard response
           }}
         >
           <textarea
