@@ -24,6 +24,25 @@ interface Recipe {
   imageURL?: string; // Optional imageURL for the recipe image
 }
 
+const shimmer = (w: number, h: number) => `
+<svg width="${w}" height="${h}" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs>
+    <linearGradient id="g">
+      <stop stop-color="#f6f7f8" offset="0%" />
+      <stop stop-color="#edeef1" offset="50%" />
+      <stop stop-color="#f6f7f8" offset="100%" />
+    </linearGradient>
+  </defs>
+  <rect width="${w}" height="${h}" fill="#f6f7f8" />
+  <rect id="r" width="${w}" height="${h}" fill="url(#g)" />
+  <animate xlink:href="#r" attributeName="x" from="-${w}" to="${w}" dur="1s" repeatCount="indefinite" />
+</svg>`;
+
+const toBase64 = (str: string) =>
+  typeof window === 'undefined'
+    ? Buffer.from(str).toString('base64')
+    : window.btoa(str);
+
 const RecipeDetails = () => {
   const [recipe, setRecipe] = useState<Recipe | null>(null); // State to store the recipe details
   const [checkedDirections, setCheckedDirections] = useState<boolean[]>([]); // Track checked directions
@@ -33,6 +52,8 @@ const RecipeDetails = () => {
   const { id } = useParams(); // Use useParams to get route params
   const router = useRouter(); // Use useRouter for redirection
   const auth = getAuth();
+  const [imageError, setImageError] = useState(false);
+  const [isImageLoading, setIsImageLoading] = useState(true);
 
   useEffect(() => {
     if (!id) return; // If no id, do nothing
@@ -148,39 +169,64 @@ const RecipeDetails = () => {
     <div className="container mx-auto px-4 py-8">
       {recipe ? (
         <div className="bg-white shadow-lg rounded-lg p-6 max-w-4xl mx-auto">
-          {/* Recipe Image */}
-          <div className="relative h-64 w-full mb-6">
-            {recipe.imageURL ? (
-              <Image
-                src={recipe.imageURL}
-                alt={recipe.recipeTitle}
-                fill
-                className="object-cover rounded-lg"
-                unoptimized
-              />
+          {/* Recipe Image with optimizations */}
+          <div className="relative aspect-video w-full mb-6 bg-gray-100 rounded-lg overflow-hidden group">
+            {recipe.imageURL && !imageError ? (
+              <>
+                <Image
+                  src={recipe.imageURL}
+                  alt={recipe.recipeTitle}
+                  fill
+                  className={`object-cover transition-opacity duration-300 ${
+                    isImageLoading ? 'opacity-0' : 'opacity-100'
+                  }`}
+                  onLoad={() => setIsImageLoading(false)}
+                  onError={() => setImageError(true)}
+                  placeholder="blur"
+                  blurDataURL={`data:image/svg+xml;base64,${toBase64(shimmer(1920, 1080))}`}
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1000px"
+                  priority
+                />
+                {isImageLoading && (
+                  <div className="absolute inset-0 bg-gray-100 animate-pulse" />
+                )}
+                {isOwner && (
+                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                    <button
+                      onClick={handleGenerateImage}
+                      disabled={loadingImage}
+                      className="bg-white text-gray-800 px-4 py-2 rounded-lg shadow-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                    >
+                      {loadingImage ? (
+                        <div className="flex items-center">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-800 mr-2"></div>
+                          Regenerating...
+                        </div>
+                      ) : (
+                        'Regenerate Image'
+                      )}
+                    </button>
+                  </div>
+                )}
+              </>
             ) : (
-              <div className="h-full w-full flex items-center justify-center bg-gray-200 rounded-lg">
-                {isOwner && !loadingImage && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                <span className="text-6xl">🍳</span>
+                {isOwner && (
                   <button
                     onClick={handleGenerateImage}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg ml-4 hover:bg-blue-700"
+                    disabled={loadingImage}
+                    className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white text-gray-800 px-4 py-2 rounded-lg shadow-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                   >
-                    Generate Image
-                  </button>
-                )}
-                {loadingImage && (
-                  <div className="ml-4">
-                    <div className="flex items-center justify-start">
-                      <div className="typing-indicator flex space-x-2 mt-4">
-                        <div className="dot bg-gray-400 rounded-full w-6 h-6"></div>
-                        <div className="dot bg-gray-400 rounded-full w-6 h-6"></div>
-                        <div className="dot bg-gray-400 rounded-full w-6 h-6"></div>
+                    {loadingImage ? (
+                      <div className="flex items-center">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-800 mr-2"></div>
+                        Generating...
                       </div>
-                    </div>
-                    <p className="text-gray-500 max-w-sm mt-2">
-                      Baba selo is weaving her magic in the kitchen! You can go explore and come back later; your masterpiece will be ready.
-                    </p>
-                  </div>
+                    ) : (
+                      'Generate Image'
+                    )}
+                  </button>
                 )}
               </div>
             )}

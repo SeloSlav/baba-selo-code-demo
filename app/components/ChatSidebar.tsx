@@ -5,6 +5,27 @@ import { faHamburger, faPersonRifle, faPencilRuler, faClose } from "@fortawesome
 import { useAuth } from "../context/AuthContext";
 import { RecipeList } from "./RecipeList";
 import Link from "next/link";
+import Image from "next/image";
+
+// Add shimmer effect for loading state
+const shimmer = (w: number, h: number) => `
+<svg width="${w}" height="${h}" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs>
+    <linearGradient id="g">
+      <stop stop-color="#f6f7f8" offset="0%" />
+      <stop stop-color="#edeef1" offset="50%" />
+      <stop stop-color="#f6f7f8" offset="100%" />
+    </linearGradient>
+  </defs>
+  <rect width="${w}" height="${h}" fill="#f6f7f8" />
+  <rect id="r" width="${w}" height="${h}" fill="url(#g)" />
+  <animate xlink:href="#r" attributeName="x" from="-${w}" to="${w}" dur="1s" repeatCount="indefinite" />
+</svg>`;
+
+const toBase64 = (str: string) =>
+  typeof window === 'undefined'
+    ? Buffer.from(str).toString('base64')
+    : window.btoa(str);
 
 export const ChatSidebar = ({
     focusInput,
@@ -18,6 +39,8 @@ export const ChatSidebar = ({
     chatWindowRef: React.RefObject<any>;
 }) => {
     const [isHydrated, setIsHydrated] = useState(false);
+    const [imageError, setImageError] = useState(false);
+    const [isImageLoading, setIsImageLoading] = useState(true);
 
     useEffect(() => {
         setIsHydrated(true);
@@ -40,9 +63,30 @@ export const ChatSidebar = ({
                 }`}
             >
                 <div className="flex flex-col h-full">
-                    {/* Sidebar Header */}
+                    {/* Sidebar Header with optimized image */}
                     <div className="flex items-center justify-between p-4 border-b">
-                        <h2 className="text-gray-600 text-sm font-semibold"></h2>
+                        <div className="relative w-8 h-8">
+                            {!imageError ? (
+                                <Image
+                                    src="/baba-removebg.png"
+                                    alt="Baba Logo"
+                                    fill
+                                    className={`object-contain transition-opacity duration-300 ${
+                                        isImageLoading ? 'opacity-0' : 'opacity-100'
+                                    }`}
+                                    onLoad={() => setIsImageLoading(false)}
+                                    onError={() => setImageError(true)}
+                                    placeholder="blur"
+                                    blurDataURL={`data:image/svg+xml;base64,${toBase64(shimmer(32, 32))}`}
+                                    sizes="32px"
+                                    priority
+                                />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-full">
+                                    <span className="text-lg">👨‍🍳</span>
+                                </div>
+                            )}
+                        </div>
                         <button
                             onClick={toggleSidebar}
                             className="p-2 rounded-md hover:bg-gray-200"
