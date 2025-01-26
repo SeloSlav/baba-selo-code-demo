@@ -102,16 +102,16 @@ export const ChatWindow = forwardRef(
         const handleVisualViewport = () => {
           if (!window.visualViewport) return;
           
-          // Only adjust position if input is focused
-          if (isInputFocused) {
-            const viewportHeight = window.visualViewport.height;
-            const windowHeight = window.innerHeight;
-            const offset = windowHeight - viewportHeight;
-            
-            // Apply transform immediately without animation
+          const viewportHeight = window.visualViewport.height;
+          const windowHeight = window.innerHeight;
+          const offset = windowHeight - viewportHeight;
+          
+          // Always keep the input area above the keyboard when it's visible
+          if (offset > 0) {
             setTranslateY(-offset);
           } else {
-            setTranslateY(0);
+            // Only reset position if we're not focused
+            setTranslateY(isInputFocused ? 0 : 0);
           }
         };
 
@@ -305,7 +305,9 @@ export const ChatWindow = forwardRef(
             backgroundColor: windowWidth !== null && windowWidth < 768 ? 'white' : 'transparent',
             zIndex: 1000,
             transform: windowWidth !== null && windowWidth < 768 ? 'translate3d(0,0,0)' : 'none',
-            transition: 'none',
+            transition: windowWidth !== null && windowWidth < 768 ? 'transform 0.1s ease-out' : 'none',
+            willChange: 'transform',
+            paddingBottom: windowWidth !== null && windowWidth < 768 ? 'env(safe-area-inset-bottom)' : '0',
           }}
         >
           <textarea
