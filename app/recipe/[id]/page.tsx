@@ -122,6 +122,11 @@ const RecipeDetails = () => {
   const handleDelete = async () => {
     if (!id) return;
 
+    // Show confirmation dialog
+    const isConfirmed = window.confirm("Are you sure you want to delete this recipe? This action cannot be undone.");
+    
+    if (!isConfirmed) return;
+
     try {
       await deleteDoc(doc(db, "recipes", id as string)); // Delete the recipe from Firestore
       router.push("/recipes"); // Redirect to the /recipes page
