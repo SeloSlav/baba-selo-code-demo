@@ -107,7 +107,7 @@ export async function POST(request: Request) {
    - Continue with ingredients and directions
    
    EXACT REQUIRED FORMAT:
-   
+
    [RECIPE TITLE - 2-5 WORDS ONLY]
    Ingredients
    - [ingredient 1]
@@ -119,7 +119,6 @@ export async function POST(request: Request) {
    [Final advice here]
 
    CORRECT EXAMPLE:
-   Oh my darling, these vegetables look so fresh and colorful! Just like what we grow in our garden back home.
 
    Garden Vegetable Stew
    Ingredients
