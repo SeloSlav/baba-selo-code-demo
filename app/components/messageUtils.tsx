@@ -28,6 +28,12 @@ export const renderNutritionInfo = (macros: any) => {
     return (
         <div className="p-4 bg-gray-50 rounded-lg shadow border border-gray-300">
             <h3 className="text-lg font-bold text-gray-800 mb-3">Nutritional Breakdown</h3>
+            
+            {macros.servings && (
+                <div className="mb-4 text-sm text-gray-600">
+                    <p className="font-semibold">Number of Servings: {macros.servings}</p>
+                </div>
+            )}
 
             {/* Total Recipe */}
             <div className="mb-4">

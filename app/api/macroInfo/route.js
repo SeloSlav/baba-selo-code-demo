@@ -26,7 +26,24 @@ export async function POST(req) {
         messages: [
           {
             role: "system",
-            content: `You are a nutritionist. Based on a given recipe, calculate the total calories and macros (proteins, carbs, fats) for the entire recipe and per serving. Provide concise output with the total values for calories, proteins, carbs, and fats in grams. Do not include a detailed breakdown of each ingredient. Structure the response as JSON with "total" and "per_serving" keys.`
+            content: `You are a nutritionist. Based on a given recipe, calculate the total calories and macros (proteins, carbs, fats) for the entire recipe and per serving. First, determine the number of servings based on the recipe portions or ingredients. Then provide concise output with the total values for calories, proteins, carbs, and fats in grams, along with the number of servings. Do not include a detailed breakdown of each ingredient. Structure the response as JSON with "servings" (number), "total" and "per_serving" keys.
+
+Example response format:
+{
+  "servings": 4,
+  "total": {
+    "calories": 1200,
+    "proteins": 60,
+    "carbs": 140,
+    "fats": 45
+  },
+  "per_serving": {
+    "calories": 300,
+    "proteins": 15,
+    "carbs": 35,
+    "fats": 11.25
+  }
+}`
           },
           { role: "user", content: recipe },
         ],
