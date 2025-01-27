@@ -6,7 +6,7 @@ import { doc, getDoc, deleteDoc, updateDoc } from "firebase/firestore"; // Fires
 import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircle, faCheckCircle, faTrashCan } from "@fortawesome/free-regular-svg-icons";
-import { faUpload, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faUpload, faTrash, faSave } from "@fortawesome/free-solid-svg-icons";
 import { getAuth } from "firebase/auth"; // Import Firebase auth
 import Image from "next/image";
 import { RecipeChatBubble } from "../../components/RecipeChatBubble";
@@ -26,6 +26,7 @@ interface Recipe {
   ingredients: string[];
   imageURL?: string; // Optional imageURL for the recipe image
   recipeSummary?: string; // Add new field for recipe summary
+  recipeNotes?: string; // Add new field for recipe notes
 }
 
 const shimmer = (w: number, h: number) => `
@@ -62,6 +63,9 @@ const RecipeDetails = () => {
   const [isImageLoading, setIsImageLoading] = useState(true);
   const [uploadingImage, setUploadingImage] = useState(false);
   const storage = getStorage();
+  const [notes, setNotes] = useState("");
+  const [savingNotes, setSavingNotes] = useState(false);
+  const [hasNoteChanges, setHasNoteChanges] = useState(false);
 
   useEffect(() => {
     if (!id) return; // If no id, do nothing
@@ -91,7 +95,9 @@ const RecipeDetails = () => {
             ingredients: ingredients, // Safely use the ingredients
             imageURL: data.imageURL || "", // Handle optional imageURL
             recipeSummary: data.recipeSummary || "", // Handle optional recipe summary
+            recipeNotes: data.recipeNotes || "", // Initialize notes
           });
+          setNotes(data.recipeNotes || ""); // Set initial notes value
 
           // Check if the current user is the owner of the recipe
           const currentUser = auth.currentUser;
@@ -230,6 +236,28 @@ const RecipeDetails = () => {
     } catch (error) {
       console.error("Error deleting image:", error);
     }
+  };
+
+  // Add function to handle saving notes
+  const handleSaveNotes = async () => {
+    if (!id) return;
+    setSavingNotes(true);
+    try {
+      const recipeDocRef = doc(db, "recipes", id as string);
+      await updateDoc(recipeDocRef, { recipeNotes: notes });
+      setRecipe(prev => prev ? { ...prev, recipeNotes: notes } : null);
+    } catch (error) {
+      console.error("Error saving notes:", error);
+    } finally {
+      setSavingNotes(false);
+    }
+  };
+
+  // Modify the notes change handler
+  const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newValue = e.target.value;
+    setNotes(newValue);
+    setHasNoteChanges(newValue !== recipe?.recipeNotes);
   };
 
   return (
@@ -476,6 +504,38 @@ const RecipeDetails = () => {
                 </button>
               </div>
             )}
+          </div>
+
+          {/* Recipe Notes Section */}
+          <div className="mb-6">
+            <h3 className="text-xl font-semibold mb-2">Recipe Notes</h3>
+            <div className="relative">
+              <textarea
+                value={notes}
+                onChange={handleNotesChange}
+                placeholder="Add your personal notes about this recipe..."
+                className="w-full h-32 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              />
+              {hasNoteChanges && (
+                <button
+                  onClick={handleSaveNotes}
+                  disabled={savingNotes}
+                  className="absolute bottom-3 right-3 bg-gray-900 text-white px-4 py-2 rounded-lg shadow-md hover:bg-gray-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                >
+                  {savingNotes ? (
+                    <div className="flex items-center">
+                      <LoadingSpinner className="mr-2" />
+                      Saving...
+                    </div>
+                  ) : (
+                    <>
+                      <FontAwesomeIcon icon={faSave} className="mr-2" />
+                      Save
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Classification section */}
