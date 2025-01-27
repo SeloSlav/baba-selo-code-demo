@@ -1,8 +1,13 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 
 export default function UpgradePlan() {
+    const [isAnnual, setIsAnnual] = useState(false);
+    const monthlyPrice = 8;
+    const annualDiscount = 0.15;
+    const annualPrice = monthlyPrice * 12 * (1 - annualDiscount);
+
     return (
         <div className="max-w-5xl mx-auto px-4 py-10">
             {/* Enhanced header section */}
@@ -33,6 +38,23 @@ export default function UpgradePlan() {
                         <div className="font-bold">Cancel anytime</div>
                         <div className="text-sm text-gray-600">No commitments</div>
                     </div>
+                </div>
+            </div>
+
+            {/* Billing cycle toggle */}
+            <div className="flex justify-center items-center gap-4 mb-12">
+                <span className={`text-sm ${!isAnnual ? 'font-semibold' : 'text-gray-600'}`}>Monthly</span>
+                <button
+                    onClick={() => setIsAnnual(!isAnnual)}
+                    className="relative w-14 h-7 bg-gray-200 rounded-full transition-colors duration-300"
+                >
+                    <div className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-300 ${
+                        isAnnual ? 'transform translate-x-7 bg-black' : ''
+                    }`} />
+                </button>
+                <div className="flex items-center gap-2">
+                    <span className={`text-sm ${isAnnual ? 'font-semibold' : 'text-gray-600'}`}>Annual</span>
+                    <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">Save 15%</span>
                 </div>
             </div>
 
@@ -82,7 +104,7 @@ export default function UpgradePlan() {
                     </ul>
                 </div>
 
-                {/* Pro Plan - More prominent */}
+                {/* Pro Plan - Updated with annual pricing */}
                 <div className="p-8 border-2 border-black rounded-2xl bg-white flex flex-col relative transform hover:scale-[1.02] transition-all duration-300">
                     <div className="absolute -top-3 left-8 bg-black text-white text-sm font-medium px-3 py-1 rounded-full">
                         Most Popular
@@ -90,21 +112,28 @@ export default function UpgradePlan() {
 
                     {/* Title + Price */}
                     <h3 className="text-2xl font-bold mb-2">Pro</h3>
-                    <div className="text-5xl font-extrabold text-gray-900 mb-1">$8</div>
-                    <div className="text-sm text-gray-500 mb-6">USD/month</div>
+                    <div className="text-5xl font-extrabold text-gray-900 mb-1">
+                        ${isAnnual ? Math.round(annualPrice / 12) : monthlyPrice}
+                    </div>
+                    <div className="text-sm text-gray-500 mb-1">USD/month</div>
+                    {isAnnual && (
+                        <div className="text-sm text-green-600 mb-6">
+                            Billed annually (${Math.round(annualPrice)}/year)
+                        </div>
+                    )}
 
                     {/* Enhanced description */}
                     <p className="text-gray-700 mb-4">
                         The complete Baba Selo experience with voice chat
                     </p>
 
-                    {/* Enhanced CTA */}
+                    {/* Updated CTA */}
                     <a 
-                        href="mailto:martin@selooils.com?subject=I'm%20very%20interested%20in%20getting%20Pro&body=Just%20sending%20this%20message%20as%20is%20will%20give%20me%20an%20idea%20of%20how%20many%20people%20are%20interested."
+                        href={`/checkout?plan=${isAnnual ? 'annual' : 'monthly'}`}
                         className="w-full py-3 mt-auto mb-6 bg-black text-white text-sm font-medium rounded-xl hover:bg-gray-900 transition-all duration-300 text-center relative overflow-hidden group"
                     >
+                        <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                         <span className="relative z-10">Get Pro Access</span>
-                        <div className="absolute inset-0 bg-gradient-to-r from-gray-900 to-black transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
                     </a>
 
                     {/* Enhanced feature list */}
@@ -116,6 +145,10 @@ export default function UpgradePlan() {
                         <li className="flex items-start">
                             <span className="text-lg mr-3">🗣️</span>
                             <span><strong>Real-time voice chat</strong> with Baba Selo</span>
+                        </li>
+                        <li className="flex items-start">
+                            <span className="text-lg mr-3">📅</span>
+                            <span><strong>Custom meal plans</strong> tailored to your preferences</span>
                         </li>
                         <li className="flex items-start">
                             <span className="text-lg mr-3">📜</span>
