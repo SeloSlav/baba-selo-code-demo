@@ -95,19 +95,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   return (
     <AuthContext.Provider value={{ user, signInWithGoogle, logOut, loading }}>
       {user && (
-        <button
-          onClick={toggleProfileMenu}
-          className="fixed top-4 right-8 z-30 p-2 rounded-md hover:bg-gray-200 bg-white"
-        >
-          <FontAwesomeIcon icon={faUserCircle} className="text-[#5d5d5d] text-xl" />
-        </button>
-      )}
+        <div className="fixed top-4 right-8 z-30">
+          <button
+            onClick={toggleProfileMenu}
+            className="relative p-2 rounded-md hover:bg-gray-200 bg-white"
+          >
+            <FontAwesomeIcon icon={faUserCircle} className="text-[#5d5d5d] text-xl" />
+          </button>
 
-      <ProfileMenu
-        isOpen={isProfileMenuOpen}
-        onClose={closeProfileMenu}
-        onLogout={logOut}
-      />
+          <ProfileMenu
+            isOpen={isProfileMenuOpen}
+            onClose={closeProfileMenu}
+            onLogout={logOut}
+          />
+        </div>
+      )}
 
       {children}
     </AuthContext.Provider>

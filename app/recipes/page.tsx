@@ -40,6 +40,7 @@ const Recipes = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
+  const [loadingPinAction, setLoadingPinAction] = useState<string | null>(null);
   const auth = getAuth();
 
   // Split recipes into pinned and unpinned
@@ -48,6 +49,7 @@ const Recipes = () => {
 
   const handlePinToggle = async (recipeId: string, currentPinned: boolean) => {
     try {
+      setLoadingPinAction(recipeId);
       const recipeRef = doc(db, "recipes", recipeId);
       await updateDoc(recipeRef, {
         pinned: !currentPinned
@@ -62,6 +64,8 @@ const Recipes = () => {
       setMenuOpen(null);
     } catch (error) {
       console.error("Error toggling pin:", error);
+    } finally {
+      setLoadingPinAction(null);
     }
   };
 
@@ -83,6 +87,7 @@ const Recipes = () => {
   const renderMenu = (recipe: Recipe) => {
     const currentUser = auth.currentUser;
     const isOwner = currentUser && recipe.userId === currentUser.uid;
+    const isPinning = loadingPinAction === recipe.id;
 
     return (
       <>
@@ -93,7 +98,7 @@ const Recipes = () => {
               onClick={() => setMenuOpen(null)} 
             />
             <div 
-              className="absolute right-0 mt-1 w-full bg-white mb-3"
+              className="absolute right-0 top-full mt-1 mb-3 w-full bg-white z-[60]"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="py-1">
@@ -102,13 +107,25 @@ const Recipes = () => {
                     e.preventDefault();
                     handlePinToggle(recipe.id, !!recipe.pinned);
                   }}
-                  className="w-full px-4 py-2 text-sm flex items-center hover:bg-gray-100 transition-colors"
+                  disabled={isPinning}
+                  className="w-full px-4 py-2 text-sm flex items-center hover:bg-gray-100 transition-colors disabled:opacity-50"
                 >
-                  <FontAwesomeIcon 
-                    icon={faThumbtack} 
-                    className={`w-4 h-4 mr-3 ${recipe.pinned ? 'text-yellow-500' : 'text-[#5d5d5d]'}`}
-                  />
-                  <span>{recipe.pinned ? 'Unpin recipe' : 'Pin recipe'}</span>
+                  {isPinning ? (
+                    <>
+                      <div className="w-4 h-4 mr-3">
+                        <div className="w-full h-full border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                      <span>{recipe.pinned ? 'Unpinning...' : 'Pinning...'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <FontAwesomeIcon 
+                        icon={faThumbtack} 
+                        className={`w-4 h-4 mr-3 ${recipe.pinned ? 'text-yellow-500' : 'text-[#5d5d5d]'}`}
+                      />
+                      <span>{recipe.pinned ? 'Unpin recipe' : 'Pin recipe'}</span>
+                    </>
+                  )}
                 </button>
 
                 {isOwner && (
@@ -227,53 +244,152 @@ const Recipes = () => {
 
   // 2) Once recipes are loaded (or we're loading more recipes), show the list.
   return (
-    <div className="min-h-screen bg-gray-100 py-8 px-4">
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-center mb-8">My recipes</h1>
+    <div className="min-h-screen bg-gray-100">
+      {/* Fixed Header Section */}
+      <div className="sticky top-0 bg-gray-100 pt-8 pb-4 px-4 z-10">
+        <div className="max-w-6xl mx-auto">
+          <h1 className="text-3xl font-bold text-center mb-8">My recipes</h1>
 
-        {/* Search Bar */}
-        <div className="relative max-w-2xl mx-auto mb-8">
-          <div className="relative">
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => searchRecipes(e.target.value)}
-              placeholder="Search recipes by title, cuisine, difficulty, diet, description..."
-              className="w-full px-4 py-3 pl-12 pr-10 rounded-full border border-gray-300 focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
-            />
-            <FontAwesomeIcon
-              icon={faSearch}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-            />
+          {/* Search Bar */}
+          <div className="relative max-w-2xl mx-auto">
+            <div className="relative">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => searchRecipes(e.target.value)}
+                placeholder="Search recipes by title, cuisine, difficulty, diet, description..."
+                className="w-full px-4 py-3 pl-12 pr-10 rounded-full border border-gray-300 focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
+              />
+              <FontAwesomeIcon
+                icon={faSearch}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => searchRecipes("")}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <FontAwesomeIcon icon={faXmark} />
+                </button>
+              )}
+            </div>
             {searchTerm && (
-              <button
-                onClick={() => searchRecipes("")}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                <FontAwesomeIcon icon={faXmark} />
-              </button>
+              <div className="absolute left-4 right-4 mt-2 text-sm text-gray-500">
+                Found {filteredRecipes.length} {filteredRecipes.length === 1 ? 'recipe' : 'recipes'}
+              </div>
             )}
           </div>
-          {searchTerm && (
-            <div className="absolute left-4 right-4 mt-2 text-sm text-gray-500">
-              Found {filteredRecipes.length} {filteredRecipes.length === 1 ? 'recipe' : 'recipes'}
-            </div>
-          )}
         </div>
+      </div>
 
-        {filteredRecipes.length === 0 && searchTerm ? (
-          <div className="text-center py-12">
-            <p className="text-lg text-gray-600 mb-4">No recipes found matching "{searchTerm}"</p>
-            <p className="text-gray-500">Try adjusting your search terms or clear the search</p>
-          </div>
-        ) : (
-          <>
-            {/* Pinned Recipes Section */}
-            {pinnedRecipes.length > 0 && (
-              <div className="mb-8">
-                <h2 className="text-xl font-semibold mb-4">📌 Pinned Recipes</h2>
+      {/* Scrollable Content Section */}
+      <div className="px-4 overflow-y-auto">
+        <div className="max-w-6xl mx-auto pt-4">
+          {filteredRecipes.length === 0 && searchTerm ? (
+            <div className="text-center py-12">
+              <p className="text-lg text-gray-600 mb-4">No recipes found matching "{searchTerm}"</p>
+              <p className="text-gray-500">Try adjusting your search terms or clear the search</p>
+            </div>
+          ) : (
+            <>
+              {/* Pinned Recipes Section */}
+              {pinnedRecipes.length > 0 && (
+                <div className="mb-8">
+                  <h2 className="text-xl font-semibold mb-4">📌 Pinned Recipes</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {pinnedRecipes.map((recipe) => (
+                      <div key={recipe.id} className="relative group">
+                        <Link 
+                          href={`/recipe/${recipe.id}`}
+                          className="block bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300"
+                        >
+                          <div className="relative w-full h-48">
+                            {recipe.imageURL ? (
+                              <Image
+                                src={recipe.imageURL}
+                                alt={recipe.recipeTitle}
+                                fill
+                                className="object-cover"
+                                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                priority={!loadingMore}
+                                quality={75}
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                                <span className="text-4xl">🍳</span>
+                              </div>
+                            )}
+                          </div>
+                          
+                          <div className="p-4">
+                            <div className="flex justify-between items-start mb-2">
+                              <h2 className="text-xl font-semibold line-clamp-1 flex-1">
+                                {recipe.recipeTitle || "Untitled Recipe"}
+                              </h2>
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setMenuOpen(menuOpen === recipe.id ? null : recipe.id);
+                                }}
+                                className="relative p-1.5 rounded-full hover:bg-gray-100 transition-colors z-50"
+                              >
+                                <FontAwesomeIcon 
+                                  icon={faEllipsisVertical} 
+                                  className="w-4 h-4 text-gray-400" 
+                                />
+                              </button>
+                            </div>
+
+                            {menuOpen === recipe.id && renderMenu(recipe)}
+
+                            {recipe.recipeSummary && (
+                              <>
+                                <meta name="recipe-summary" content={recipe.recipeSummary} />
+                                <p className="text-gray-600 mb-3 line-clamp-2">
+                                  {recipe.recipeSummary}
+                                </p>
+                              </>
+                            )}
+                            
+                            <div className="space-y-2 text-sm">
+                              <div className="flex items-center text-gray-600">
+                                <span className="mr-2">🍲</span>
+                                <span className="line-clamp-1">
+                                  {recipe.diet && recipe.diet.length > 0
+                                    ? recipe.diet.map(d => d.charAt(0).toUpperCase() + d.slice(1)).join(", ")
+                                    : "Not specified"}
+                                </span>
+                              </div>
+                              
+                              <div className="flex items-center text-gray-600">
+                                <span className="mr-2">🍽️</span>
+                                <span>{recipe.cuisineType ? recipe.cuisineType.charAt(0).toUpperCase() + recipe.cuisineType.slice(1) : "Unknown"}</span>
+                              </div>
+                              
+                              <div className="flex items-center text-gray-600">
+                                <span className="mr-2">⏲️</span>
+                                <span>{recipe.cookingTime || "Not specified"}</span>
+                              </div>
+                              
+                              <div className="flex items-center text-gray-600">
+                                <span className="mr-2">🧩</span>
+                                <span>{recipe.cookingDifficulty ? recipe.cookingDifficulty.charAt(0).toUpperCase() + recipe.cookingDifficulty.slice(1) : "Unknown"}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </Link>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* All Recipes Section */}
+              <div>
+                <h2 className="text-xl font-semibold mb-4">🍳 All Recipes</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {pinnedRecipes.map((recipe) => (
+                  {unpinnedRecipes.map((recipe) => (
                     <div key={recipe.id} className="relative group">
                       <Link 
                         href={`/recipe/${recipe.id}`}
@@ -308,7 +424,7 @@ const Recipes = () => {
                                 e.stopPropagation();
                                 setMenuOpen(menuOpen === recipe.id ? null : recipe.id);
                               }}
-                              className="p-1.5 rounded-full hover:bg-gray-100 transition-colors"
+                              className="relative p-1.5 rounded-full hover:bg-gray-100 transition-colors z-50"
                             >
                               <FontAwesomeIcon 
                                 icon={faEllipsisVertical} 
@@ -359,119 +475,29 @@ const Recipes = () => {
                   ))}
                 </div>
               </div>
-            )}
 
-            {/* All Other Recipes */}
-            <div>
-              <h2 className="text-xl font-semibold mb-4">🍳 All Recipes</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {unpinnedRecipes.map((recipe) => (
-                  <div key={recipe.id} className="relative group">
-                    <Link 
-                      href={`/recipe/${recipe.id}`}
-                      className="block bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300"
-                    >
-                      <div className="relative w-full h-48">
-                        {recipe.imageURL ? (
-                          <Image
-                            src={recipe.imageURL}
-                            alt={recipe.recipeTitle}
-                            fill
-                            className="object-cover"
-                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                            priority={!loadingMore}
-                            quality={75}
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                            <span className="text-4xl">🍳</span>
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="p-4">
-                        <div className="flex justify-between items-start mb-2">
-                          <h2 className="text-xl font-semibold line-clamp-1 flex-1">
-                            {recipe.recipeTitle || "Untitled Recipe"}
-                          </h2>
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setMenuOpen(menuOpen === recipe.id ? null : recipe.id);
-                            }}
-                            className="p-1.5 rounded-full hover:bg-gray-100 transition-colors"
-                          >
-                            <FontAwesomeIcon 
-                              icon={faEllipsisVertical} 
-                              className="w-4 h-4 text-gray-400" 
-                            />
-                          </button>
-                        </div>
-
-                        {menuOpen === recipe.id && renderMenu(recipe)}
-
-                        {recipe.recipeSummary && (
-                          <>
-                            <meta name="recipe-summary" content={recipe.recipeSummary} />
-                            <p className="text-gray-600 mb-3 line-clamp-2">
-                              {recipe.recipeSummary}
-                            </p>
-                          </>
-                        )}
-                        
-                        <div className="space-y-2 text-sm">
-                          <div className="flex items-center text-gray-600">
-                            <span className="mr-2">🍲</span>
-                            <span className="line-clamp-1">
-                              {recipe.diet && recipe.diet.length > 0
-                                ? recipe.diet.map(d => d.charAt(0).toUpperCase() + d.slice(1)).join(", ")
-                                : "Not specified"}
-                            </span>
-                          </div>
-                          
-                          <div className="flex items-center text-gray-600">
-                            <span className="mr-2">🍽️</span>
-                            <span>{recipe.cuisineType ? recipe.cuisineType.charAt(0).toUpperCase() + recipe.cuisineType.slice(1) : "Unknown"}</span>
-                          </div>
-                          
-                          <div className="flex items-center text-gray-600">
-                            <span className="mr-2">⏲️</span>
-                            <span>{recipe.cookingTime || "Not specified"}</span>
-                          </div>
-                          
-                          <div className="flex items-center text-gray-600">
-                            <span className="mr-2">🧩</span>
-                            <span>{recipe.cookingDifficulty ? recipe.cookingDifficulty.charAt(0).toUpperCase() + recipe.cookingDifficulty.slice(1) : "Unknown"}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {!searchTerm && recipes.length > 0 && (
-              <div className="flex justify-center mt-8">
-                <button
-                  onClick={() => fetchRecipes(true)}
-                  disabled={loadingMore}
-                  className="bg-black text-white px-6 py-3 rounded-full hover:bg-[#212121] transition-colors disabled:bg-gray-400 flex items-center space-x-2"
-                >
-                  {loadingMore ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Loading...</span>
-                    </>
-                  ) : (
-                    "Load More Recipes"
-                  )}
-                </button>
-              </div>
-            )}
-          </>
-        )}
+              {/* Load More Button */}
+              {!searchTerm && recipes.length > 0 && (
+                <div className="flex justify-center mt-8 pb-8">
+                  <button
+                    onClick={() => fetchRecipes(true)}
+                    disabled={loadingMore}
+                    className="bg-black text-white px-6 py-3 rounded-full hover:bg-[#212121] transition-colors disabled:bg-gray-400 flex items-center space-x-2"
+                  >
+                    {loadingMore ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Loading...</span>
+                      </>
+                    ) : (
+                      "Load More Recipes"
+                    )}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -36,7 +36,7 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
     return (
         <div
             ref={profileMenuRef}
-            className="fixed md:absolute top-16 right-8 z-40 bg-white rounded-3xl shadow-lg w-60 border border-gray-300 p-3"
+            className="absolute top-full right-0 mt-1 z-40 bg-white rounded-3xl shadow-lg w-60 border border-gray-300 p-3"
             style={{ maxHeight: 'calc(100vh - 5rem)', overflowY: 'auto' }}
         >
             <ul className="space-y-1">
