@@ -8,11 +8,12 @@ import React, {
   useEffect,
 } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPaperclip, faArrowUp, faArrowDown } from "@fortawesome/free-solid-svg-icons";
+import { faPaperclip, faCamera, faArrowUp, faArrowDown, faImage } from "@fortawesome/free-solid-svg-icons";
 import { ChatMessages } from "./ChatMessages";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
 import { ImageUploadPopup } from "./ImageUploadPopup";
+import { DrawImagePopup } from "./DrawImagePopup";
 import { LoadingSpinner } from "./LoadingSpinner";
 import { SendButtonSpinner } from "./SendButtonSpinner";
 
@@ -45,6 +46,9 @@ export const ChatWindow = forwardRef(
 
     // Modal state for our new ImageUploadPopup
     const [isImageUploadOpen, setIsImageUploadOpen] = useState(false);
+
+    // Add new state for draw image popup
+    const [isDrawImageOpen, setIsDrawImageOpen] = useState(false);
 
     useImperativeHandle(ref, () => ({
       focusInput: () => {
@@ -265,6 +269,12 @@ export const ChatWindow = forwardRef(
       setIsInputFocused(false);
     };
 
+    // Add handler for draw image submit
+    const handleDrawImageSubmit = (prompt: string) => {
+      // This will be implemented later
+      console.log("Draw image prompt:", prompt);
+    };
+
     return (
       <div className="flex flex-col h-screen w-full">
         <div
@@ -319,13 +329,22 @@ export const ChatWindow = forwardRef(
                   }}
                 />
                 <div className="flex items-center justify-between bg-gray-100 p-2 rounded-b-3xl">
-                  <button
-                    className="p-2 bg-gray-200 rounded-md hover:bg-gray-300 flex items-center justify-center"
-                    style={{ background: "transparent" }}
-                    onClick={() => setIsImageUploadOpen(true)}
-                  >
-                    <FontAwesomeIcon icon={faPaperclip} className="text-black" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      className="p-2 bg-gray-200 rounded-md hover:bg-gray-300 flex items-center justify-center"
+                      style={{ background: "transparent" }}
+                      onClick={() => setIsImageUploadOpen(true)}
+                    >
+                      <FontAwesomeIcon icon={faPaperclip} className="text-black" />
+                    </button>
+                    <button
+                      className="p-2 bg-gray-200 rounded-md hover:bg-gray-300 flex items-center justify-center"
+                      style={{ background: "transparent" }}
+                      onClick={() => setIsDrawImageOpen(true)}
+                    >
+                      <FontAwesomeIcon icon={faImage} className="text-black" />
+                    </button>
+                  </div>
                   <button
                     onClick={() => sendMessage(message)}
                     disabled={message.trim() === "" || loading}
@@ -386,13 +405,22 @@ export const ChatWindow = forwardRef(
               }}
             />
             <div className="flex items-center justify-between bg-gray-100 p-2 rounded-b-3xl">
-              <button
-                className="p-2 bg-gray-200 rounded-md hover:bg-gray-300 flex items-center justify-center"
-                style={{ background: "transparent" }}
-                onClick={() => setIsImageUploadOpen(true)}
-              >
-                <FontAwesomeIcon icon={faPaperclip} className="text-black" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  className="p-2 bg-gray-200 rounded-md hover:bg-gray-300 flex items-center justify-center"
+                  style={{ background: "transparent" }}
+                  onClick={() => setIsImageUploadOpen(true)}
+                >
+                  <FontAwesomeIcon icon={faCamera} className="text-black" />
+                </button>
+                <button
+                  className="p-2 bg-gray-200 rounded-md hover:bg-gray-300 flex items-center justify-center"
+                  style={{ background: "transparent" }}
+                  onClick={() => setIsDrawImageOpen(true)}
+                >
+                  <FontAwesomeIcon icon={faImage} className="text-black" />
+                </button>
+              </div>
               <button
                 onClick={() => sendMessage(message)}
                 disabled={message.trim() === "" || loading}
@@ -422,6 +450,13 @@ export const ChatWindow = forwardRef(
           isOpen={isImageUploadOpen}
           onClose={() => setIsImageUploadOpen(false)}
           onSubmit={handleImageSubmit}
+        />
+
+        {/* Draw Image Popup */}
+        <DrawImagePopup
+          isOpen={isDrawImageOpen}
+          onClose={() => setIsDrawImageOpen(false)}
+          onSubmit={handleDrawImageSubmit}
         />
       </div>
     );
