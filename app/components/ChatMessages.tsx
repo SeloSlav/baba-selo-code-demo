@@ -3,18 +3,9 @@
 import React, { useEffect, useState, useRef } from "react";
 import { getAuth } from "firebase/auth"; // Import Firebase auth to get current user
 import { LoadingSpinner } from "./LoadingSpinner";
-
-interface Message {
-    role: "user" | "assistant";
-    content: string;
-}
-
-interface RecipeClassification {
-    diet: string[];
-    cuisine: string;
-    cooking_time: string;
-    difficulty: string;
-}
+import { MessageRenderer } from "./MessageRenderer";
+import { Message, RecipeClassification } from "./types";
+import { parseRecipe, isRecipe } from "./messageUtils";
 
 interface ChatMessagesProps {
     messages: Message[];
@@ -204,58 +195,40 @@ const formatDishPairings = async (text: string): Promise<string> => {
     }
 };
 
-export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, setLoading, onSuggestionClick, onAssistantResponse }) => {
+export const ChatMessages: React.FC<ChatMessagesProps> = ({
+    messages,
+    loading,
+    setLoading,
+    onSuggestionClick,
+    onAssistantResponse
+}) => {
     const [recipeClassification, setRecipeClassification] = useState<Record<number, RecipeClassification | null>>({});
     const [formattedPairings, setFormattedPairings] = useState<Record<number, string>>({});
     const bottomRef = useRef<HTMLDivElement | null>(null);
     const [userId, setUserId] = useState<string>("");
+    const lastAssistantRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
-        // Fetch the current user from Firebase Auth
         const auth = getAuth();
         const user = auth.currentUser;
         if (user) {
-            setUserId(user.uid); // Set userId from Firebase Auth
+            setUserId(user.uid);
         }
     }, []);
 
-    const isRecipe = (text: any) => {
-        return (
-            typeof text === "string" &&
-            text.toLowerCase().includes("ingredients") &&
-            text.toLowerCase().includes("directions")
-        );
-    };
-
-    // Render a discount button if the message is about Selo olive oil
-    const renderDiscountButton = () => (
-        <div className="mt-3">
-            <a
-                href="https://seloolive.com/discount/BABASELO10?redirect=/products/authentic-croatian-olive-oil?variant=40790542549035"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block px-4 py-2 bg-green-500 text-white font-semibold rounded-md hover:bg-green-600"
-            >
-                🌿 Click for a 10% Discount on Selo Olive Oil
-            </a>
-        </div>
-    );
-
-    // Function to check if the message mentions Selo olive oil
-    const isAboutSeloOliveOil = (text: string): boolean => {
-        return text.toLowerCase().includes("selo olive oil");
-    };
+    useEffect(() => {
+        if (lastAssistantRef.current) {
+            lastAssistantRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+    }, [messages]);
 
     const handleSaveRecipe = async (msg: string, classification: RecipeClassification | null) => {
         setLoading(true);
 
         try {
             const { title } = parseRecipe(msg);
-
-            // 1. Generate the docId on the client side
             const docId = userId + "-" + Date.now();
 
-            // 2. Pass it to /api/saveRecipe
             const response = await fetch("/api/saveRecipe", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -266,12 +239,11 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
                     cookingDifficulty: classification?.difficulty || "Medium",
                     cookingTime: classification?.cooking_time || "2 hours",
                     diet: classification?.diet || ["gluten-free", "paleo"],
-                    docId, // <--- pass docId to the server
+                    docId,
                 }),
             });
 
             if (response.ok) {
-                // 3. Immediately link the user to that same docId
                 onAssistantResponse(
                     `Your <a href="/recipe/${docId}" target="_blank" rel="noopener noreferrer" class="underline text-blue-600"> ${title}</a> recipe has been tucked away in the kitchen vault, ready for use!`
                 );
@@ -288,38 +260,6 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
         }
     };
 
-
-    const isCalorieInfo = (data: any) => {
-        return (
-            typeof data === "object" &&
-            data.total &&
-            data.per_serving &&
-            typeof data.total.calories === "number" &&
-            typeof data.per_serving.calories === "number"
-        );
-    };
-
-    // Function to check if the message is about Selo olive oil
-    const isSelo = (text: string): boolean => {
-        return text.toLowerCase().includes("selo olive oil");
-    };
-
-    const parseRecipe = (text: string) => {
-        const lines = text.split("\n").map(line => line.trim()).filter(line => line !== "");
-        const ingredientsIndex = lines.findIndex(line => line.toLowerCase() === "ingredients");
-        const directionsIndex = lines.findIndex(line => line.toLowerCase() === "directions");
-
-        if (ingredientsIndex === -1 || directionsIndex === -1) {
-            return { title: text, ingredients: [], directions: [] };
-        }
-
-        const title = lines[0];
-        const ingredients = lines.slice(ingredientsIndex + 1, directionsIndex).map(ing => ing.replace(/^-+\s*/, ''));
-        const directions = lines.slice(directionsIndex + 1).map(dir => dir.replace(/^([0-9]+\.\s*)+/, '').replace(/^-+\s*/, ''));
-
-        return { title, ingredients, directions };
-    };
-
     useEffect(() => {
         const lastAssistantIndex = messages
             .map((m, i) => (m.role === "assistant" ? i : -1))
@@ -350,88 +290,10 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
         }
     }, [messages]);
 
-    // Create a ref to point to the last assistant message
-    const lastAssistantRef = useRef<HTMLDivElement | null>(null);
-
-    // Instead of scrolling to the bottomRef, we scroll the last assistant message into view:
-    useEffect(() => {
-        if (lastAssistantRef.current) {
-            lastAssistantRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-    }, [messages]);
-
-    const [firstMessage, ...restMessages] = messages;
-
-    function renderMarkdown(text: string): React.ReactNode {
-        // Split by bold markers
-        const parts = text.split(/(\*\*.*?\*\*)/);
-
-        return parts.map((part, index) => {
-            if (part.startsWith("**") && part.endsWith("**")) {
-                // Remove ** and trim spaces inside the bolded content
-                const trimmedPart = part.slice(2, -2).trim();
-
-                const nextPart = parts[index + 1] || "";
-                const endsWithPunctuation = nextPart.startsWith(".") || nextPart.startsWith(",") || nextPart.startsWith("!");
-
-                return (
-                    <React.Fragment key={index}>
-                        {/* Add a space only if the preceding part doesn't end with a space */}
-                        {index > 0 && !parts[index - 1].endsWith(" ") && " "}
-                        <strong className="font-semibold">{trimmedPart}</strong>
-                        {/* Add a space only if the following part doesn't start with a space or punctuation */}
-                        {index < parts.length - 1 && !endsWithPunctuation && !nextPart.startsWith(" ") && " "}
-                    </React.Fragment>
-                );
-            }
-            // Return non-bold parts unchanged
-            return part;
-        });
-    }
-
-    useEffect(() => {
-        const lastAssistantIndex = messages
-            .map((m, i) => (m.role === "assistant" ? i : -1))
-            .filter(i => i !== -1)
-            .pop();
-
-        if (lastAssistantIndex !== undefined && lastAssistantIndex !== -1) {
-            const msg = messages[lastAssistantIndex];
-            if (isRecipe(msg.content)) {
-                (async () => {
-                    try {
-                        const response = await fetch("/api/classifyRecipe", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ message: msg.content }),
-                        });
-                        if (response.ok) {
-                            const data = await response.json();
-                            setRecipeClassification(prev => ({ ...prev, [lastAssistantIndex]: data }));
-                        } else {
-                            setRecipeClassification(prev => ({ ...prev, [lastAssistantIndex]: null }));
-                        }
-                    } catch {
-                        setRecipeClassification(prev => ({ ...prev, [lastAssistantIndex]: null }));
-                    }
-                })();
-            }
-        }
-    }, [messages]);
-
-    const suggestions = [
-        "Make me a random Balkan recipe",
-        "What's your secret to perfect sarma?",
-        "Help me use up these leftovers",
-        "Tell me a funny cooking disaster story",
-        "Give me a recipe for my date",
-        "Tell me about SELO olive oil"
-    ];
-
-    // Add new useEffect for formatting dish pairings
     useEffect(() => {
         messages.forEach((msg, index) => {
             if (msg.role === "assistant" && 
+                typeof msg.content === "string" &&
                 (msg.content.includes("pairing") || msg.content.includes("complement")) &&
                 !formattedPairings[index]) {
                 formatDishPairings(msg.content).then(formatted => {
@@ -444,10 +306,19 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
         });
     }, [messages, formattedPairings]);
 
+    const suggestions = [
+        "Make me a random Balkan recipe",
+        "What's your secret to perfect sarma?",
+        "Help me use up these leftovers",
+        "Tell me a funny cooking disaster story",
+        "Give me a recipe for my date",
+        "Tell me about SELO olive oil"
+    ];
+
+    const [firstMessage, ...restMessages] = messages;
+
     return (
         <div className="w-full max-w-2xl mx-auto px-0 md:px-4 space-y-4">
-
-            {/* Suggestion Buttons shown only once, after the first assistant message */}
             {firstMessage && firstMessage.role === "assistant" && (
                 <div className="flex flex-wrap gap-2 mt-4">
                     {suggestions.map((suggestion, i) => {
@@ -474,240 +345,24 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
 
             {restMessages.map((msg, index) => {
                 const actualIndex = index + 1;
-                const isLastItem = actualIndex === restMessages.length; // Are we on the very last message in restMessages?
+                const isLastItem = actualIndex === restMessages.length;
                 const isAssistant = msg.role === "assistant";
-
-                // Debug: check exactly how the messages appear
-                // console.log("[DEBUG] Rendering message =>", msg);
-
-                // We'll only attach the `ref` to the last assistant message
                 const messageRef = isAssistant && isLastItem ? lastAssistantRef : null;
 
-                // [DEBUG] So you can see which message is "last assistant"
-                // console.log("Rendering message index:", actualIndex, "isAssistant:", isAssistant, "isLastItem:", isLastItem);
-
-                // 1) User messages
-                if (msg.role === "user") {
-                    return (
-                        <div key={actualIndex} className="flex justify-end">
-                            <div className="bg-[#0284FE] text-white px-5 py-2.5 rounded-3xl max-w-xs whitespace-pre-line">
-                                {msg.content}
-                            </div>
-                        </div>
-                    );
-                }
-
-                // 2) If it's an assistant message that literally has <a> tags
-                if (msg.role === "assistant" && /<a .*?<\/a>/i.test(msg.content)) {
-                    return (
-                        <div key={actualIndex} ref={messageRef} className="flex items-start space-x-2">
-                            <div
-                                className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl"
-                                dangerouslySetInnerHTML={{ __html: msg.content }}
-                            />
-                        </div>
-                    );
-                }
-
-                // 3) If it's an assistant message with calorie info
-                if (msg.role === "assistant" && isCalorieInfo(msg.content)) {
-                    return (
-                        <div key={actualIndex} ref={messageRef} className="flex items-start space-x-2">
-                            {renderNutritionInfo(msg.content)}
-                        </div>
-                    );
-                }
-
-                // 4) If it's an assistant message that specifically mentions "Selo olive oil"
-                //    We'll render the discount button
-                if (msg.role === "assistant" && isAboutSeloOliveOil(msg.content)) {
-                    return (
-                        <div key={actualIndex} ref={messageRef} className="flex items-start space-x-2">
-                            <div className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl">
-                                {renderMarkdown(msg.content)}
-                                {renderDiscountButton()}
-                            </div>
-                        </div>
-                    );
-                }
-
-                // 5) If it's an assistant message that includes "selo olive oil"
-                if (msg.role === "assistant" && isSelo(msg.content)) {
-                    return (
-                        <div key={actualIndex} ref={messageRef} className="flex items-start space-x-2">
-                            <div className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl">
-                                {linkifyLastSelo(msg.content)}
-                            </div>
-                        </div>
-                    );
-                }
-
-                // 6) If it's recognized as a recipe
-                if (msg.role === "assistant" && isRecipe(msg.content)) {
-                    const { title, ingredients, directions } = parseRecipe(msg.content);
-                    const classification = recipeClassification[actualIndex];
-
-                    let foundOliveOilInIngredients = false;
-                    let foundOliveOilInDirections = false;
-
-                    return (
-                        <div key={actualIndex} ref={messageRef} className="flex items-start space-x-2">
-                            <div className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl">
-                                <div className="text-xl mb-2">{title}</div>
-
-                                <div className="font-semibold mb-1">Ingredients</div>
-                                <ul className="list-disc list-inside mb-3">
-                                    {ingredients.map((ing, i) => {
-                                        const lowerIng = ing.toLowerCase();
-                                        if (!foundOliveOilInIngredients && lowerIng.includes("olive oil")) {
-                                            foundOliveOilInIngredients = true;
-                                            return <li key={i}>{linkifyOliveOil(ing)}</li>;
-                                        }
-                                        return <li key={i}>{ing}</li>;
-                                    })}
-                                </ul>
-
-                                <div className="font-semibold mb-1">Directions</div>
-                                <ol className="list-decimal list-inside mb-3">
-                                    {directions.map((dir, i) => {
-                                        const lowerDir = dir.toLowerCase();
-                                        if (!foundOliveOilInDirections && lowerDir.includes("olive oil")) {
-                                            foundOliveOilInDirections = true;
-                                            return <li key={i}>{linkifyOliveOil(dir)}</li>;
-                                        }
-                                        return <li key={i}>{dir}</li>;
-                                    })}
-                                </ol>
-
-                                {classification && (
-                                    <div className="mb-3 flex flex-wrap items-center gap-2">
-                                        {classification.diet && classification.diet.length > 0 && (
-                                            <div className="flex items-center bg-white border border-gray-300 shadow-sm rounded-full px-3 py-1">
-                                                <span className="font-semibold mr-1">🍲</span>
-                                                <span>
-                                                    {classification.diet
-                                                        .map(d => d.charAt(0).toUpperCase() + d.slice(1))
-                                                        .join(", ")}
-                                                </span>
-                                            </div>
-                                        )}
-                                        {classification.cuisine && (
-                                            <div className="flex items-center bg-white border border-gray-300 shadow-sm rounded-full px-3 py-1">
-                                                <span className="font-semibold mr-1">🍽️</span>
-                                                <span>
-                                                    {classification.cuisine.charAt(0).toUpperCase() +
-                                                        classification.cuisine.slice(1)}
-                                                </span>
-                                            </div>
-                                        )}
-                                        {classification.cooking_time && (
-                                            <div className="flex items-center bg-white border border-gray-300 shadow-sm rounded-full px-3 py-1">
-                                                <span className="font-semibold mr-1">⏲️</span>
-                                                <span>{classification.cooking_time}</span>
-                                            </div>
-                                        )}
-                                        {classification.difficulty && (
-                                            <div className="flex items-center bg-white border border-gray-300 shadow-sm rounded-full px-3 py-1">
-                                                <span className="font-semibold mr-1">🧩</span>
-                                                <span>
-                                                    {classification.difficulty.charAt(0).toUpperCase() +
-                                                        classification.difficulty.slice(1)}
-                                                </span>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
-                                {/* Action buttons */}
-                                <div className="flex flex-wrap gap-2 mt-3">
-                                    <button
-                                        className="p-2 bg-black rounded-md hover:bg-gray-600 text-white"
-                                        onClick={() => handleSaveRecipe(msg.content, classification)}
-                                    >
-                                        📝 Save Recipe
-                                    </button>
-                                    <button
-                                        className="p-2 bg-blue-50 rounded-md hover:bg-blue-100 text-black"
-                                        onClick={async () => {
-                                            setLoading(true);
-                                            try {
-                                                const response = await fetch("/api/dishPairing", {
-                                                    method: "POST",
-                                                    headers: { "Content-Type": "application/json" },
-                                                    body: JSON.stringify({ recipe: msg.content }),
-                                                });
-                                                if (response.ok) {
-                                                    const data = await response.json();
-                                                    onAssistantResponse(data.suggestion || "No pairing suggestion available.");
-                                                } else {
-                                                    onAssistantResponse("Failed to fetch dish pairing.");
-                                                }
-                                            } catch (error) {
-                                                console.error("Error fetching dish pairing:", error);
-                                                onAssistantResponse("Error: Unable to fetch dish pairing.");
-                                            } finally {
-                                                setLoading(false);
-                                            }
-                                        }}
-                                    >
-                                        🍷 Get Dish Pairing
-                                    </button>
-                                    <button
-                                        className="p-2 bg-blue-50 rounded-md hover:bg-blue-100 text-black"
-                                        onClick={async () => {
-                                            setLoading(true);
-                                            try {
-                                                const response = await fetch("/api/macroInfo", {
-                                                    method: "POST",
-                                                    headers: { "Content-Type": "application/json" },
-                                                    body: JSON.stringify({ recipe: msg.content }),
-                                                });
-                                                if (response.ok) {
-                                                    const data = await response.json();
-                                                    onAssistantResponse(data.macros || "No macro info available.");
-                                                } else {
-                                                    onAssistantResponse("Failed to fetch calorie/macro info.");
-                                                }
-                                            } catch (error) {
-                                                console.error("Error fetching calorie/macro info:", error);
-                                                onAssistantResponse("Error: Unable to fetch calorie/macro info.");
-                                            } finally {
-                                                setLoading(false);
-                                            }
-                                        }}
-                                    >
-                                        🍎 Get Nutritional Info
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    );
-                }
-
-                // 7) Otherwise, normal assistant message
-                if (msg.role === "assistant") {
-                    // Check if it's a dish pairing message
-                    if (msg.content.includes("pairing") || msg.content.includes("complement")) {
-                        return (
-                            <div key={actualIndex} ref={messageRef} className="flex items-start space-x-2">
-                                <div className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl">
-                                    {renderDishPairingLinks(formattedPairings[index] || msg.content, onSuggestionClick)}
-                                </div>
-                            </div>
-                        );
-                    }
-                    
-                    return (
-                        <div key={actualIndex} ref={messageRef} className="flex items-start space-x-2">
-                            <div className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl">
-                                {renderMarkdown(msg.content)}
-                            </div>
-                        </div>
-                    );
-                }
-
-                // 8) Fallback
-                return null;
+                return (
+                    <MessageRenderer
+                        key={actualIndex}
+                        message={msg}
+                        index={actualIndex}
+                        messageRef={messageRef}
+                        recipeClassification={recipeClassification[actualIndex]}
+                        formattedPairings={formattedPairings}
+                        onSuggestionClick={onSuggestionClick}
+                        onAssistantResponse={onAssistantResponse}
+                        setLoading={setLoading}
+                        handleSaveRecipe={handleSaveRecipe}
+                    />
+                );
             })}
 
             {loading && (
