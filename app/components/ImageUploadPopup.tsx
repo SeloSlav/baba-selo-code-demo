@@ -133,12 +133,13 @@ export const ImageUploadPopup: React.FC<ImageUploadPopupProps> = ({
               />
               <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 p-2 bg-black text-white text-xs rounded-lg shadow-lg z-50">
                 <div className="relative">
-                  Upload any food-related image:
+                  Upload any image:
                   <ul className="mt-1 ml-2 space-y-1">
                     <li>• Your fridge contents</li>
                     <li>• Ingredients you have</li>
                     <li>• A dish you made</li>
                     <li>• Recipe inspiration</li>
+                    <li>• Your grandson</li>
                   </ul>
                   <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 translate-y-full w-2 h-2 bg-black rotate-45"></div>
                 </div>
