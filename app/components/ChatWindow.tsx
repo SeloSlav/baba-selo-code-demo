@@ -270,9 +270,53 @@ export const ChatWindow = forwardRef(
     };
 
     // Add handler for draw image submit
-    const handleDrawImageSubmit = (prompt: string) => {
-      // This will be implemented later
-      console.log("Draw image prompt:", prompt);
+    const handleDrawImageSubmit = async (prompt: string) => {
+      setLoading(true);
+      try {
+        const response = await fetch('/api/generateImage', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ prompt }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          // Add user's prompt to the conversation
+          setMessages(prev => [
+            ...prev,
+            { role: 'user', content: `Draw this for me: ${prompt}` }
+          ]);
+
+          // Add Baba's response with the generated image
+          const babaResponse = `Here's what I drew for you, dear! ${data.revisedPrompt ? `\n\nI interpreted your request as: "${data.revisedPrompt}"` : ''}\n\n![Generated Image](${data.imageUrl})`;
+          
+          setMessages(prev => [
+            ...prev,
+            { role: 'assistant', content: babaResponse }
+          ]);
+        } else {
+          const errorMessage = data.error || "Failed to generate image";
+          console.log('Image generation failed:', errorMessage);
+          setMessages(prev => [
+            ...prev,
+            { role: 'user', content: `Draw this for me: ${prompt}` },
+            { role: 'assistant', content: "Oh dear, my artistic vision seems a bit clouded today. Could you try asking again? Sometimes my paintbrush needs a little rest!" }
+          ]);
+        }
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+        console.log('Error in image generation:', errorMessage);
+        setMessages(prev => [
+          ...prev,
+          { role: 'user', content: `Draw this for me: ${prompt}` },
+          { role: 'assistant', content: "Ah, my artistic spirit is feeling a bit under the weather. Let's try again in a moment, dear!" }
+        ]);
+      } finally {
+        setLoading(false);
+      }
     };
 
     return (

@@ -1,22 +1,43 @@
 import React from 'react';
 
 export const renderMarkdown = (text: string): React.ReactNode => {
-    const parts = text.split(/(\*\*.*?\*\*)/);
+    // First handle images with markdown syntax ![alt](url)
+    const parts = text.split(/(!?\[.*?\]\(.*?\))/);
+    
     return parts.map((part, index) => {
-        if (part.startsWith("**") && part.endsWith("**")) {
-            const trimmedPart = part.slice(2, -2).trim();
-            const nextPart = parts[index + 1] || "";
-            const endsWithPunctuation = nextPart.startsWith(".") || nextPart.startsWith(",") || nextPart.startsWith("!");
-
+        // Check if this part is an image markdown
+        if (part.match(/^!\[.*?\]\(.*?\)$/)) {
+            const [, alt, url] = part.match(/^!\[(.*?)\]\((.*?)\)$/) || [];
             return (
-                <React.Fragment key={index}>
-                    {index > 0 && !parts[index - 1].endsWith(" ") && " "}
-                    <strong className="font-semibold">{trimmedPart}</strong>
-                    {index < parts.length - 1 && !endsWithPunctuation && !nextPart.startsWith(" ") && " "}
-                </React.Fragment>
+                <div key={index} className="my-4">
+                    <img 
+                        src={url} 
+                        alt={alt} 
+                        className="rounded-xl max-w-full h-auto shadow-lg"
+                        loading="lazy"
+                    />
+                </div>
             );
         }
-        return part;
+        
+        // Handle regular bold text for the remaining parts
+        const boldParts = part.split(/(\*\*.*?\*\*)/);
+        return boldParts.map((boldPart, boldIndex) => {
+            if (boldPart.startsWith("**") && boldPart.endsWith("**")) {
+                const trimmedPart = boldPart.slice(2, -2).trim();
+                const nextPart = boldParts[boldIndex + 1] || "";
+                const endsWithPunctuation = nextPart.startsWith(".") || nextPart.startsWith(",") || nextPart.startsWith("!");
+
+                return (
+                    <React.Fragment key={`${index}-${boldIndex}`}>
+                        {boldIndex > 0 && !boldParts[boldIndex - 1].endsWith(" ") && " "}
+                        <strong className="font-semibold">{trimmedPart}</strong>
+                        {boldIndex < boldParts.length - 1 && !endsWithPunctuation && !nextPart.startsWith(" ") && " "}
+                    </React.Fragment>
+                );
+            }
+            return boldPart;
+        });
     });
 };
 
