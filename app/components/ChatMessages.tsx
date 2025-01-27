@@ -166,10 +166,48 @@ const renderDishPairingLinks = (text: string, onSuggestionClick: (suggestion: st
     return <>{parts}</>;
 };
 
+// Function to extract and format food items
+const formatDishPairings = async (text: string): Promise<string> => {
+    try {
+        const response = await fetch('/api/extractFoodItems', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text })
+        });
+
+        if (!response.ok) throw new Error('Failed to extract food items');
+        
+        const data = await response.json();
+        
+        // Check if items exists in the response
+        if (!data || !Array.isArray(data.items)) {
+            console.warn('Invalid response format from API:', data);
+            return text;
+        }
+        
+        // Replace each food item with its bold version
+        let formattedText = text;
+        data.items.forEach(item => {
+            if (typeof item === 'string') {
+                formattedText = formattedText.replace(
+                    new RegExp(item, 'gi'),
+                    `**${item}**`
+                );
+            }
+        });
+        
+        return formattedText;
+    } catch (error) {
+        console.error('Error formatting dish pairings:', error);
+        return text;
+    }
+};
+
 export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, setLoading, onSuggestionClick, onAssistantResponse }) => {
     const [recipeClassification, setRecipeClassification] = useState<Record<number, RecipeClassification | null>>({});
-    const bottomRef = useRef<HTMLDivElement | null>(null); // Reference for scrolling
-    const [userId, setUserId] = useState<string>(""); // To hold the current user ID from Firebase
+    const [formattedPairings, setFormattedPairings] = useState<Record<number, string>>({});
+    const bottomRef = useRef<HTMLDivElement | null>(null);
+    const [userId, setUserId] = useState<string>("");
 
     useEffect(() => {
         // Fetch the current user from Firebase Auth
@@ -388,6 +426,22 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
         "Give me a recipe for my date",
         "Tell me about SELO olive oil"
     ];
+
+    // Add new useEffect for formatting dish pairings
+    useEffect(() => {
+        messages.forEach((msg, index) => {
+            if (msg.role === "assistant" && 
+                (msg.content.includes("pairing") || msg.content.includes("complement")) &&
+                !formattedPairings[index]) {
+                formatDishPairings(msg.content).then(formatted => {
+                    setFormattedPairings(prev => ({
+                        ...prev,
+                        [index]: formatted
+                    }));
+                });
+            }
+        });
+    }, [messages, formattedPairings]);
 
     return (
         <div className="w-full max-w-2xl mx-auto px-0 md:px-4 space-y-4">
@@ -632,11 +686,11 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
                 // 7) Otherwise, normal assistant message
                 if (msg.role === "assistant") {
                     // Check if it's a dish pairing message
-                    if (msg.content.includes("For a delightful pairing")) {
+                    if (msg.content.includes("pairing") || msg.content.includes("complement")) {
                         return (
                             <div key={actualIndex} ref={messageRef} className="flex items-start space-x-2">
                                 <div className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl">
-                                    {renderDishPairingLinks(msg.content, onSuggestionClick)}
+                                    {renderDishPairingLinks(formattedPairings[index] || msg.content, onSuggestionClick)}
                                 </div>
                             </div>
                         );
