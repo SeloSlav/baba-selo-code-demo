@@ -16,27 +16,27 @@ export default function UpgradePlan() {
                 <p className="text-gray-600 max-w-xl mx-auto">Get the full Baba Selo experience with real-time audio conversations and advanced features.</p>
             </div>
 
-            {/* Social proof section */}
-            <div className="flex justify-center gap-8 mb-12">
+            {/* Social proof section - Compact on mobile */}
+            <div className="flex justify-center gap-4 md:gap-8 mb-12">
                 <div className="flex items-center">
-                    <span className="text-2xl mr-2">⭐</span>
+                    <span className="text-xl md:text-2xl mr-1.5 md:mr-2">⭐</span>
                     <div>
-                        <div className="font-bold">4.9/5 rating</div>
-                        <div className="text-sm text-gray-600">from 100+ users</div>
+                        <div className="text-sm md:text-base font-bold">4.9/5 rating</div>
+                        <div className="text-xs md:text-sm text-gray-600">100+ users</div>
                     </div>
                 </div>
                 <div className="flex items-center">
-                    <span className="text-2xl mr-2">🔒</span>
+                    <span className="text-xl md:text-2xl mr-1.5 md:mr-2">🔒</span>
                     <div>
-                        <div className="font-bold">Secure payments</div>
-                        <div className="text-sm text-gray-600">256-bit encryption</div>
+                        <div className="text-sm md:text-base font-bold">Secure</div>
+                        <div className="text-xs md:text-sm text-gray-600">256-bit SSL</div>
                     </div>
                 </div>
                 <div className="flex items-center">
-                    <span className="text-2xl mr-2">💫</span>
+                    <span className="text-xl md:text-2xl mr-1.5 md:mr-2">💫</span>
                     <div>
-                        <div className="font-bold">Cancel anytime</div>
-                        <div className="text-sm text-gray-600">No commitments</div>
+                        <div className="text-sm md:text-base font-bold">Flexible</div>
+                        <div className="text-xs md:text-sm text-gray-600">Cancel anytime</div>
                     </div>
                 </div>
             </div>
@@ -58,58 +58,14 @@ export default function UpgradePlan() {
                 </div>
             </div>
 
+            {/* Grid with reordered cards on mobile */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* Free Plan - More subdued */}
-                <div className="p-8 border border-gray-200 rounded-2xl bg-white flex flex-col relative">
-                    <div className="absolute -top-3 left-8 bg-gray-100 text-gray-700 text-sm font-medium px-3 py-1 rounded-full">
-                        Basic
-                    </div>
-                    
-                    {/* Title + Price */}
-                    <h3 className="text-2xl font-bold mb-2">Free</h3>
-                    <div className="text-5xl font-extrabold text-gray-900 mb-1">$0</div>
-                    <div className="text-sm text-gray-500 mb-6">USD/month</div>
-
-                    {/* Short description */}
-                    <p className="text-gray-700 mb-4">
-                        Perfect for trying out Baba Selo's core features
-                    </p>
-
-                    {/* Current plan indicator */}
-                    <button
-                        disabled
-                        className="w-full py-3 mt-auto mb-6 text-gray-500 text-sm font-medium bg-gray-100 rounded-xl cursor-not-allowed"
-                    >
-                        Your current plan
-                    </button>
-
-                    {/* Feature list */}
-                    <ul className="flex-1 space-y-3 text-sm text-gray-700">
-                        <li className="flex items-start">
-                            <span className="text-lg mr-3">🗨️</span>
-                            <span>Unlimited text-based conversations with Baba Selo</span>
-                        </li>
-                        <li className="flex items-start">
-                            <span className="text-lg mr-3">🍲</span>
-                            <span>Unlimited recipe generation</span>
-                        </li>
-                        <li className="flex items-start">
-                            <span className="text-lg mr-3">💾</span>
-                            <span>Ability to save recipes</span>
-                        </li>
-                        <li className="flex items-start">
-                            <span className="text-lg mr-3">🤔</span>
-                            <span>Ask Baba Selo anything about life, cooking, etc.</span>
-                        </li>
-                    </ul>
-                </div>
-
-                {/* Pro Plan - Updated with annual pricing */}
-                <div className="p-8 border-2 border-black rounded-2xl bg-white flex flex-col relative transform hover:scale-[1.02] transition-all duration-300">
+                {/* Pro Plan First on Mobile */}
+                <div className="md:order-2 p-8 border-2 border-black rounded-2xl bg-white flex flex-col relative transform hover:scale-[1.02] transition-all duration-300">
                     <div className="absolute -top-3 left-8 bg-black text-white text-sm font-medium px-3 py-1 rounded-full">
                         Most Popular
                     </div>
-
+                    
                     {/* Title + Price */}
                     <h3 className="text-2xl font-bold mb-2">Pro</h3>
                     <div className="text-5xl font-extrabold text-gray-900 mb-1">
@@ -167,6 +123,51 @@ export default function UpgradePlan() {
                             30-day money-back guarantee
                         </div>
                     </div>
+                </div>
+
+                {/* Free Plan Second on Mobile */}
+                <div className="md:order-1 p-8 border border-gray-200 rounded-2xl bg-white flex flex-col relative">
+                    <div className="absolute -top-3 left-8 bg-gray-100 text-gray-700 text-sm font-medium px-3 py-1 rounded-full">
+                        Basic
+                    </div>
+                    
+                    {/* Title + Price */}
+                    <h3 className="text-2xl font-bold mb-2">Free</h3>
+                    <div className="text-5xl font-extrabold text-gray-900 mb-1">$0</div>
+                    <div className="text-sm text-gray-500 mb-6">USD/month</div>
+
+                    {/* Short description */}
+                    <p className="text-gray-700 mb-4">
+                        Perfect for trying out Baba Selo's core features
+                    </p>
+
+                    {/* Current plan indicator */}
+                    <button
+                        disabled
+                        className="w-full py-3 mt-auto mb-6 text-gray-500 text-sm font-medium bg-gray-100 rounded-xl cursor-not-allowed"
+                    >
+                        Your current plan
+                    </button>
+
+                    {/* Feature list */}
+                    <ul className="flex-1 space-y-3 text-sm text-gray-700">
+                        <li className="flex items-start">
+                            <span className="text-lg mr-3">🗨️</span>
+                            <span>Unlimited text-based conversations with Baba Selo</span>
+                        </li>
+                        <li className="flex items-start">
+                            <span className="text-lg mr-3">🍲</span>
+                            <span>Unlimited recipe generation</span>
+                        </li>
+                        <li className="flex items-start">
+                            <span className="text-lg mr-3">💾</span>
+                            <span>Ability to save recipes</span>
+                        </li>
+                        <li className="flex items-start">
+                            <span className="text-lg mr-3">🤔</span>
+                            <span>Ask Baba Selo anything about life, cooking, etc.</span>
+                        </li>
+                    </ul>
                 </div>
             </div>
         </div>
