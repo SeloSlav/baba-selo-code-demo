@@ -14,7 +14,22 @@ export async function POST(request: Request) {
             messages: [
                 {
                     role: "system",
-                    content: "You are a helpful assistant that identifies food items and dishes from text. Extract only food items and dishes, excluding beverages like wine, beer, or cocktails. Return the items as a JSON array of strings."
+                    content: `You are a helpful assistant that identifies food items and dishes from text. 
+                    
+RULES:
+1. Extract ONLY food items, dishes, and ingredients that could be used in recipes
+2. EXCLUDE all beverages (wine, beer, cocktails, spirits, etc.)
+3. EXCLUDE cooking methods or descriptive terms
+4. Return ONLY the actual food items that someone might want a recipe for
+5. Return the response as a JSON object with a single "items" array containing strings
+
+Example input: "Pair with red wine and serve with Greek yogurt and roasted vegetables"
+Correct response: {"items": ["Greek yogurt", "roasted vegetables"]}
+
+Example input: "Serve with Muscat wine and baklava"
+Correct response: {"items": ["baklava"]}
+
+The response must be valid JSON with only the "items" array.`
                 },
                 {
                     role: "user",

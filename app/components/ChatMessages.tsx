@@ -185,14 +185,15 @@ const formatDishPairings = async (text: string): Promise<string> => {
             return text;
         }
         
-        // Replace each food item with its bold version
+        // Sort items by length (longest first) to handle overlapping matches
+        const sortedItems = data.items.sort((a, b) => b.length - a.length);
+        
+        // Replace each food item with its bold version, using word boundaries
         let formattedText = text;
-        data.items.forEach(item => {
+        sortedItems.forEach(item => {
             if (typeof item === 'string') {
-                formattedText = formattedText.replace(
-                    new RegExp(item, 'gi'),
-                    `**${item}**`
-                );
+                const regex = new RegExp(`\\b${item}\\b`, 'gi');
+                formattedText = formattedText.replace(regex, `**${item}**`);
             }
         });
         

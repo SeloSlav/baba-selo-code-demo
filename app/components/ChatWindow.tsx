@@ -13,6 +13,8 @@ import { ChatMessages } from "./ChatMessages";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
 import { ImageUploadPopup } from "./ImageUploadPopup";
+import { LoadingSpinner } from "./LoadingSpinner";
+import { SendButtonSpinner } from "./SendButtonSpinner";
 
 interface Message {
   role: "user" | "assistant";
@@ -326,15 +328,19 @@ export const ChatWindow = forwardRef(
                   </button>
                   <button
                     onClick={() => sendMessage(message)}
-                    disabled={message.trim() === ""}
+                    disabled={message.trim() === "" || loading}
                     className={`rounded-full w-10 h-10 flex items-center justify-center
-                      ${message.trim() === ""
+                      ${message.trim() === "" || loading
                         ? "bg-gray-300 text-gray-600 cursor-not-allowed"
                         : "bg-black text-white hover:bg-gray-800"
                       }`}
                     title={message.trim() === "" ? "Message is empty" : ""}
                   >
-                    <FontAwesomeIcon icon={faArrowUp} />
+                    {loading ? (
+                      <SendButtonSpinner />
+                    ) : (
+                      <FontAwesomeIcon icon={faArrowUp} />
+                    )}
                   </button>
                 </div>
                 <p className="text-xs text-gray-500 text-center mt-2 mb-2">
@@ -389,15 +395,19 @@ export const ChatWindow = forwardRef(
               </button>
               <button
                 onClick={() => sendMessage(message)}
-                disabled={message.trim() === ""}
+                disabled={message.trim() === "" || loading}
                 className={`rounded-full w-10 h-10 flex items-center justify-center
-                  ${message.trim() === ""
+                  ${message.trim() === "" || loading
                     ? "bg-gray-300 text-gray-600 cursor-not-allowed"
                     : "bg-black text-white hover:bg-gray-800"
                   }`}
                 title={message.trim() === "" ? "Message is empty" : ""}
               >
-                <FontAwesomeIcon icon={faArrowUp} />
+                {loading ? (
+                  <SendButtonSpinner />
+                ) : (
+                  <FontAwesomeIcon icon={faArrowUp} />
+                )}
               </button>
             </div>
             <p className="text-xs text-gray-500 text-center mt-2 mb-2">

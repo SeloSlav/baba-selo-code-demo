@@ -32,12 +32,13 @@ IMPORTANT RULES:
 6. Focus on what makes this recipe special
 7. Include relevant keywords for SEO
 8. Do not use superlatives or marketing language
+9. DO NOT use any quotation marks in the summary
 
 Example good summary:
-"Traditional Croatian beef goulash simmered with paprika and root vegetables. This hearty stew features tender meat and rich flavors, perfect for cold weather meals. Naturally gluten-free and ready in under two hours."
+Traditional Croatian beef goulash simmered with paprika and root vegetables. This hearty stew features tender meat and rich flavors, perfect for cold weather meals. Naturally gluten-free and ready in under two hours.
 
 Example bad summary:
-"The most amazing and delicious recipe you'll ever try! This incredible dish will blow your mind with its fantastic flavors and super easy preparation method that anyone can master!"`;
+"The most amazing and delicious recipe you'll ever try!" This incredible dish will blow your mind with its fantastic flavors and super easy preparation method that anyone can master!`;
 
     const completion = await openai.chat.completions.create({
       messages: [
