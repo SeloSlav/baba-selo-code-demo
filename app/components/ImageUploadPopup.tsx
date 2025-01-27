@@ -2,7 +2,8 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTimes } from "@fortawesome/free-solid-svg-icons";
+import { faTimes, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
+import Image from "next/image";
 
 interface ImageUploadPopupProps {
   isOpen: boolean;
@@ -114,10 +115,40 @@ export const ImageUploadPopup: React.FC<ImageUploadPopupProps> = ({
           <FontAwesomeIcon icon={faTimes} />
         </button>
 
-        {/* Title */}
-        <h2 className="text-xl font-semibold text-center mb-4">
-          Upload an Image
-        </h2>
+        {/* Header with Baba's image */}
+        <div className="flex flex-col items-center mb-6">
+          <Image 
+            src="/baba_no_text.png"
+            alt="Baba Selo"
+            width={64}
+            height={64}
+            className="mb-4"
+          />
+          <div className="flex items-center gap-2 mb-2">
+            <h2 className="text-xl font-semibold">Upload an Image</h2>
+            <div className="group relative">
+              <FontAwesomeIcon 
+                icon={faCircleInfo} 
+                className="text-gray-400 hover:text-gray-600 text-sm cursor-help"
+              />
+              <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 p-2 bg-black text-white text-xs rounded-lg shadow-lg z-50">
+                <div className="relative">
+                  Upload any food-related image:
+                  <ul className="mt-1 ml-2 space-y-1">
+                    <li>• Your fridge contents</li>
+                    <li>• Ingredients you have</li>
+                    <li>• A dish you made</li>
+                    <li>• Recipe inspiration</li>
+                  </ul>
+                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 translate-y-full w-2 h-2 bg-black rotate-45"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p className="text-gray-600 text-center text-sm">
+            Show Baba what you're cooking! She'll tell you if your sarma needs more rolling practice 😉
+          </p>
+        </div>
 
         {/* Error Message */}
         {error && (

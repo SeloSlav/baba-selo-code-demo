@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 
 // This would be your actual Stripe configuration
@@ -14,7 +14,7 @@ const STRIPE_CONFIG = {
     }
 };
 
-export default function Checkout() {
+function CheckoutContent() {
     const searchParams = useSearchParams();
     const plan = searchParams.get('plan') || 'monthly';
     const [loading, setLoading] = useState(true);
@@ -81,5 +81,13 @@ export default function Checkout() {
                 ) : null}
             </div>
         </div>
+    );
+}
+
+export default function CheckoutPage() {
+    return (
+        <Suspense fallback={<div className="p-4">Loading checkout...</div>}>
+            <CheckoutContent />
+        </Suspense>
     );
 } 

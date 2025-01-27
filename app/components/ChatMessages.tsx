@@ -126,7 +126,44 @@ const renderNutritionInfo = (macros: any) => {
                 </div>
             </div>
         </div>
-    );
+    );  
+};
+
+// Add this helper function to handle dish pairing links
+const renderDishPairingLinks = (text: string, onSuggestionClick: (suggestion: string) => void): React.ReactNode => {
+    // Regular expression to match text between ** or __
+    const boldRegex = /[*_]{2}(.*?)[*_]{2}/g;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = boldRegex.exec(text)) !== null) {
+        // Add text before the match
+        if (match.index > lastIndex) {
+            parts.push(text.slice(lastIndex, match.index));
+        }
+
+        // Add the linked bold text
+        const boldText = match[1];
+        parts.push(
+            <button
+                key={match.index}
+                onClick={() => onSuggestionClick(`Give me a recipe for ${boldText}`)}
+                className="font-bold text-blue-600 hover:underline cursor-pointer"
+            >
+                {boldText}
+            </button>
+        );
+
+        lastIndex = match.index + match[0].length;
+    }
+
+    // Add any remaining text
+    if (lastIndex < text.length) {
+        parts.push(text.slice(lastIndex));
+    }
+
+    return <>{parts}</>;
 };
 
 export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, setLoading, onSuggestionClick, onAssistantResponse }) => {
@@ -345,10 +382,10 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
 
     const suggestions = [
         "Make me a random Balkan recipe",
-        "Give me a recipe for breakfast",
-        "Give me a recipe for lunch",
-        "Give me a recipe for dinner",
-        "Tell me a brief story about your village",
+        "What's your secret to perfect sarma?",
+        "Help me use up these leftovers",
+        "Tell me a funny cooking disaster story",
+        "Give me a recipe for my date",
         "Tell me about SELO olive oil"
     ];
 
@@ -361,10 +398,10 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
                     {suggestions.map((suggestion, i) => {
                         let emoji = "";
                         if (suggestion.toLowerCase().includes("random balkan")) emoji = "🌍";
-                        else if (suggestion.toLowerCase().includes("breakfast")) emoji = "🍳";
-                        else if (suggestion.toLowerCase().includes("lunch")) emoji = "🥪";
-                        else if (suggestion.toLowerCase().includes("dinner")) emoji = "🍽️";
-                        else if (suggestion.toLowerCase().includes("story")) emoji = "📜";
+                        else if (suggestion.toLowerCase().includes("sarma")) emoji = "🥬";
+                        else if (suggestion.toLowerCase().includes("leftovers")) emoji = "🍽️";
+                        else if (suggestion.toLowerCase().includes("disaster")) emoji = "😅";
+                        else if (suggestion.toLowerCase().includes("date")) emoji = "❤️";
                         else if (suggestion.toLowerCase().includes("olive")) emoji = "🌿";
 
                         return (
@@ -594,6 +631,17 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
 
                 // 7) Otherwise, normal assistant message
                 if (msg.role === "assistant") {
+                    // Check if it's a dish pairing message
+                    if (msg.content.includes("For a delightful pairing")) {
+                        return (
+                            <div key={actualIndex} ref={messageRef} className="flex items-start space-x-2">
+                                <div className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl">
+                                    {renderDishPairingLinks(msg.content, onSuggestionClick)}
+                                </div>
+                            </div>
+                        );
+                    }
+                    
                     return (
                         <div key={actualIndex} ref={messageRef} className="flex items-start space-x-2">
                             <div className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl">
