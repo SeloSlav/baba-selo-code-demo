@@ -8,12 +8,16 @@ import {
   orderBy,
   limit,
   startAfter,
+  doc,
+  updateDoc,
+  deleteDoc,
 } from "firebase/firestore";
 import { db } from "../firebase/firebase";
 import Link from "next/link"; // Import Link for navigation
 import Image from "next/image";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSearch, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faSearch, faXmark, faEllipsisVertical, faThumbtack, faTrashCan } from "@fortawesome/free-solid-svg-icons";
+import { getAuth } from "firebase/auth";
 
 interface Recipe {
   id: string;
@@ -23,6 +27,9 @@ interface Recipe {
   cookingTime: string;
   diet: string[];
   imageURL?: string;
+  recipeSummary?: string;
+  pinned?: boolean;
+  userId?: string;
 }
 
 const Recipes = () => {
@@ -32,6 +39,100 @@ const Recipes = () => {
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [menuOpen, setMenuOpen] = useState<string | null>(null);
+  const auth = getAuth();
+
+  // Split recipes into pinned and unpinned
+  const pinnedRecipes = filteredRecipes.filter(recipe => recipe.pinned);
+  const unpinnedRecipes = filteredRecipes.filter(recipe => !recipe.pinned);
+
+  const handlePinToggle = async (recipeId: string, currentPinned: boolean) => {
+    try {
+      const recipeRef = doc(db, "recipes", recipeId);
+      await updateDoc(recipeRef, {
+        pinned: !currentPinned
+      });
+      
+      // Update local state
+      const updatedRecipes = recipes.map(recipe =>
+        recipe.id === recipeId ? { ...recipe, pinned: !currentPinned } : recipe
+      );
+      setRecipes(updatedRecipes);
+      setFilteredRecipes(updatedRecipes);
+      setMenuOpen(null);
+    } catch (error) {
+      console.error("Error toggling pin:", error);
+    }
+  };
+
+  const handleDelete = async (recipeId: string) => {
+    const isConfirmed = window.confirm("Are you sure you want to delete this recipe? This action cannot be undone.");
+    if (!isConfirmed) return;
+
+    try {
+      await deleteDoc(doc(db, "recipes", recipeId));
+      const updatedRecipes = recipes.filter(recipe => recipe.id !== recipeId);
+      setRecipes(updatedRecipes);
+      setFilteredRecipes(updatedRecipes);
+      setMenuOpen(null);
+    } catch (error) {
+      console.error("Error deleting recipe:", error);
+    }
+  };
+
+  const renderMenu = (recipe: Recipe) => {
+    const currentUser = auth.currentUser;
+    const isOwner = currentUser && recipe.userId === currentUser.uid;
+
+    return (
+      <>
+        {menuOpen === recipe.id && (
+          <>
+            <div 
+              className="fixed inset-0 bg-transparent" 
+              onClick={() => setMenuOpen(null)} 
+            />
+            <div 
+              className="absolute right-0 mt-1 w-full bg-white mb-3"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="py-1">
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handlePinToggle(recipe.id, !!recipe.pinned);
+                  }}
+                  className="w-full px-4 py-2 text-sm flex items-center hover:bg-gray-100 transition-colors"
+                >
+                  <FontAwesomeIcon 
+                    icon={faThumbtack} 
+                    className={`w-4 h-4 mr-3 ${recipe.pinned ? 'text-yellow-500' : 'text-[#5d5d5d]'}`}
+                  />
+                  <span>{recipe.pinned ? 'Unpin recipe' : 'Pin recipe'}</span>
+                </button>
+
+                {isOwner && (
+                  <>
+                    <div className="border-t border-gray-100" />
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleDelete(recipe.id);
+                      }}
+                      className="w-full px-4 py-2 text-sm flex items-center text-red-600 hover:bg-gray-100 transition-colors"
+                    >
+                      <FontAwesomeIcon icon={faTrashCan} className="w-4 h-4 mr-3" />
+                      <span>Delete recipe</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+      </>
+    );
+  };
 
   const searchRecipes = (term: string) => {
     setSearchTerm(term);
@@ -49,6 +150,7 @@ const Recipes = () => {
         recipe.cookingDifficulty,
         recipe.cuisineType,
         recipe.cookingTime,
+        recipe.recipeSummary,
         ...(recipe.diet || [])
       ].map(field => (field || "").toLowerCase());
 
@@ -83,6 +185,8 @@ const Recipes = () => {
       const fetchedRecipes: Recipe[] = querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...(doc.data() as Recipe),
+        pinned: doc.data().pinned || false,
+        userId: doc.data().userId || "",
       }));
 
       const newRecipes = loadMore 
@@ -134,7 +238,7 @@ const Recipes = () => {
               type="text"
               value={searchTerm}
               onChange={(e) => searchRecipes(e.target.value)}
-              placeholder="Search recipes by title, cuisine, difficulty, diet..."
+              placeholder="Search recipes by title, cuisine, difficulty, diet, description..."
               className="w-full px-4 py-3 pl-12 pr-10 rounded-full border border-gray-300 focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
             />
             <FontAwesomeIcon
@@ -164,64 +268,188 @@ const Recipes = () => {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredRecipes.map((recipe) => (
-                <Link 
-                  href={`/recipe/${recipe.id}`} 
-                  key={recipe.id}
-                  className="block bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300"
-                >
-                  <div className="relative w-full h-48">
-                    {recipe.imageURL ? (
-                      <Image
-                        src={recipe.imageURL}
-                        alt={recipe.recipeTitle}
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                        priority={!loadingMore}
-                        quality={75}
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                        <span className="text-4xl">🍳</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="p-4">
-                    <h2 className="text-xl font-semibold mb-3 line-clamp-1">
-                      {recipe.recipeTitle || "Untitled Recipe"}
-                    </h2>
-                    
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center text-gray-600">
-                        <span className="mr-2">🍲</span>
-                        <span className="line-clamp-1">
-                          {recipe.diet && recipe.diet.length > 0
-                            ? recipe.diet.map(d => d.charAt(0).toUpperCase() + d.slice(1)).join(", ")
-                            : "Not specified"}
-                        </span>
-                      </div>
-                      
-                      <div className="flex items-center text-gray-600">
-                        <span className="mr-2">🍽️</span>
-                        <span>{recipe.cuisineType ? recipe.cuisineType.charAt(0).toUpperCase() + recipe.cuisineType.slice(1) : "Unknown"}</span>
-                      </div>
-                      
-                      <div className="flex items-center text-gray-600">
-                        <span className="mr-2">⏲️</span>
-                        <span>{recipe.cookingTime || "Not specified"}</span>
-                      </div>
-                      
-                      <div className="flex items-center text-gray-600">
-                        <span className="mr-2">🧩</span>
-                        <span>{recipe.cookingDifficulty ? recipe.cookingDifficulty.charAt(0).toUpperCase() + recipe.cookingDifficulty.slice(1) : "Unknown"}</span>
-                      </div>
+            {/* Pinned Recipes Section */}
+            {pinnedRecipes.length > 0 && (
+              <div className="mb-8">
+                <h2 className="text-xl font-semibold mb-4">📌 Pinned Recipes</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {pinnedRecipes.map((recipe) => (
+                    <div key={recipe.id} className="relative group">
+                      <Link 
+                        href={`/recipe/${recipe.id}`}
+                        className="block bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300"
+                      >
+                        <div className="relative w-full h-48">
+                          {recipe.imageURL ? (
+                            <Image
+                              src={recipe.imageURL}
+                              alt={recipe.recipeTitle}
+                              fill
+                              className="object-cover"
+                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                              priority={!loadingMore}
+                              quality={75}
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                              <span className="text-4xl">🍳</span>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="p-4">
+                          <div className="flex justify-between items-start mb-2">
+                            <h2 className="text-xl font-semibold line-clamp-1 flex-1">
+                              {recipe.recipeTitle || "Untitled Recipe"}
+                            </h2>
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setMenuOpen(menuOpen === recipe.id ? null : recipe.id);
+                              }}
+                              className="p-1.5 rounded-full hover:bg-gray-100 transition-colors"
+                            >
+                              <FontAwesomeIcon 
+                                icon={faEllipsisVertical} 
+                                className="w-4 h-4 text-gray-400" 
+                              />
+                            </button>
+                          </div>
+
+                          {menuOpen === recipe.id && renderMenu(recipe)}
+
+                          {recipe.recipeSummary && (
+                            <>
+                              <meta name="recipe-summary" content={recipe.recipeSummary} />
+                              <p className="text-gray-600 mb-3 line-clamp-2">
+                                {recipe.recipeSummary}
+                              </p>
+                            </>
+                          )}
+                          
+                          <div className="space-y-2 text-sm">
+                            <div className="flex items-center text-gray-600">
+                              <span className="mr-2">🍲</span>
+                              <span className="line-clamp-1">
+                                {recipe.diet && recipe.diet.length > 0
+                                  ? recipe.diet.map(d => d.charAt(0).toUpperCase() + d.slice(1)).join(", ")
+                                  : "Not specified"}
+                              </span>
+                            </div>
+                            
+                            <div className="flex items-center text-gray-600">
+                              <span className="mr-2">🍽️</span>
+                              <span>{recipe.cuisineType ? recipe.cuisineType.charAt(0).toUpperCase() + recipe.cuisineType.slice(1) : "Unknown"}</span>
+                            </div>
+                            
+                            <div className="flex items-center text-gray-600">
+                              <span className="mr-2">⏲️</span>
+                              <span>{recipe.cookingTime || "Not specified"}</span>
+                            </div>
+                            
+                            <div className="flex items-center text-gray-600">
+                              <span className="mr-2">🧩</span>
+                              <span>{recipe.cookingDifficulty ? recipe.cookingDifficulty.charAt(0).toUpperCase() + recipe.cookingDifficulty.slice(1) : "Unknown"}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </Link>
                     </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* All Other Recipes */}
+            <div>
+              <h2 className="text-xl font-semibold mb-4">🍳 All Recipes</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {unpinnedRecipes.map((recipe) => (
+                  <div key={recipe.id} className="relative group">
+                    <Link 
+                      href={`/recipe/${recipe.id}`}
+                      className="block bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300"
+                    >
+                      <div className="relative w-full h-48">
+                        {recipe.imageURL ? (
+                          <Image
+                            src={recipe.imageURL}
+                            alt={recipe.recipeTitle}
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                            priority={!loadingMore}
+                            quality={75}
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                            <span className="text-4xl">🍳</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <h2 className="text-xl font-semibold line-clamp-1 flex-1">
+                            {recipe.recipeTitle || "Untitled Recipe"}
+                          </h2>
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setMenuOpen(menuOpen === recipe.id ? null : recipe.id);
+                            }}
+                            className="p-1.5 rounded-full hover:bg-gray-100 transition-colors"
+                          >
+                            <FontAwesomeIcon 
+                              icon={faEllipsisVertical} 
+                              className="w-4 h-4 text-gray-400" 
+                            />
+                          </button>
+                        </div>
+
+                        {menuOpen === recipe.id && renderMenu(recipe)}
+
+                        {recipe.recipeSummary && (
+                          <>
+                            <meta name="recipe-summary" content={recipe.recipeSummary} />
+                            <p className="text-gray-600 mb-3 line-clamp-2">
+                              {recipe.recipeSummary}
+                            </p>
+                          </>
+                        )}
+                        
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-center text-gray-600">
+                            <span className="mr-2">🍲</span>
+                            <span className="line-clamp-1">
+                              {recipe.diet && recipe.diet.length > 0
+                                ? recipe.diet.map(d => d.charAt(0).toUpperCase() + d.slice(1)).join(", ")
+                                : "Not specified"}
+                            </span>
+                          </div>
+                          
+                          <div className="flex items-center text-gray-600">
+                            <span className="mr-2">🍽️</span>
+                            <span>{recipe.cuisineType ? recipe.cuisineType.charAt(0).toUpperCase() + recipe.cuisineType.slice(1) : "Unknown"}</span>
+                          </div>
+                          
+                          <div className="flex items-center text-gray-600">
+                            <span className="mr-2">⏲️</span>
+                            <span>{recipe.cookingTime || "Not specified"}</span>
+                          </div>
+                          
+                          <div className="flex items-center text-gray-600">
+                            <span className="mr-2">🧩</span>
+                            <span>{recipe.cookingDifficulty ? recipe.cookingDifficulty.charAt(0).toUpperCase() + recipe.cookingDifficulty.slice(1) : "Unknown"}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
                   </div>
-                </Link>
-              ))}
+                ))}
+              </div>
             </div>
 
             {!searchTerm && recipes.length > 0 && (

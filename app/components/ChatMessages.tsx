@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import { getAuth } from "firebase/auth"; // Import Firebase auth to get current user
+import { LoadingSpinner } from "./LoadingSpinner";
 
 interface Message {
     role: "user" | "assistant";
@@ -607,11 +608,9 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, s
             })}
 
             {loading && (
-                <div className="flex items-start space-x-2">
-                    <div className="typing-indicator flex space-x-2 mt-4">
-                        <div className="dot bg-gray-400 rounded-full w-2 h-2"></div>
-                        <div className="dot bg-gray-400 rounded-full w-2 h-2"></div>
-                        <div className="dot bg-gray-400 rounded-full w-2 h-2"></div>
+                <div className="flex justify-start">
+                    <div className="bg-white rounded-3xl px-4 py-2">
+                        <LoadingSpinner />
                     </div>
                 </div>
             )}

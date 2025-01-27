@@ -9,6 +9,7 @@ import { faCircle, faCheckCircle, faTrashCan } from "@fortawesome/free-regular-s
 import { getAuth } from "firebase/auth"; // Import Firebase auth
 import Image from "next/image";
 import { RecipeChatBubble } from "../../components/RecipeChatBubble";
+import { LoadingSpinner } from "../../components/LoadingSpinner";
 
 interface Recipe {
   recipeTitle: string;
@@ -22,6 +23,7 @@ interface Recipe {
   directions: string[];
   ingredients: string[];
   imageURL?: string; // Optional imageURL for the recipe image
+  recipeSummary?: string; // Add new field for recipe summary
 }
 
 const shimmer = (w: number, h: number) => `
@@ -48,8 +50,10 @@ const RecipeDetails = () => {
   const [checkedDirections, setCheckedDirections] = useState<boolean[]>([]); // Track checked directions
   const [checkedIngredients, setCheckedIngredients] = useState<boolean[]>([]); // Track checked ingredients
   const [isOwner, setIsOwner] = useState(false); // Check if the current user owns the recipe
-  const [loadingImage, setLoadingImage] = useState(false); // Loading state for image generation
-  const { id } = useParams(); // Use useParams to get route params
+  const [loadingImage, setLoadingImage] = useState(false);
+  const [loadingTitle, setLoadingTitle] = useState(false);
+  const [loadingSummary, setLoadingSummary] = useState(false);
+  const { id } = useParams();
   const router = useRouter(); // Use useRouter for redirection
   const auth = getAuth();
   const [imageError, setImageError] = useState(false);
@@ -82,6 +86,7 @@ const RecipeDetails = () => {
             directions: directions, // Safely use the directions
             ingredients: ingredients, // Safely use the ingredients
             imageURL: data.imageURL || "", // Handle optional imageURL
+            recipeSummary: data.recipeSummary || "", // Handle optional recipe summary
           });
 
           // Check if the current user is the owner of the recipe
@@ -204,7 +209,7 @@ const RecipeDetails = () => {
                     >
                       {loadingImage ? (
                         <div className="flex items-center">
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-800 mr-2"></div>
+                          <LoadingSpinner className="mr-2" />
                           Regenerating...
                         </div>
                       ) : (
@@ -225,7 +230,7 @@ const RecipeDetails = () => {
                   >
                     {loadingImage ? (
                       <div className="flex items-center">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-800 mr-2"></div>
+                        <LoadingSpinner className="mr-2" />
                         Generating...
                       </div>
                     ) : (
@@ -243,6 +248,7 @@ const RecipeDetails = () => {
               <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-5 transition-all duration-300 rounded-lg flex items-center justify-center">
                 <button
                   onClick={async () => {
+                    setLoadingTitle(true);
                     try {
                       const response = await fetch("/api/generateTitle", {
                         method: "POST",
@@ -266,11 +272,123 @@ const RecipeDetails = () => {
                       }
                     } catch (error) {
                       console.error("Error generating title:", error);
+                    } finally {
+                      setLoadingTitle(false);
                     }
                   }}
-                  className="opacity-0 group-hover:opacity-100 bg-white text-gray-800 px-3 py-1 text-sm rounded-lg shadow-md hover:bg-gray-100 transition-all duration-200"
+                  disabled={loadingTitle}
+                  className="opacity-0 group-hover:opacity-100 bg-white text-gray-800 px-3 py-1 text-sm rounded-lg shadow-md hover:bg-gray-100 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Regenerate Title
+                  {loadingTitle ? (
+                    <div className="flex items-center">
+                      <LoadingSpinner className="mr-2" />
+                      Regenerating...
+                    </div>
+                  ) : (
+                    'Regenerate Title'
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Recipe Summary Section */}
+          <div className="relative group mb-6">
+            {recipe.recipeSummary ? (
+              <p className="text-gray-600 text-lg leading-relaxed">{recipe.recipeSummary}</p>
+            ) : (
+              <div className="flex justify-center">
+                <button
+                  onClick={async () => {
+                    setLoadingSummary(true);
+                    try {
+                      const response = await fetch("/api/generateSummary", {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                          title: recipe.recipeTitle,
+                          ingredients: recipe.ingredients,
+                          directions: recipe.directions,
+                          cuisineType: recipe.cuisineType,
+                          diet: recipe.diet,
+                          cookingTime: recipe.cookingTime,
+                          cookingDifficulty: recipe.cookingDifficulty,
+                        }),
+                      });
+
+                      const data = await response.json();
+                      if (data.summary) {
+                        const recipeDocRef = doc(db, "recipes", id as string);
+                        await updateDoc(recipeDocRef, { recipeSummary: data.summary });
+                        setRecipe(prev => prev ? { ...prev, recipeSummary: data.summary } : null);
+                      }
+                    } catch (error) {
+                      console.error("Error generating summary:", error);
+                    } finally {
+                      setLoadingSummary(false);
+                    }
+                  }}
+                  disabled={loadingSummary}
+                  className="bg-white text-gray-800 px-4 py-2 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loadingSummary ? (
+                    <div className="flex items-center">
+                      <LoadingSpinner className="mr-2" />
+                      Generating Summary...
+                    </div>
+                  ) : (
+                    'Generate Recipe Summary'
+                  )}
+                </button>
+              </div>
+            )}
+            {isOwner && recipe.recipeSummary && (
+              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-5 transition-all duration-300 rounded-lg flex items-center justify-center">
+                <button
+                  onClick={async () => {
+                    setLoadingSummary(true);
+                    try {
+                      const response = await fetch("/api/generateSummary", {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                          title: recipe.recipeTitle,
+                          ingredients: recipe.ingredients,
+                          directions: recipe.directions,
+                          cuisineType: recipe.cuisineType,
+                          diet: recipe.diet,
+                          cookingTime: recipe.cookingTime,
+                          cookingDifficulty: recipe.cookingDifficulty,
+                        }),
+                      });
+
+                      const data = await response.json();
+                      if (data.summary) {
+                        const recipeDocRef = doc(db, "recipes", id as string);
+                        await updateDoc(recipeDocRef, { recipeSummary: data.summary });
+                        setRecipe(prev => prev ? { ...prev, recipeSummary: data.summary } : null);
+                      }
+                    } catch (error) {
+                      console.error("Error generating summary:", error);
+                    } finally {
+                      setLoadingSummary(false);
+                    }
+                  }}
+                  disabled={loadingSummary}
+                  className="opacity-0 group-hover:opacity-100 bg-white text-gray-800 px-3 py-1 text-sm rounded-lg shadow-md hover:bg-gray-100 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loadingSummary ? (
+                    <div className="flex items-center">
+                      <LoadingSpinner className="mr-2" />
+                      Regenerating...
+                    </div>
+                  ) : (
+                    'Regenerate Summary'
+                  )}
                 </button>
               </div>
             )}
@@ -378,11 +496,7 @@ ${recipe.directions.map((direction, index) => `${index + 1}. ${direction}`).join
       ) : (
         <div className="flex flex-col items-center justify-center min-h-screen">
           <img src="/baba-removebg.png" alt="Baba" className="w-32 h-32 mb-6" />
-          <div className="typing-indicator flex space-x-2">
-            <div className="dot bg-gray-400 rounded-full w-6 h-6"></div>
-            <div className="dot bg-gray-400 rounded-full w-6 h-6"></div>
-            <div className="dot bg-gray-400 rounded-full w-6 h-6"></div>
-          </div>
+          <LoadingSpinner className="scale-100" />
         </div>
       )}
     </div>
