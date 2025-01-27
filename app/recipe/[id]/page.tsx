@@ -5,11 +5,13 @@ import { db } from "../../firebase/firebase"; // Import Firestore db
 import { doc, getDoc, deleteDoc, updateDoc } from "firebase/firestore"; // Firestore methods
 import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCircle, faCheckCircle, faTrashCan } from "@fortawesome/free-regular-svg-icons"; // Import FontAwesome icons
+import { faCircle, faCheckCircle, faTrashCan } from "@fortawesome/free-regular-svg-icons";
+import { faUpload, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { getAuth } from "firebase/auth"; // Import Firebase auth
 import Image from "next/image";
 import { RecipeChatBubble } from "../../components/RecipeChatBubble";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 
 interface Recipe {
   recipeTitle: string;
@@ -58,6 +60,8 @@ const RecipeDetails = () => {
   const auth = getAuth();
   const [imageError, setImageError] = useState(false);
   const [isImageLoading, setIsImageLoading] = useState(true);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const storage = getStorage();
 
   useEffect(() => {
     if (!id) return; // If no id, do nothing
@@ -175,6 +179,59 @@ const RecipeDetails = () => {
     setLoadingImage(false);
   };
 
+  // Add new function to handle image upload
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0] || !id) return;
+
+    setUploadingImage(true);
+    const file = e.target.files[0];
+
+    try {
+      // Create a reference to the storage location
+      const storageRef = ref(storage, `recipe-images/${id}`);
+      
+      // Upload the file
+      await uploadBytes(storageRef, file);
+      
+      // Get the download URL
+      const downloadURL = await getDownloadURL(storageRef);
+      
+      // Update Firestore with the new image URL
+      const recipeDocRef = doc(db, "recipes", id as string);
+      await updateDoc(recipeDocRef, { imageURL: downloadURL });
+      
+      // Update local state
+      setRecipe((prevRecipe) => prevRecipe && { ...prevRecipe, imageURL: downloadURL });
+      setImageError(false);
+      setIsImageLoading(true);
+    } catch (error) {
+      console.error("Error uploading image:", error);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  // Add function to handle image deletion
+  const handleDeleteImage = async () => {
+    if (!id || !recipe?.imageURL) return;
+
+    try {
+      // Delete from Storage
+      const storageRef = ref(storage, `recipe-images/${id}`);
+      await deleteObject(storageRef);
+
+      // Update Firestore
+      const recipeDocRef = doc(db, "recipes", id as string);
+      await updateDoc(recipeDocRef, { imageURL: "" });
+
+      // Update local state
+      setRecipe((prevRecipe) => prevRecipe && { ...prevRecipe, imageURL: "" });
+      setImageError(false);
+    } catch (error) {
+      console.error("Error deleting image:", error);
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       {recipe ? (
@@ -201,7 +258,7 @@ const RecipeDetails = () => {
                   <div className="absolute inset-0 bg-gray-100 animate-pulse" />
                 )}
                 {isOwner && (
-                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-4">
                     <button
                       onClick={handleGenerateImage}
                       disabled={loadingImage}
@@ -216,6 +273,13 @@ const RecipeDetails = () => {
                         'Regenerate Image'
                       )}
                     </button>
+                    <button
+                      onClick={handleDeleteImage}
+                      className="bg-red-600 text-white px-4 py-2 rounded-lg shadow-md hover:bg-red-700 transition-all duration-200"
+                    >
+                      <FontAwesomeIcon icon={faTrash} className="mr-2" />
+                      Clear Image
+                    </button>
                   </div>
                 )}
               </>
@@ -223,20 +287,40 @@ const RecipeDetails = () => {
               <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
                 <span className="text-6xl">🍳</span>
                 {isOwner && (
-                  <button
-                    onClick={handleGenerateImage}
-                    disabled={loadingImage}
-                    className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white text-gray-800 px-4 py-2 rounded-lg shadow-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-                  >
-                    {loadingImage ? (
-                      <div className="flex items-center">
-                        <LoadingSpinner className="mr-2" />
-                        Generating...
-                      </div>
-                    ) : (
-                      'Generate Image'
-                    )}
-                  </button>
+                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-4">
+                    <button
+                      onClick={handleGenerateImage}
+                      disabled={loadingImage}
+                      className="bg-white text-gray-800 px-4 py-2 rounded-lg shadow-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                    >
+                      {loadingImage ? (
+                        <div className="flex items-center">
+                          <LoadingSpinner className="mr-2" />
+                          Generating...
+                        </div>
+                      ) : (
+                        'Generate Image'
+                      )}
+                    </button>
+                    <label className="bg-white text-gray-800 px-4 py-2 rounded-lg shadow-md hover:bg-gray-100 cursor-pointer transition-all duration-200 flex items-center">
+                      <FontAwesomeIcon icon={faUpload} className="mr-2" />
+                      {uploadingImage ? (
+                        <div className="flex items-center">
+                          <LoadingSpinner className="mr-2" />
+                          Uploading...
+                        </div>
+                      ) : (
+                        'Upload Image'
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="hidden"
+                        disabled={uploadingImage}
+                      />
+                    </label>
+                  </div>
                 )}
               </div>
             )}
