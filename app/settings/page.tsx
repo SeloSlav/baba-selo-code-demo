@@ -21,7 +21,7 @@ export default function SettingsPage() {
   const [showDietaryDropdown, setShowDietaryDropdown] = useState(false);
   const [showOilDropdown, setShowOilDropdown] = useState(false);
 
-  // Tracking when we’re actually saving
+  // Tracking when we're actually saving
   const [isSaving, setIsSaving] = useState(false);
 
   // The lists of valid options
@@ -55,7 +55,7 @@ export default function SettingsPage() {
   const oilRef = useRef<HTMLDivElement>(null);
 
   /**
-   * Fetch user’s data from Firestore on mount
+   * Fetch user's data from Firestore on mount
    */
   useEffect(() => {
     if (!user || loading) return;
@@ -204,11 +204,18 @@ export default function SettingsPage() {
 
       <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
         {/* Dietary Preferences */}
-        <div className="p-8 border border-gray-200 rounded-lg shadow-sm bg-white flex flex-col">
-          <h3 className="text-2xl font-bold mb-4">Dietary Preferences</h3>
-          <p className="text-sm text-gray-500 mb-4">
-            Select multiple dietary restrictions or preferences.
-          </p>
+        <div className="p-8 border border-gray-200 rounded-2xl shadow-sm bg-white flex flex-col transition-shadow hover:shadow-md">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-blue-50 rounded-xl">
+              <span className="text-xl">🍲</span>
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold">Dietary Preferences</h3>
+              <p className="text-sm text-gray-500">
+                Select multiple dietary restrictions or preferences.
+              </p>
+            </div>
+          </div>
 
           {/* Input + dropdown for dietary */}
           <div className="relative mb-4" ref={dietaryRef}>
@@ -221,15 +228,15 @@ export default function SettingsPage() {
               }}
               onClick={() => setShowDietaryDropdown(true)}
               placeholder="Type to search..."
-              className="w-full p-2 border border-gray-300 rounded focus:outline-none"
+              className="w-full p-3 border border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
             />
             {showDietaryDropdown && filteredDietaryOptions.length > 0 && (
-              <ul className="absolute z-10 w-full bg-white border border-gray-300 mt-1 rounded shadow-md max-h-40 overflow-auto">
+              <ul className="absolute z-10 w-full bg-white border border-gray-200 mt-1 rounded-xl shadow-lg max-h-40 overflow-auto">
                 {filteredDietaryOptions.map((option) => (
                   <li
                     key={option}
                     onClick={() => handleSelectDietary(option)}
-                    className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                    className="px-4 py-2.5 hover:bg-gray-50 cursor-pointer transition-colors"
                   >
                     {option}
                   </li>
@@ -243,12 +250,12 @@ export default function SettingsPage() {
             {dietaryPreferences.map((pref) => (
               <div
                 key={pref}
-                className="flex items-center space-x-1 bg-gray-100 px-2 py-1 rounded-full text-sm"
+                className="flex items-center gap-1.5 bg-gray-100 px-3 py-1.5 rounded-full text-sm group hover:bg-gray-200 transition-colors"
               >
                 <span>{pref}</span>
                 <button
                   onClick={() => handleRemoveDietary(pref)}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
                   ✕
                 </button>
@@ -258,11 +265,18 @@ export default function SettingsPage() {
         </div>
 
         {/* Preferred Cooking Oil */}
-        <div className="p-8 border border-gray-200 rounded-lg shadow-sm bg-white flex flex-col">
-          <h3 className="text-2xl font-bold mb-4">Preferred Cooking Oil</h3>
-          <p className="text-sm text-gray-500 mb-4">
-            Select a single cooking oil option.
-          </p>
+        <div className="p-8 border border-gray-200 rounded-2xl shadow-sm bg-white flex flex-col transition-shadow hover:shadow-md">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-blue-50 rounded-xl">
+              <span className="text-xl">🫒</span>
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold">Preferred Cooking Oil</h3>
+              <p className="text-sm text-gray-500">
+                Select a single cooking oil option.
+              </p>
+            </div>
+          </div>
 
           {/* Input + dropdown for oil */}
           <div className="relative mb-4" ref={oilRef}>
@@ -275,15 +289,15 @@ export default function SettingsPage() {
               }}
               onClick={() => setShowOilDropdown(true)}
               placeholder="Type or select a cooking oil..."
-              className="w-full p-2 border border-gray-300 rounded focus:outline-none"
+              className="w-full p-3 border border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
             />
             {showOilDropdown && filteredOilOptions.length > 0 && (
-              <ul className="absolute z-10 w-full bg-white border border-gray-300 mt-1 rounded shadow-md max-h-40 overflow-auto">
+              <ul className="absolute z-10 w-full bg-white border border-gray-200 mt-1 rounded-xl shadow-lg max-h-40 overflow-auto">
                 {filteredOilOptions.map((oil) => (
                   <li
                     key={oil}
                     onClick={() => handleSelectOil(oil)}
-                    className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                    className="px-4 py-2.5 hover:bg-gray-50 cursor-pointer transition-colors"
                   >
                     {oil}
                   </li>
@@ -291,34 +305,24 @@ export default function SettingsPage() {
               </ul>
             )}
           </div>
-
-          {/* Show selected oil as a bubble (only one) */}
-          {preferredCookingOil && (
-            <div className="flex flex-wrap gap-2">
-              <div
-                className="flex items-center space-x-1 bg-gray-100 px-2 py-1 rounded-full text-sm"
-              >
-                <span>{preferredCookingOil}</span>
-                <button
-                  onClick={handleRemoveOil}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Save button */}
-      <div className="flex justify-center mt-8">
+      {/* Save Button - Moved outside the grid */}
+      <div className="mt-8 max-w-md mx-auto">
         <button
           onClick={handleSave}
           disabled={isSaving}
-          className="bg-black text-white text-sm py-2 px-6 rounded-full hover:bg-[#212121] transition-colors"
+          className="w-full bg-black text-white px-6 py-3 rounded-xl hover:bg-[#212121] disabled:bg-gray-400 transition-colors flex items-center justify-center gap-2"
         >
-          {isSaving ? "Saving Settings..." : "Save Settings"}
+          {isSaving ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              <span>Saving...</span>
+            </>
+          ) : (
+            "Save Changes"
+          )}
         </button>
       </div>
     </div>
