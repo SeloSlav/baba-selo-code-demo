@@ -293,6 +293,41 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
     };
 
     useEffect(() => {
+        const handleNewRecipe = async (msg: Message, lastAssistantIndex: number) => {
+            try {
+                const recipeHash = createRecipeHash(msg.content);
+
+                // Award points for generating recipe
+                if (userId) {
+                    const pointsResult = await SpoonPointSystem.awardPoints(
+                        userId,
+                        'GENERATE_RECIPE',
+                        recipeHash
+                    );
+
+                    if (pointsResult.success) {
+                        showPointsToast(pointsResult.points!, 'New recipe generated!');
+                    }
+                }
+
+                // Classify recipe
+                const response = await fetch("/api/classifyRecipe", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message: msg.content }),
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    setRecipeClassification(prev => ({ ...prev, [lastAssistantIndex]: data }));
+                } else {
+                    setRecipeClassification(prev => ({ ...prev, [lastAssistantIndex]: null }));
+                }
+            } catch (error) {
+                console.error("Error handling new recipe:", error);
+                setRecipeClassification(prev => ({ ...prev, [lastAssistantIndex]: null }));
+            }
+        };
+
         const lastAssistantIndex = messages
             .map((m, i) => (m.role === "assistant" ? i : -1))
             .filter(i => i !== -1)
@@ -301,26 +336,10 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
         if (lastAssistantIndex !== undefined && lastAssistantIndex !== -1) {
             const msg = messages[lastAssistantIndex];
             if (isRecipe(msg.content)) {
-                (async () => {
-                    try {
-                        const response = await fetch("/api/classifyRecipe", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ message: msg.content }),
-                        });
-                        if (response.ok) {
-                            const data = await response.json();
-                            setRecipeClassification(prev => ({ ...prev, [lastAssistantIndex]: data }));
-                        } else {
-                            setRecipeClassification(prev => ({ ...prev, [lastAssistantIndex]: null }));
-                        }
-                    } catch {
-                        setRecipeClassification(prev => ({ ...prev, [lastAssistantIndex]: null }));
-                    }
-                })();
+                handleNewRecipe(msg, lastAssistantIndex);
             }
         }
-    }, [messages]);
+    }, [messages, userId, showPointsToast, createRecipeHash]);
 
     useEffect(() => {
         messages.forEach((msg, index) => {
