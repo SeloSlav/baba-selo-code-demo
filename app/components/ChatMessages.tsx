@@ -7,6 +7,7 @@ import { MessageRenderer } from "./MessageRenderer";
 import { Message, RecipeClassification } from "./types";
 import { parseRecipe, isRecipe } from "./messageUtils";
 import { SpoonPointSystem } from "../lib/spoonPoints";
+import { usePoints } from '../context/PointsContext';
 
 interface ChatMessagesProps {
     messages: Message[];
@@ -219,6 +220,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
     const bottomRef = useRef<HTMLDivElement | null>(null);
     const [userId, setUserId] = useState<string>("");
     const lastAssistantRef = useRef<HTMLDivElement | null>(null);
+    const { showPointsToast } = usePoints();
 
     useEffect(() => {
         const auth = getAuth();
@@ -269,6 +271,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                 let message = `Your <a href="/recipe/${docId}" target="_blank" rel="noopener noreferrer" class="underline text-blue-600"> ${title}</a> recipe has been tucked away in the kitchen vault, ready for use!`;
                 
                 if (pointsResult.success) {
+                    showPointsToast(pointsResult.points!, 'Recipe saved successfully!');
                     message += ` You earned ${pointsResult.points} spoon points! 🥄✨`;
                 } else if (pointsResult.error) {
                     // Optionally show why points weren't awarded
