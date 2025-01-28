@@ -11,6 +11,7 @@ import {
   doc,
   updateDoc,
   deleteDoc,
+  where,
 } from "firebase/firestore";
 import { db } from "../firebase/firebase";
 import Link from "next/link"; // Import Link for navigation
@@ -44,6 +45,7 @@ const Recipes = () => {
   const [loadingPinAction, setLoadingPinAction] = useState<string | null>(null);
   const auth = getAuth();
   const { showDeletePopup } = useDeleteRecipe();
+  const user = auth.currentUser;
 
   // Split recipes into pinned and unpinned
   const pinnedRecipes = filteredRecipes.filter(recipe => recipe.pinned);
@@ -182,6 +184,8 @@ const Recipes = () => {
   };
 
   const fetchRecipes = async (loadMore = false) => {
+    if (!user) return; // Don't fetch if no user is logged in
+    
     if (loadMore) {
       setLoadingMore(true);
     } else {
@@ -193,11 +197,17 @@ const Recipes = () => {
       const recipesQuery = loadMore
         ? query(
             recipesRef,
+            where("userId", "==", user.uid),
             orderBy("createdAt", "desc"),
             startAfter(lastVisible),
             limit(20)
           )
-        : query(recipesRef, orderBy("createdAt", "desc"), limit(20));
+        : query(
+            recipesRef,
+            where("userId", "==", user.uid),
+            orderBy("createdAt", "desc"),
+            limit(20)
+          );
 
       const querySnapshot = await getDocs(recipesQuery);
       const fetchedRecipes: Recipe[] = querySnapshot.docs.map((doc) => ({
