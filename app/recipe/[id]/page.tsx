@@ -16,40 +16,18 @@ import { useDeleteRecipe } from "../../context/DeleteRecipeContext";
 import { usePoints } from '../../context/PointsContext';
 import { SpoonPointSystem } from '../../lib/spoonPoints';
 import { useAuth } from '../../context/AuthContext';
-
-interface Recipe {
-  recipeTitle: string;
-  recipeContent: string;
-  id: string;
-  userId: string; // Add userId to track ownership
-  cuisineType: string;
-  cookingDifficulty: string;
-  cookingTime: string;
-  diet: string[];
-  directions: string[];
-  ingredients: string[];
-  imageURL?: string; // Optional imageURL for the recipe image
-  recipeSummary?: string; // Add new field for recipe summary
-  recipeNotes?: string; // Add new field for recipe notes
-  macroInfo?: {
-    servings: number;
-    total: {
-      calories: number;
-      proteins: number;
-      carbs: number;
-      fats: number;
-    };
-    per_serving: {
-      calories: number;
-      proteins: number;
-      carbs: number;
-      fats: number;
-    };
-  };
-  dishPairings?: string;
-  pinned?: boolean;
-  lastPinnedAt?: string;
-}
+import { RecipeHeader } from "../components/RecipeHeader";
+import { RecipeImage } from "../components/RecipeImage";
+import { RecipeNavigation } from "../components/RecipeNavigation";
+import { RecipeFooter } from "../components/RecipeFooter";
+import { Recipe } from "../types";
+import { RecipeIngredients } from "../components/RecipeIngredients";
+import { RecipeDirections } from "../components/RecipeDirections";
+import { RecipeNotes } from "../components/RecipeNotes";
+import { RecipeMacros } from "../components/RecipeMacros";
+import { RecipePairings } from "../components/RecipePairings";
+import { RecipeTitle } from "../components/RecipeTitle";
+import { RecipeSummary } from "../components/RecipeSummary";
 
 const shimmer = (w: number, h: number) => `
 <svg width="${w}" height="${h}" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -275,17 +253,17 @@ const RecipeDetails = () => {
     try {
       // Create a reference to the storage location
       const storageRef = ref(storage, `recipe-images/${id}`);
-      
+
       // Upload the file
       await uploadBytes(storageRef, file);
-      
+
       // Get the download URL
       const downloadURL = await getDownloadURL(storageRef);
-      
+
       // Update Firestore with the new image URL
       const recipeDocRef = doc(db, "recipes", id as string);
       await updateDoc(recipeDocRef, { imageURL: downloadURL });
-      
+
       // Update local state
       setRecipe((prevRecipe) => prevRecipe && { ...prevRecipe, imageURL: downloadURL });
       setImageError(false);
@@ -342,10 +320,10 @@ const RecipeDetails = () => {
 
   const calculateProgress = () => {
     if (!recipe) return { ingredients: 0, directions: 0 };
-    
+
     const ingredientsProgress = checkedIngredients.filter(Boolean).length / recipe.ingredients.length * 100;
     const directionsProgress = checkedDirections.filter(Boolean).length / recipe.directions.length * 100;
-    
+
     return {
       ingredients: ingredientsProgress,
       directions: directionsProgress
@@ -355,7 +333,7 @@ const RecipeDetails = () => {
   // Function to handle points award
   const handlePointsAward = async (actionType: string, targetId: string, message: string) => {
     if (!user) return;
-    
+
     const result = await SpoonPointSystem.awardPoints(user.uid, actionType, targetId);
     if (result.success) {
       showPointsToast(result.points!, message);
@@ -365,7 +343,7 @@ const RecipeDetails = () => {
   // Update the generateSummary function
   const generateSummary = async () => {
     if (!recipe || !user || typeof id !== 'string') return;
-    
+
     setLoadingSummary(true);
     try {
       const response = await fetch("/api/generateSummary", {
@@ -387,7 +365,7 @@ const RecipeDetails = () => {
         const recipeRef = doc(db, "recipes", id);
         await updateDoc(recipeRef, { recipeSummary: data.summary });
         setRecipe((prev) => (prev ? { ...prev, recipeSummary: data.summary } : null));
-        
+
         // Award points for generating summary
         await handlePointsAward(
           'GENERATE_SUMMARY',
@@ -405,7 +383,7 @@ const RecipeDetails = () => {
   // Update the handleMacroCalculation function
   const handleMacroCalculation = async () => {
     if (!recipe || !user || typeof id !== 'string') return;
-    
+
     setLoadingMacros(true);
     try {
       const response = await fetch("/api/macroInfo", {
@@ -422,12 +400,12 @@ const RecipeDetails = () => {
           // Save to Firestore
           const recipeRef = doc(db, "recipes", id);
           await updateDoc(recipeRef, { macroInfo: data.macros });
-          
+
           // Update local state
           setMacroInfo(data.macros);
           setRecipe(prev => prev ? { ...prev, macroInfo: data.macros } : null);
         }
-        
+
         // Award points for generating nutrition info
         await handlePointsAward(
           'GENERATE_NUTRITION',
@@ -445,7 +423,7 @@ const RecipeDetails = () => {
   // Update the handleGetPairings function
   const handleGetPairings = async () => {
     if (!recipe || !user || typeof id !== 'string') return;
-    
+
     setLoadingPairings(true);
     try {
       const response = await fetch("/api/dishPairing", {
@@ -456,16 +434,16 @@ const RecipeDetails = () => {
 
       if (response.ok) {
         const data = await response.json();
-        
+
         if (data.suggestion) {  // API returns suggestion, not pairings
           // Save to Firestore
           const recipeRef = doc(db, "recipes", id);
           await updateDoc(recipeRef, { dishPairings: data.suggestion });
-          
+
           // Update local state
           setDishPairings(data.suggestion);
           setRecipe(prev => prev ? { ...prev, dishPairings: data.suggestion } : null);
-          
+
           // Award points for generating pairings
           await handlePointsAward(
             'GENERATE_PAIRINGS',
@@ -499,16 +477,16 @@ const RecipeDetails = () => {
     try {
       const recipeDocRef = doc(db, "recipes", id as string);
       const newPinnedState = !recipe?.pinned;
-      
+
       // Update Firestore with consistent property names
-      await updateDoc(recipeDocRef, { 
+      await updateDoc(recipeDocRef, {
         pinned: newPinnedState,
         lastPinnedAt: newPinnedState ? new Date().toISOString() : null
       });
-      
+
       // Update local state
-      setRecipe(prev => prev ? { 
-        ...prev, 
+      setRecipe(prev => prev ? {
+        ...prev,
         pinned: newPinnedState,
         lastPinnedAt: newPinnedState ? new Date().toISOString() : null
       } : null);
@@ -520,7 +498,7 @@ const RecipeDetails = () => {
   // Function to copy recipe URL to clipboard
   const handleCopyRecipe = () => {
     if (!recipe) return;
-    
+
     const recipeUrl = `https://www.babaselo.com/recipe/${id}`;
 
     navigator.clipboard.writeText(recipeUrl).then(() => {
@@ -530,713 +508,143 @@ const RecipeDetails = () => {
     });
   };
 
+  const handleGenerateTitle = async () => {
+    if (!recipe || !id || typeof id !== 'string') return;
+
+    setLoadingTitle(true);
+    try {
+      const response = await fetch("/api/generateTitle", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ingredients: recipe.ingredients,
+          directions: recipe.directions,
+          cuisineType: recipe.cuisineType,
+          diet: recipe.diet,
+          recipeId: id,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.title) {
+        const recipeRef = doc(db, "recipes", id);
+        await updateDoc(recipeRef, { recipeTitle: data.title });
+        setRecipe(prev => prev ? { ...prev, recipeTitle: data.title } : null);
+      }
+    } catch (error) {
+      console.error("Error generating title:", error);
+    } finally {
+      setLoadingTitle(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 py-8 px-4">
       {recipe ? (
         <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-6">
-          {/* Recipe Classifications */}
-          <div className="mb-6 flex flex-wrap gap-3">
-            {recipe.diet.length > 0 && (
-              <div className="flex items-center bg-gray-100 border border-gray-300 shadow-sm rounded-full px-3 py-1.5 text-sm">
-                <span className="font-semibold mr-2">🍲</span>
-                <span>{recipe.diet.map((d) => d.charAt(0).toUpperCase() + d.slice(1)).join(", ")}</span>
-              </div>
-            )}
-            {recipe.cuisineType && (
-              <div className="flex items-center bg-gray-100 border border-gray-300 shadow-sm rounded-full px-3 py-1.5 text-sm">
-                <span className="font-semibold mr-2">🍽️</span>
-                <span>{recipe.cuisineType.charAt(0).toUpperCase() + recipe.cuisineType.slice(1)}</span>
-              </div>
-            )}
-            {recipe.cookingTime && (
-              <div className="flex items-center bg-gray-100 border border-gray-300 shadow-sm rounded-full px-3 py-1.5 text-sm">
-                <span className="font-semibold mr-2">⏲️</span>
-                <span>{recipe.cookingTime}</span>
-              </div>
-            )}
-            {recipe.cookingDifficulty && (
-              <div className="flex items-center bg-gray-100 border border-gray-300 shadow-sm rounded-full px-3 py-1.5 text-sm">
-                <span className="font-semibold mr-2">🧩</span>
-                <span>{recipe.cookingDifficulty.charAt(0).toUpperCase() + recipe.cookingDifficulty.slice(1)}</span>
-              </div>
-            )}
-          </div>
+          <RecipeTitle
+            recipe={recipe}
+            isOwner={isOwner}
+            loadingTitle={loadingTitle}
+            handleGenerateTitle={handleGenerateTitle}
+          />
 
-          {/* New Action Bar */}
-          <div className="flex flex-wrap gap-3 mb-8 items-center border-t border-b border-gray-200 py-4">
-            <button
-              onClick={handleCopyRecipe}
-              className="flex items-center text-gray-700 hover:text-gray-900 transition-colors duration-200"
-            >
-              <FontAwesomeIcon icon={faCopy} className="w-5 h-5" />
-              <span className="ml-2 text-sm">{copySuccess ? 'Link Copied!' : 'Share Recipe'}</span>
-            </button>
+          <RecipeSummary
+            recipe={recipe}
+            isOwner={isOwner}
+            loadingSummary={loadingSummary}
+            generateSummary={generateSummary}
+          />
 
-            {isOwner && (
-              <>
-                <div className="w-px h-6 bg-gray-200" /> {/* Divider */}
-                <button
-                  onClick={handlePinToggle}
-                  className={`flex items-center transition-colors duration-200 ${
-                    recipe.pinned ? 'text-blue-500 hover:text-blue-600' : 'text-gray-700 hover:text-gray-900'
-                  }`}
-                >
-                  <FontAwesomeIcon 
-                    icon={faThumbtack} 
-                    className={`w-5 h-5 transform transition-all duration-300 ${
-                      recipe.pinned ? 'rotate-[45deg] scale-110' : 'hover:scale-110'
-                    }`}
-                  />
-                  <span className="ml-2 text-sm">{recipe.pinned ? 'Pinned' : 'Pin Recipe'}</span>
-                </button>
+          <RecipeHeader
+            recipe={recipe}
+            isOwner={isOwner}
+            copySuccess={copySuccess}
+            handleCopyRecipe={handleCopyRecipe}
+            handlePinToggle={handlePinToggle}
+            handleDelete={handleDelete}
+          />
 
-                <div className="w-px h-6 bg-gray-200" /> {/* Divider */}
-                <button
-                  onClick={handleDelete}
-                  className="flex items-center text-gray-700 hover:text-red-600 transition-colors duration-200"
-                >
-                  <FontAwesomeIcon icon={faTrashCan} className="w-5 h-5" />
-                  <span className="ml-2 text-sm">Delete Recipe</span>
-                </button>
-              </>
-            )}
-          </div>
+          <RecipeImage
+            recipe={recipe}
+            isOwner={isOwner}
+            isImageLoading={isImageLoading}
+            imageError={imageError}
+            loadingImage={loadingImage}
+            uploadingImage={uploadingImage}
+            handleGenerateImage={handleGenerateImage}
+            handleDeleteImage={handleDeleteImage}
+            handleImageUpload={handleImageUpload}
+            setIsImageLoading={setIsImageLoading}
+            setImageError={setImageError}
+            shimmer={shimmer}
+            toBase64={toBase64}
+          />
 
-          {/* Recipe Image with optimizations */}
-          <div className="relative aspect-video w-full mb-6 bg-gray-100 rounded-lg overflow-hidden group">
-            {recipe.imageURL && !imageError ? (
-              <>
-                <Image
-                  src={recipe.imageURL}
-                  alt={recipe.recipeTitle}
-                  fill
-                  className={`object-cover transition-opacity duration-300 ${
-                    isImageLoading ? 'opacity-0' : 'opacity-100'
-                  }`}
-                  onLoad={() => setIsImageLoading(false)}
-                  onError={() => setImageError(true)}
-                  placeholder="blur"
-                  blurDataURL={`data:image/svg+xml;base64,${toBase64(shimmer(1920, 1080))}`}
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1000px"
-                  priority
-                />
-                {isImageLoading && (
-                  <div className="absolute inset-0 bg-gray-100 animate-pulse" />
-                )}
-                {isOwner && (
-                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-4">
-                    <button
-                      onClick={handleGenerateImage}
-                      disabled={loadingImage}
-                      className="bg-white text-gray-800 px-4 py-2 rounded-lg shadow-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-                    >
-                      {loadingImage ? (
-                        <div className="flex items-center">
-                          <LoadingSpinner className="mr-2" />
-                          Regenerating...
-                        </div>
-                      ) : (
-                        'Regenerate Image'
-                      )}
-                    </button>
-                    <button
-                      onClick={handleDeleteImage}
-                      className="bg-red-600 text-white px-4 py-2 rounded-lg shadow-md hover:bg-red-700 transition-all duration-200"
-                    >
-                      <FontAwesomeIcon icon={faTrash} className="mr-2" />
-                      Clear Image
-                    </button>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-                <span className="text-6xl">🍳</span>
-                {isOwner && (
-                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-4">
-                    <button
-                      onClick={handleGenerateImage}
-                      disabled={loadingImage}
-                      className="bg-white text-gray-800 px-4 py-2 rounded-lg shadow-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-                    >
-                      {loadingImage ? (
-                        <div className="flex items-center">
-                          <LoadingSpinner className="mr-2" />
-                          Generating...
-                        </div>
-                      ) : (
-                        'Generate Image'
-                      )}
-                    </button>
-                    <label className="bg-white text-gray-800 px-4 py-2 rounded-lg shadow-md hover:bg-gray-100 cursor-pointer transition-all duration-200 flex items-center">
-                      <FontAwesomeIcon icon={faUpload} className="mr-2" />
-                      {uploadingImage ? (
-                        <div className="flex items-center">
-                          <LoadingSpinner className="mr-2" />
-                          Uploading...
-                        </div>
-                      ) : (
-                        'Upload Image'
-                      )}
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="hidden"
-                        disabled={uploadingImage}
-                      />
-                    </label>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
 
-          <div className="relative group">
-            <div className="flex justify-between items-start">
-              <h1 className="text-3xl font-bold mb-4">{recipe.recipeTitle}</h1>
-              {isOwner && (
-                <button
-                  onClick={async () => {
-                    setLoadingTitle(true);
-                    try {
-                      const response = await fetch("/api/generateTitle", {
-                        method: "POST",
-                        headers: {
-                          "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify({
-                          ingredients: recipe.ingredients,
-                          directions: recipe.directions,
-                          cuisineType: recipe.cuisineType,
-                          diet: recipe.diet,
-                          recipeId: id,
-                        }),
-                      });
 
-                      const data = await response.json();
-                      if (data.title) {
-                        const recipeDocRef = doc(db, "recipes", id as string);
-                        await updateDoc(recipeDocRef, { recipeTitle: data.title });
-                        setRecipe(prev => prev ? { ...prev, recipeTitle: data.title } : null);
-                      }
-                    } catch (error) {
-                      console.error("Error generating title:", error);
-                    } finally {
-                      setLoadingTitle(false);
-                    }
-                  }}
-                  disabled={loadingTitle}
-                  className="opacity-0 group-hover:opacity-100 ml-4 bg-white text-gray-600 px-2 py-1 text-xs rounded-md shadow-sm hover:bg-gray-50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center whitespace-nowrap"
-                >
-                  {loadingTitle ? (
-                    <div className="flex items-center">
-                      <LoadingSpinner className="mr-1 w-3 h-3" />
-                      <span>Regenerating...</span>
-                    </div>
-                  ) : (
-                    <>
-                      <span>🔄</span>
-                      <span className="ml-1">Regenerate</span>
-                    </>
-                  )}
-                </button>
-              )}
-            </div>
-          </div>
 
-          {/* Recipe Summary Section */}
-          <div className="relative group mb-6">
-            <div className="flex flex-col md:flex-row md:justify-between md:items-start">
-              <div className="w-full">
-                {recipe.recipeSummary ? (
-                  <div className="relative">
-                    <p className="text-gray-600 text-lg leading-relaxed">{recipe.recipeSummary}</p>
-                    {isOwner && (
-                      <button
-                        onClick={generateSummary}
-                        disabled={loadingSummary}
-                        className="opacity-0 group-hover:opacity-100 absolute top-0 right-0 md:relative md:ml-4 bg-white text-gray-600 px-2 py-1 text-xs rounded-md shadow-sm hover:bg-gray-50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center whitespace-nowrap"
-                      >
-                        {loadingSummary ? (
-                          <div className="flex items-center">
-                            <LoadingSpinner className="mr-1 w-3 h-3" />
-                            <span>Regenerating...</span>
-                          </div>
-                        ) : (
-                          <>
-                            <span>🔄</span>
-                            <span className="ml-1">Regenerate</span>
-                          </>
-                        )}
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex justify-center">
-                    <button
-                      onClick={generateSummary}
-                      disabled={loadingSummary}
-                      className="bg-white text-gray-800 px-4 py-2 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {loadingSummary ? (
-                        <div className="flex items-center">
-                          <LoadingSpinner className="mr-2" />
-                          Generating Summary...
-                        </div>
-                      ) : (
-                        'Generate Recipe Summary'
-                      )}
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
 
-          {/* Add refs to sections */}
-          <div ref={ingredientsRef} className="mb-6">
-            <h3 className="text-xl font-semibold mb-2">
-              <span className="mr-2">📝</span>
-              Ingredients
-            </h3>
-            <ul className="list-none pl-6 space-y-2">
-              {recipe.ingredients.map((ingredient, index) => (
-                <li
-                  key={index}
-                  className={`cursor-pointer flex items-center bg-gray-100 border border-gray-300 rounded-full px-3 py-2 transform transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-md ${
-                    checkedIngredients[index] 
-                      ? "bg-green-50 border-green-200 -translate-x-1" 
-                      : "hover:border-gray-400"
-                  }`}
-                  onClick={() => toggleIngredientCheck(index)}
-                >
-                  <FontAwesomeIcon
-                    icon={checkedIngredients[index] ? faCheckCircle : faCircle}
-                    className={`mr-3 transform transition-transform duration-300 ${
-                      checkedIngredients[index] 
-                        ? "text-green-500 scale-110" 
-                        : "text-gray-400 hover:scale-105"
-                    }`}
-                  />
-                  <span className={`transition-all duration-300 ${
-                    checkedIngredients[index] 
-                      ? "line-through text-gray-400" 
-                      : "text-gray-700"
-                  }`}>
-                  {ingredient}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <RecipeIngredients
+            recipe={recipe}
+            checkedIngredients={checkedIngredients}
+            toggleIngredientCheck={toggleIngredientCheck}
+            ingredientsRef={ingredientsRef}
+          />
 
-          <div ref={directionsRef} className="mb-6">
-            <h3 className="text-xl font-semibold mb-2">
-              <span className="mr-2">👩‍🍳</span>
-              Directions
-            </h3>
-            <ul className="list-none pl-6 space-y-2">
-              {recipe.directions.map((direction, index) => (
-                <li
-                  key={index}
-                  className={`cursor-pointer flex items-center bg-gray-100 border border-gray-300 rounded-md px-3 py-2 transform transition-all duration-300 ease-in-out hover:scale-[1.01] hover:shadow-md ${
-                    checkedDirections[index] 
-                      ? "bg-blue-50 border-blue-200 -translate-x-1" 
-                      : "hover:border-gray-400"
-                  }`}
-                  onClick={() => toggleDirectionCheck(index)}
-                >
-                  <div className="flex-shrink-0">
-                  <FontAwesomeIcon
-                    icon={checkedDirections[index] ? faCheckCircle : faCircle}
-                      className={`mr-3 transform transition-transform duration-300 ${
-                        checkedDirections[index] 
-                          ? "text-blue-500 scale-110" 
-                          : "text-gray-400 hover:scale-105"
-                      }`}
-                    />
-                  </div>
-                  <span className={`transition-all duration-300 ${
-                    checkedDirections[index] 
-                      ? "line-through text-gray-400" 
-                      : "text-gray-700"
-                  }`}>
-                  {direction}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <RecipeDirections
+            recipe={recipe}
+            checkedDirections={checkedDirections}
+            toggleDirectionCheck={toggleDirectionCheck}
+            directionsRef={directionsRef}
+          />
 
-          <div ref={notesRef} className="mb-6">
-            <h3 className="text-xl font-semibold mb-2">
-              <span className="mr-2">📌</span>
-              Recipe Notes
-            </h3>
-            <div className="relative">
-              <textarea
-                value={notes}
-                onChange={handleNotesChange}
-                placeholder="Add your personal notes about this recipe..."
-                className="w-full h-32 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-              />
-              {hasNoteChanges && (
-                <button
-                  onClick={handleSaveNotes}
-                  disabled={savingNotes}
-                  className="absolute bottom-3 right-3 bg-gray-900 text-white px-4 py-2 rounded-lg shadow-md hover:bg-gray-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                >
-                  {savingNotes ? (
-                    <div className="flex items-center">
-                      <LoadingSpinner className="mr-2" />
-                      Saving...
-                    </div>
-                  ) : (
-                    <>
-                      <FontAwesomeIcon icon={faSave} className="mr-2" />
-                      Save
-                    </>
-                  )}
-                </button>
-              )}
-            </div>
-          </div>
+          <RecipeNotes
+            recipe={recipe}
+            isOwner={isOwner}
+            notes={notes}
+            savingNotes={savingNotes}
+            hasNoteChanges={hasNoteChanges}
+            notesRef={notesRef}
+            setNotes={setNotes}
+            setHasNoteChanges={setHasNoteChanges}
+            handleSaveNotes={handleSaveNotes}
+          />
 
-          {/* Move Calorie & Nutritional Info Section here */}
-          <div ref={macroInfoRef} className="mb-6" style={{ scrollMarginBottom: '150px' }}>
-            <h3 className="text-xl font-semibold mb-2">
-              <span className="mr-2">🔢</span>
-              Calorie & Nutritional Info
-            </h3>
-            <div className="relative group">
-              <div className="w-full">
-                {macroInfo ? (
-                  <div className="relative">
-                    <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                      <div className="space-y-4">
-                        <div>
-                          <h4 className="font-semibold text-gray-700 mb-2">Total Recipe ({macroInfo.servings} servings)</h4>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div className="bg-gray-50 p-3 rounded-lg">
-                              <div className="text-sm text-gray-500">Calories</div>
-                              <div className="font-semibold">{macroInfo.total.calories}</div>
-                            </div>
-                            <div className="bg-gray-50 p-3 rounded-lg">
-                              <div className="text-sm text-gray-500">Protein</div>
-                              <div className="font-semibold">{macroInfo.total.proteins}g</div>
-                            </div>
-                            <div className="bg-gray-50 p-3 rounded-lg">
-                              <div className="text-sm text-gray-500">Carbs</div>
-                              <div className="font-semibold">{macroInfo.total.carbs}g</div>
-                            </div>
-                            <div className="bg-gray-50 p-3 rounded-lg">
-                              <div className="text-sm text-gray-500">Fat</div>
-                              <div className="font-semibold">{macroInfo.total.fats}g</div>
-                            </div>
-                          </div>
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-gray-700 mb-2">Per Serving</h4>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div className="bg-gray-50 p-3 rounded-lg">
-                              <div className="text-sm text-gray-500">Calories</div>
-                              <div className="font-semibold">{macroInfo.per_serving.calories}</div>
-                            </div>
-                            <div className="bg-gray-50 p-3 rounded-lg">
-                              <div className="text-sm text-gray-500">Protein</div>
-                              <div className="font-semibold">{macroInfo.per_serving.proteins}g</div>
-                            </div>
-                            <div className="bg-gray-50 p-3 rounded-lg">
-                              <div className="text-sm text-gray-500">Carbs</div>
-                              <div className="font-semibold">{macroInfo.per_serving.carbs}g</div>
-                            </div>
-                            <div className="bg-gray-50 p-3 rounded-lg">
-                              <div className="text-sm text-gray-500">Fat</div>
-                              <div className="font-semibold">{macroInfo.per_serving.fats}g</div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    {macroInfo && (
-                      <button
-                        onClick={handleMacroCalculation}
-                        disabled={loadingMacros}
-                        className="opacity-0 group-hover:opacity-100 absolute top-2 right-2 md:relative md:ml-4 bg-white text-gray-600 px-2 py-1 text-xs rounded-md shadow-sm hover:bg-gray-50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center whitespace-nowrap"
-                      >
-                        {loadingMacros ? (
-                          <div className="flex items-center">
-                            <LoadingSpinner className="mr-1 w-3 h-3" />
-                            <span>Recalculating...</span>
-                          </div>
-                        ) : (
-                          <>
-                            <span>🔄</span>
-                            <span className="ml-1">Recalculate</span>
-                          </>
-                        )}
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex justify-center">
-                    <button
-                      onClick={handleMacroCalculation}
-                      disabled={loadingMacros}
-                      className="bg-white text-gray-800 px-4 py-2 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {loadingMacros ? (
-                        <div className="flex items-center">
-                          <LoadingSpinner className="mr-2" />
-                          Calculating...
-                        </div>
-                      ) : (
-                        'Calculate Nutritional Info'
-                      )}
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+          <RecipeMacros
+            recipe={recipe}
+            isOwner={isOwner}
+            loadingMacros={loadingMacros}
+            macroInfoRef={macroInfoRef}
+            handleMacroCalculation={handleMacroCalculation}
+          />
 
-          {/* Move Dish Pairings Section here */}
-          <div ref={pairingsRef} className="mb-6" style={{ scrollMarginBottom: '150px' }}>
-            <h3 className="text-xl font-semibold mb-2">
-              <span className="mr-2">🍷</span>
-              Dish Pairings
-            </h3>
-            <div className="relative group">
-              <div className="w-full">
-                {dishPairings ? (
-                  <div className="relative">
-                    <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                      <p className="text-gray-700 leading-relaxed">{dishPairings}</p>
-                    </div>
-                    {dishPairings && (
-                      <button
-                        onClick={handleGetPairings}
-                        disabled={loadingPairings}
-                        className="opacity-0 group-hover:opacity-100 absolute top-2 right-2 md:relative md:ml-4 bg-white text-gray-600 px-2 py-1 text-xs rounded-md shadow-sm hover:bg-gray-50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center whitespace-nowrap"
-                      >
-                        {loadingPairings ? (
-                          <div className="flex items-center">
-                            <LoadingSpinner className="mr-1 w-3 h-3" />
-                            <span>Regenerating...</span>
-                          </div>
-                        ) : (
-                          <>
-                            <span>🔄</span>
-                            <span className="ml-1">Regenerate</span>
-                          </>
-                        )}
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex justify-center">
-                    <button
-                      onClick={handleGetPairings}
-                      disabled={loadingPairings}
-                      className="bg-white text-gray-800 px-4 py-2 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {loadingPairings ? (
-                        <div className="flex items-center">
-                          <LoadingSpinner className="mr-2" />
-                          Generating Suggestions...
-                        </div>
-                      ) : (
-                        'Get Pairing Suggestions'
-                      )}
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+          <RecipePairings
+            recipe={recipe}
+            isOwner={isOwner}
+            loadingPairings={loadingPairings}
+            pairingsRef={pairingsRef}
+            handleGetPairings={handleGetPairings}
+          />
 
-          {/* Modified sticky navigation with progress and mobile responsiveness */}
-          <div className="md:sticky md:top-4 fixed bottom-0 left-0 right-0 md:relative z-30">
-            {/* Desktop version */}
-            <div className="hidden md:block bg-white/80 backdrop-blur-sm rounded-lg shadow-sm mb-6 transition-all duration-300 ease-in-out">
-              <div className="p-4">
-                <div className="flex justify-between items-center mb-4">
-                  <div className="flex space-x-4">
-                    <button
-                      onClick={() => scrollToSection(ingredientsRef)}
-                      className={`px-4 py-2 rounded-full transition-all duration-200 ${
-                        activeSection === 'ingredients'
-                          ? 'bg-black text-white'
-                          : 'bg-gray-100 hover:bg-gray-200'
-                      }`}
-                    >
-                      Ingredients
-                    </button>
-                    <button
-                      onClick={() => scrollToSection(directionsRef)}
-                      className={`px-4 py-2 rounded-full transition-all duration-200 ${
-                        activeSection === 'directions'
-                          ? 'bg-black text-white'
-                          : 'bg-gray-100 hover:bg-gray-200'
-                      }`}
-                    >
-                      Directions
-                    </button>
-                    <button
-                      onClick={() => scrollToSection(notesRef)}
-                      className={`px-4 py-2 rounded-full transition-all duration-200 ${
-                        activeSection === 'notes'
-                          ? 'bg-black text-white'
-                          : 'bg-gray-100 hover:bg-gray-200'
-                      }`}
-                    >
-                      Notes
-                    </button>
-                    <button
-                      onClick={() => scrollToSection(macroInfoRef)}
-                      className={`px-4 py-2 rounded-full transition-all duration-200 ${
-                        activeSection === 'macros'
-                          ? 'bg-black text-white'
-                          : 'bg-gray-100 hover:bg-gray-200'
-                      }`}
-                    >
-                      Nutrition
-                    </button>
-                    <button
-                      onClick={() => scrollToSection(pairingsRef)}
-                      className={`px-4 py-2 rounded-full transition-all duration-200 ${
-                        activeSection === 'pairings'
-                          ? 'bg-black text-white'
-                          : 'bg-gray-100 hover:bg-gray-200'
-                      }`}
-                    >
-                      Pairings
-                    </button>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <div className="flex justify-between text-sm text-gray-600 mb-1">
-                      <span>Ingredients</span>
-                      <span>{Math.round(calculateProgress().ingredients)}%</span>
-                    </div>
-                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-green-500 transition-all duration-300 ease-out"
-                        style={{ width: `${calculateProgress().ingredients}%` }}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between text-sm text-gray-600 mb-1">
-                      <span>Steps</span>
-                      <span>{Math.round(calculateProgress().directions)}%</span>
-                    </div>
-                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-blue-500 transition-all duration-300 ease-out"
-                        style={{ width: `${calculateProgress().directions}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Modified Mobile version - bottom fixed bar with horizontal scroll */}
-            <div className="md:hidden bg-white shadow-[0_-4px_6px_-1px_rgb(0,0,0,0.1)] rounded-t-xl w-[75%]">
-              <div className="safe-area-inset-bottom">
-                <div className="p-3">
-                  {/* Progress bars in a more compact format */}
-                  <div className="grid grid-cols-2 gap-2 mb-2">
-                    <div className="w-full">
-                      <div className="flex justify-between text-xs text-gray-600 mb-1">
-                        <span>Ingredients: {Math.round(calculateProgress().ingredients)}%</span>
-                      </div>
-                      <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-green-500 transition-all duration-300 ease-out"
-                          style={{ width: `${calculateProgress().ingredients}%` }}
-                        />
-                      </div>
-                    </div>
-                    <div className="w-full">
-                      <div className="flex justify-between text-xs text-gray-600 mb-1">
-                        <span>Steps: {Math.round(calculateProgress().directions)}%</span>
-                      </div>
-                      <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-blue-500 transition-all duration-300 ease-out"
-                          style={{ width: `${calculateProgress().directions}%` }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  {/* Navigation buttons in scrollable row */}
-                  <div className="overflow-x-auto scrollbar-hide -mx-3">
-                    <div className="flex space-x-2 min-w-max px-3">
-                      <button
-                        onClick={() => scrollToSection(ingredientsRef)}
-                        className={`px-3 py-1.5 rounded-full text-sm transition-all duration-200 whitespace-nowrap ${
-                          activeSection === 'ingredients'
-                            ? 'bg-black text-white'
-                            : 'bg-gray-100 hover:bg-gray-200'
-                        }`}
-                      >
-                        Ingredients
-                      </button>
-                      <button
-                        onClick={() => scrollToSection(directionsRef)}
-                        className={`px-3 py-1.5 rounded-full text-sm transition-all duration-200 whitespace-nowrap ${
-                          activeSection === 'directions'
-                            ? 'bg-black text-white'
-                            : 'bg-gray-100 hover:bg-gray-200'
-                        }`}
-                      >
-                        Directions
-                      </button>
-                      <button
-                        onClick={() => scrollToSection(notesRef)}
-                        className={`px-3 py-1.5 rounded-full text-sm transition-all duration-200 whitespace-nowrap ${
-                          activeSection === 'notes'
-                            ? 'bg-black text-white'
-                            : 'bg-gray-100 hover:bg-gray-200'
-                        }`}
-                      >
-                        Notes
-                      </button>
-                      <button
-                        onClick={() => scrollToSection(macroInfoRef)}
-                        className={`px-3 py-1.5 rounded-full text-sm transition-all duration-200 whitespace-nowrap ${
-                          activeSection === 'macros'
-                            ? 'bg-black text-white'
-                            : 'bg-gray-100 hover:bg-gray-200'
-                        }`}
-                      >
-                        Nutrition
-                      </button>
-                      <button
-                        onClick={() => scrollToSection(pairingsRef)}
-                        className={`px-3 py-1.5 rounded-full text-sm transition-all duration-200 whitespace-nowrap ${
-                          activeSection === 'pairings'
-                            ? 'bg-black text-white'
-                            : 'bg-gray-100 hover:bg-gray-200'
-                        }`}
-                      >
-                        Pairings
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <RecipeNavigation
+            activeSection={activeSection}
+            ingredientsProgress={calculateProgress().ingredients}
+            directionsProgress={calculateProgress().directions}
+            scrollToSection={scrollToSection}
+            ingredientsRef={ingredientsRef}
+            directionsRef={directionsRef}
+            notesRef={notesRef}
+            macroInfoRef={macroInfoRef}
+            pairingsRef={pairingsRef}
+          />
 
           {/* Add the chat bubble with adjusted positioning and higher z-index */}
           <div className="relative mb-16 md:mb-8">
             <div className="fixed bottom-0 right-0 w-[25%] md:w-auto md:relative md:bottom-auto md:right-auto z-50">
-              <RecipeChatBubble 
+              <RecipeChatBubble
                 recipeContent={`Title: ${recipe.recipeTitle}
 
 Cuisine Type: ${recipe.cuisineType}
@@ -1249,28 +657,12 @@ ${recipe.ingredients.map((ingredient, index) => `${index + 1}. ${ingredient}`).j
 
 Directions:
 ${recipe.directions.map((direction, index) => `${index + 1}. ${direction}`).join('\n')}
-`} 
+`}
               />
             </div>
           </div>
 
-          {/* Disclaimer with Logo */}
-          <div className="text-center mb-8 mt-24">
-            <div className="flex justify-center mb-4">
-              <Image
-                src="/baba-removebg.png"
-                alt="Baba Selo"
-                width={128}
-                height={128}
-                className="opacity-100"
-              />
-            </div>
-            <div className="text-gray-500 text-sm px-4">
-              <p>⚠️ Please double-check all ingredients, measurements, and cooking steps, as even Baba Selo can make mistakes sometimes.</p>
-              <p className="mt-2 mb-24">For food safety, always ensure proper cooking temperatures and handling of ingredients.</p>
-            </div>
-          </div>
-
+          <RecipeFooter />
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center min-h-screen">
