@@ -186,23 +186,46 @@ const SpoonStats = () => {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
+      {/* Add Baba Selo logo and title */}
+      <div className="flex flex-col items-center mb-12">
+        <img src="/baba-removebg.png" alt="Baba" className="w-32 h-32 mb-4" />
+        <h1 className="text-center text-2xl font-semibold mb-4">
+          Let's see how many points you've earned, dear!
+        </h1>
+        <p className="text-lg text-gray-600">Every interaction with Baba counts!</p>
+      </div>
+
       {/* Header with total points */}
       <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <div className="bg-yellow-100 p-4 rounded-full mr-4">
-              <FontAwesomeIcon icon={faSpoon} className="text-2xl text-yellow-600" />
+        {userData?.totalPoints ? (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="bg-yellow-100 p-4 rounded-full mr-4">
+                <FontAwesomeIcon icon={faSpoon} className="text-2xl text-yellow-600" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold">Your Spoon Stats</h1>
+                <p className="text-gray-600">Track your cooking achievements</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-3xl font-bold">Your Spoon Stats</h1>
-              <p className="text-gray-600">Track your cooking achievements</p>
+            <div className="text-right">
+              <div className="text-4xl font-bold text-yellow-600">{userData.totalPoints}</div>
+              <div className="text-gray-600">Total Spoons Earned</div>
             </div>
           </div>
-          <div className="text-center">
-            <div className="text-4xl font-bold text-yellow-600">{userData?.totalPoints || 0}</div>
-            <div className="text-gray-600">Total Points</div>
+        ) : (
+          <div className="text-center py-8">
+            <div className="text-2xl font-bold mb-4">No Points Yet!</div>
+            <p className="text-gray-600 mb-6">Time to start your cooking journey with Baba!</p>
+            <Link 
+              href="/"
+              className="inline-flex items-center px-6 py-3 bg-black text-white rounded-full hover:bg-gray-800 transition-colors"
+            >
+              <span className="mr-2">✨</span>
+              Start by Generating a Recipe
+            </Link>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Info Section */}
@@ -238,7 +261,7 @@ const SpoonStats = () => {
                 <li>Getting calorie and nutritional information (20 points)</li>
                 <li>Discovering perfect dish pairings (15 points)</li>
                 <li>Generating AI recipe images (10 points)</li>
-                <li>Uploading your own recipe photos (25 points)</li>
+                <li>Uploading your own recipe photos (25-100 points for authentic food photos, 0 points if unrelated)</li>
                 <li>Chatting with Baba about your recipe (5 points per meaningful interaction)</li>
                 <li>Having others save your shared recipes (10 points per save)</li>
               </ul>
