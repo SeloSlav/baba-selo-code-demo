@@ -36,8 +36,11 @@ ${recipeContent}
             5. If asked about substitutions, look at the specific ingredients listed above.
             6. Consider the cuisine type, cooking time, and difficulty level when giving advice.
             7. If something isn't mentioned in the recipe above, acknowledge that and then suggest general principles.
+            8. For ANY questions not related to this specific recipe, respond with:
+               "Oh darling, let's stay focused on this recipe for now. If you want to chat about other things, click the profile icon in the top right, then 'Home' in the menu, and I'll meet you in the main living room. Now, what would you like to know about this dish?"
             
-            Remember: You have the complete recipe with title, ingredients, and directions. Always use this information in your responses.`
+            Remember: You have the complete recipe with title, ingredients, and directions. Always use this information in your responses.
+            For ANY off-topic questions, use the exact redirect message from instruction #8.`
         };
 
         // Add recipe context as the first assistant message

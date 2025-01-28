@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTimes, faCamera, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
+import { faTimes, faCamera, faCircleInfo, faUpload } from "@fortawesome/free-solid-svg-icons";
 import Image from "next/image";
 
 interface ImageUploadPopupProps {
@@ -23,6 +23,7 @@ export const ImageUploadPopup: React.FC<ImageUploadPopupProps> = ({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!selectedFile) {
@@ -36,21 +37,21 @@ export const ImageUploadPopup: React.FC<ImageUploadPopupProps> = ({
     return () => URL.revokeObjectURL(objectUrl);
   }, [selectedFile]);
 
+  const validateFile = (file: File): boolean => {
+    if (file.size > MAX_FILE_SIZE) {
+      setError(`File size must be less than ${MAX_FILE_SIZE / (1024 * 1024)} MB`);
+      return false;
+    }
+    setError("");
+    return true;
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    if (file.size > MAX_FILE_SIZE) {
-      setError(`File size must be less than ${MAX_FILE_SIZE / (1024 * 1024)} MB`);
-      return;
+    if (validateFile(file)) {
+      setSelectedFile(file);
     }
-
-    setError("");
-    setSelectedFile(file);
-  };
-
-  const handleClick = () => {
-    fileInputRef.current?.click();
   };
 
   const handleDrop = useCallback(
@@ -58,14 +59,9 @@ export const ImageUploadPopup: React.FC<ImageUploadPopupProps> = ({
       e.preventDefault();
       const file = e.dataTransfer.files?.[0];
       if (!file) return;
-
-      if (file.size > MAX_FILE_SIZE) {
-        setError(`File size must be less than ${MAX_FILE_SIZE / (1024 * 1024)} MB`);
-        return;
+      if (validateFile(file)) {
+        setSelectedFile(file);
       }
-
-      setError("");
-      setSelectedFile(file);
     },
     []
   );
@@ -120,47 +116,78 @@ export const ImageUploadPopup: React.FC<ImageUploadPopupProps> = ({
 
         {/* Upload Area */}
         {!previewUrl ? (
-          <div
-            onClick={handleClick}
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            className="mb-6 border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:bg-gray-50 transition-colors cursor-pointer relative"
-          >
-            <div className="absolute top-3 right-3 group">
-              <FontAwesomeIcon 
-                icon={faCircleInfo} 
-                className="text-gray-400 hover:text-gray-600 text-sm cursor-help"
-              />
-              <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 absolute right-0 bottom-full mb-2 w-64 p-3 bg-black text-white text-xs rounded-xl shadow-lg z-50">
-                <div className="relative">
-                  Upload any image:
-                  <ul className="mt-2 ml-2 space-y-1.5">
-                    <li>• Your fridge contents</li>
-                    <li>• Ingredients you have</li>
-                    <li>• A dish you made</li>
-                    <li>• Recipe inspiration</li>
-                    <li>• Your grandson</li>
-                  </ul>
-                  <div className="absolute -bottom-1 right-3 translate-y-full w-2 h-2 bg-black rotate-45"></div>
+          <div className="mb-6">
+            {/* Camera and Upload Options */}
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              {/* Take Photo Option */}
+              <button
+                onClick={() => cameraInputRef.current?.click()}
+                className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
+              >
+                <FontAwesomeIcon icon={faCamera} className="text-3xl text-gray-400 mb-3" />
+                <p className="text-sm text-gray-600 font-medium">Take a Photo</p>
+                <p className="text-xs text-gray-400 mt-1">Use your camera</p>
+                <input
+                  type="file"
+                  ref={cameraInputRef}
+                  onChange={handleFileChange}
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                />
+              </button>
+
+              {/* Upload Option */}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
+              >
+                <FontAwesomeIcon icon={faUpload} className="text-3xl text-gray-400 mb-3" />
+                <p className="text-sm text-gray-600 font-medium">Upload Photo</p>
+                <p className="text-xs text-gray-400 mt-1">From your device</p>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept="image/*"
+                  className="hidden"
+                />
+              </button>
+            </div>
+
+            {/* Drag & Drop Area */}
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              className="relative border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:bg-gray-50 transition-colors cursor-pointer"
+            >
+              <div className="absolute top-3 right-3 group">
+                <FontAwesomeIcon 
+                  icon={faCircleInfo} 
+                  className="text-gray-400 hover:text-gray-600 text-sm cursor-help"
+                />
+                <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 absolute right-0 bottom-full mb-2 w-64 p-3 bg-black text-white text-xs rounded-xl shadow-lg z-50">
+                  <div className="relative">
+                    Upload any image:
+                    <ul className="mt-2 ml-2 space-y-1.5">
+                      <li>• Your fridge contents</li>
+                      <li>• Ingredients you have</li>
+                      <li>• A dish you made</li>
+                      <li>• Recipe inspiration</li>
+                      <li>• Your grandson</li>
+                    </ul>
+                    <div className="absolute -bottom-1 right-3 translate-y-full w-2 h-2 bg-black rotate-45"></div>
+                  </div>
                 </div>
               </div>
+              <p className="text-gray-600 mb-2">
+                Or drag & drop your image here
+              </p>
+              <p className="text-xs text-gray-400">
+                JPG, PNG, or GIF • Max {MAX_FILE_SIZE / (1024 * 1024)} MB
+              </p>
             </div>
-            <div className="mb-4">
-              <FontAwesomeIcon icon={faCamera} className="text-4xl text-gray-400" />
-            </div>
-            <p className="text-gray-600 mb-2">
-              Drag & drop your image here or click to browse
-            </p>
-            <p className="text-xs text-gray-400">
-              JPG, PNG, or GIF • Max {MAX_FILE_SIZE / (1024 * 1024)} MB
-            </p>
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              accept="image/*"
-              className="hidden"
-            />
           </div>
         ) : (
           <div className="mb-6 relative">

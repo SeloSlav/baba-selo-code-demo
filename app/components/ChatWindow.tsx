@@ -8,7 +8,7 @@ import React, {
   useEffect,
 } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPaperclip, faCamera, faArrowUp, faArrowDown, faImage } from "@fortawesome/free-solid-svg-icons";
+import { faPaperclip, faCamera, faArrowUp, faArrowDown, faImage, faMagicWandSparkles, faUpload, faFileUpload } from "@fortawesome/free-solid-svg-icons";
 import { ChatMessages } from "./ChatMessages";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
@@ -379,14 +379,14 @@ export const ChatWindow = forwardRef(
                       style={{ background: "transparent" }}
                       onClick={() => setIsImageUploadOpen(true)}
                     >
-                      <FontAwesomeIcon icon={faPaperclip} className="text-black" />
+                      <FontAwesomeIcon icon={faCamera} className="text-black" />
                     </button>
                     <button
                       className="p-2 bg-gray-200 rounded-md hover:bg-gray-300 flex items-center justify-center"
                       style={{ background: "transparent" }}
                       onClick={() => setIsDrawImageOpen(true)}
                     >
-                      <FontAwesomeIcon icon={faImage} className="text-black" />
+                      <FontAwesomeIcon icon={faMagicWandSparkles} className="text-black" />
                     </button>
                   </div>
                   <button
@@ -455,14 +455,14 @@ export const ChatWindow = forwardRef(
                   style={{ background: "transparent" }}
                   onClick={() => setIsImageUploadOpen(true)}
                 >
-                  <FontAwesomeIcon icon={faCamera} className="text-black" />
+                  <FontAwesomeIcon icon={faPaperclip} className="text-black" />
                 </button>
                 <button
                   className="p-2 bg-gray-200 rounded-md hover:bg-gray-300 flex items-center justify-center"
                   style={{ background: "transparent" }}
                   onClick={() => setIsDrawImageOpen(true)}
                 >
-                  <FontAwesomeIcon icon={faImage} className="text-black" />
+                  <FontAwesomeIcon icon={faMagicWandSparkles} className="text-black" />
                 </button>
               </div>
               <button

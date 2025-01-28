@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowUp, faXmark, faComment } from "@fortawesome/free-solid-svg-icons";
+import { renderNutritionInfo } from './messageUtils';
 
 interface Message {
     role: "user" | "assistant";
-    content: string;
+    content: string | any; // Allow for object content for nutrition info
 }
 
 interface RecipeChatBubbleProps {
@@ -32,7 +33,9 @@ export const RecipeChatBubble: React.FC<RecipeChatBubbleProps> = ({ recipeConten
         "What's the most important step to get right?",
         "How many people does this recipe serve?",
         "What should I watch out for when making this?",
-        "How do I know when it's perfectly cooked?"
+        "How do I know when it's perfectly cooked?",
+        "What dishes pair well with this recipe?",
+        "Can you tell me the calorie and nutritional info?"
     ];
 
     const scrollToLatestMessage = () => {
@@ -51,11 +54,54 @@ export const RecipeChatBubble: React.FC<RecipeChatBubbleProps> = ({ recipeConten
         setMessages(updatedMessages);
         setLoading(true);
 
+        // Special handling for calorie info request
+        if (suggestion.toLowerCase().includes("calorie") || 
+            suggestion.toLowerCase().includes("nutrition") ||
+            suggestion.toLowerCase().includes("macro") ||
+            suggestion.toLowerCase().match(/how many (calories|cals)/) ||
+            suggestion.toLowerCase().includes("protein") ||
+            suggestion.toLowerCase().includes("carbs") ||
+            suggestion.toLowerCase().includes("fat")) {
+            fetch("/api/macroInfo", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ recipe: recipeContent }),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.macros) {
+                        throw new Error("No macro data available");
+                    }
+
+                    const assistantMessage: Message = { 
+                        role: "assistant", 
+                        content: data.macros
+                    };
+                    setMessages(prev => [...prev, assistantMessage]);
+                })
+                .catch(error => {
+                    console.error("Error fetching nutritional info:", error);
+                    const errorMessage: Message = { 
+                        role: "assistant", 
+                        content: "Oh dear, I had trouble calculating the nutritional information. Let's try that again later." 
+                    };
+                    setMessages(prev => [...prev, errorMessage]);
+                })
+                .finally(() => {
+                    setLoading(false);
+                });
+            return;
+        }
+
+        // Regular recipe chat handling for other suggestions
         fetch("/api/recipeChat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                messages: updatedMessages,
+                messages: updatedMessages.map(msg => ({
+                    role: msg.role,
+                    content: typeof msg.content === 'string' ? msg.content : 'Nutritional information was provided.'
+                })),
                 recipeContent
             }),
         })
@@ -88,12 +134,53 @@ export const RecipeChatBubble: React.FC<RecipeChatBubbleProps> = ({ recipeConten
         setMessage("");
         setLoading(true);
 
+        // Check if it's a nutrition-related question
+        const lowerMessage = message.toLowerCase();
+        if (lowerMessage.includes("calorie") || 
+            lowerMessage.includes("nutrition") ||
+            lowerMessage.includes("macro") ||
+            lowerMessage.match(/how many (calories|cals)/) ||
+            lowerMessage.includes("protein") ||
+            lowerMessage.includes("carbs") ||
+            lowerMessage.includes("fat")) {
+            try {
+                const response = await fetch("/api/macroInfo", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ recipe: recipeContent }),
+                });
+                const data = await response.json();
+                if (!data.macros) {
+                    throw new Error("No macro data available");
+                }
+                const assistantMessage: Message = { 
+                    role: "assistant", 
+                    content: data.macros
+                };
+                setMessages(prev => [...prev, assistantMessage]);
+            } catch (error) {
+                console.error("Error fetching nutritional info:", error);
+                const errorMessage: Message = { 
+                    role: "assistant", 
+                    content: "Oh dear, I had trouble calculating the nutritional information. Let's try that again later." 
+                };
+                setMessages(prev => [...prev, errorMessage]);
+            } finally {
+                setLoading(false);
+            }
+            return;
+        }
+
+        // Regular chat handling for non-nutrition questions
         try {
             const response = await fetch("/api/recipeChat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    messages: updatedMessages,
+                    messages: updatedMessages.map(msg => ({
+                        role: msg.role,
+                        content: typeof msg.content === 'string' ? msg.content : 'Nutritional information was provided.'
+                    })),
                     recipeContent
                 }),
             });
@@ -160,6 +247,8 @@ export const RecipeChatBubble: React.FC<RecipeChatBubbleProps> = ({ recipeConten
                         else if (suggestion.includes("serve")) emoji = "👥";
                         else if (suggestion.includes("watch out")) emoji = "⚠️";
                         else if (suggestion.includes("cooked")) emoji = "✅";
+                        else if (suggestion.includes("pair")) emoji = "🍷";
+                        else if (suggestion.includes("calorie")) emoji = "📊";
 
                         return (
                             <button
@@ -186,7 +275,10 @@ export const RecipeChatBubble: React.FC<RecipeChatBubbleProps> = ({ recipeConten
                                     : "bg-[#F3F3F3] text-[#0d0d0d]"
                             }`}
                         >
-                            {msg.content}
+                            {typeof msg.content === "string" 
+                                ? msg.content 
+                                : renderNutritionInfo(msg.content)
+                            }
                         </div>
                     </div>
                 ))}
