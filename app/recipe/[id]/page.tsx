@@ -206,13 +206,11 @@ const RecipeDetails = () => {
 
   // Function to generate a new recipe image using DALL·E
   const handleGenerateImage = async () => {
-    if (!recipe || !id) return;
+    if (!recipe || !id || !user) return;  // Add user check
 
     setLoadingImage(true);
-
     try {
-      const auth = getAuth();
-      const userId = auth.currentUser?.uid;
+      console.log("Generating image with user ID:", user.uid);
 
       const response = await fetch("/api/generateImage", {
         method: "POST",
@@ -221,8 +219,7 @@ const RecipeDetails = () => {
         },
         body: JSON.stringify({
           prompt: `A rustic dish representation for ${recipe.recipeTitle}`,
-          recipeId: id,
-          userId: userId
+          userId: user.uid  // Use user.uid directly
         }),
       });
 
@@ -583,10 +580,6 @@ const RecipeDetails = () => {
             toBase64={toBase64}
           />
 
-
-
-
-
           <RecipeIngredients
             recipe={recipe}
             checkedIngredients={checkedIngredients}
@@ -594,7 +587,7 @@ const RecipeDetails = () => {
             ingredientsRef={ingredientsRef}
           />
 
-          <RecipeDirections
+          <RecipeDirections 
             recipe={recipe}
             checkedDirections={checkedDirections}
             toggleDirectionCheck={toggleDirectionCheck}

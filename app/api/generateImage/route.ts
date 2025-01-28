@@ -3,15 +3,8 @@ import OpenAI from 'openai';
 import { db } from '../../firebase/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
-});
-
-interface ImageStyleOption {
-    prompt: string;
-}
-
-const imageStyleOptions: Record<string, ImageStyleOption> = {
+// Image style options with their prompts - must match settings page
+const imageStyleOptions = {
     "rustic-traditional": {
         prompt: "Create this in a rustic, traditional art style reminiscent of old European pen and ink drawings with watercolor washes on aged parchment paper. The style should be warm and charming, with a handcrafted feel like something a grandmother would lovingly sketch. Use a muted, earthy color palette with touches of warm browns, soft yellows, and gentle greens. Add subtle textures that suggest the grain of parchment paper and delicate ink lines. The overall effect should be nostalgic and heartwarming, like finding an old recipe book illustration."
     },
@@ -26,9 +19,14 @@ const imageStyleOptions: Record<string, ImageStyleOption> = {
     }
 };
 
+const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY
+});
+
 export async function POST(req: Request) {
     try {
         const { prompt, userId } = await req.json();
+        console.log("Received request with userId:", userId);
 
         if (!prompt) {
             return NextResponse.json({ error: "No prompt provided" }, { status: 400 });
@@ -38,21 +36,33 @@ export async function POST(req: Request) {
         let stylePrompt = imageStyleOptions["rustic-traditional"].prompt; // Default style
         if (userId) {
             try {
+                console.log("Fetching user preferences for userId:", userId);
                 const userDocRef = doc(db, "users", userId);
                 const userDocSnap = await getDoc(userDocRef);
+                console.log("User doc exists:", userDocSnap.exists());
                 if (userDocSnap.exists()) {
                     const userData = userDocSnap.data();
-                    const userStyle = userData.preferredImageStyle as keyof typeof imageStyleOptions;
+                    console.log("User data:", userData);
+                    const userStyle = userData.preferredImageStyle;
+                    console.log("User's preferred style:", userStyle);
                     if (userStyle && imageStyleOptions[userStyle]) {
                         stylePrompt = imageStyleOptions[userStyle].prompt;
+                        console.log("Using style prompt:", userStyle);
+                    } else {
+                        console.log("No valid style found, using default");
                     }
                 }
             } catch (error) {
                 console.error("Error fetching user style preference:", error);
                 // Continue with default style if there's an error
             }
+        } else {
+            console.log("No userId provided, using default style");
         }
 
+        console.log("Final style prompt being used:", stylePrompt);
+
+        // Generate image with DALL-E
         const response = await openai.images.generate({
             model: "dall-e-3",
             prompt: `${prompt}. ${stylePrompt}`,
