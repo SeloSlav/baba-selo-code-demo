@@ -11,8 +11,8 @@ const imageStyleOptions = {
     "modern-cookbook": {
         prompt: "Create this in a modern cookbook photography style with clean, professional lighting. Use soft, natural light with subtle shadows to highlight textures and details. The style should be crisp and appetizing with a shallow depth of field effect. Add a hint of styled food photography elements like carefully placed herbs or droplets. The overall effect should be contemporary and magazine-worthy."
     },
-    "vintage-poster": {
-        prompt: "Create this in a vintage advertising poster style from the 1950s-60s. Use bold, saturated colors and simplified shapes with a slightly textured, printed look. The style should be reminiscent of mid-century commercial art with clean lines and graphic elements. Add subtle halftone patterns and slight misalignment effects to simulate vintage printing. The overall effect should be retro and cheerful."
+    "social-snap": {
+        prompt: "Create this in a modern social media photography style. Use bright, even lighting with enhanced dynamic range to capture rich details and textures. Frame the shot from a slightly elevated angle with a lifestyle-focused composition. The colors should be vibrant yet natural, with crisp details and subtle depth of field. Add gentle highlights to create an appetizing glow, making the food look fresh and inviting. The overall effect should feel contemporary and shareable, like a professional food influencer's content."
     },
     "whimsical-cartoon": {
         prompt: "Create this in a whimsical, animated style with exaggerated, friendly features. Use bright, cheerful colors and smooth, rounded shapes. The style should be reminiscent of modern animated films with a touch of Studio Ghibli charm. Add subtle textures and warm lighting effects. The overall effect should be playful and inviting."

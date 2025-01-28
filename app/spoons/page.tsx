@@ -333,6 +333,17 @@ const SpoonStats = () => {
                 <li>The more unique and diverse your contributions, the more points you can earn</li>
               </ul>
             </div>
+
+            <div className="bg-green-50 rounded-lg p-4 mt-4">
+              <p className="font-semibold text-green-800">🎁 Coming Soon:</p>
+              <ul className="list-disc list-inside space-y-1 ml-2 text-green-800">
+                <li>Exclusive discounts on SELO olive oil and partnering brands</li>
+                <li>Special rewards and free product giveaways</li>
+                <li>Seasonal cooking contests with exciting prizes</li>
+                <li>Early access to new Baba Selo features</li>
+              </ul>
+              <p className="mt-2 text-sm text-green-700 italic">Baba Selo is currently finalizing these exciting rewards - keep earning those points!</p>
+            </div>
           </div>
         )}
       </div>

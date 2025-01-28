@@ -232,6 +232,13 @@ const RecipeDetails = () => {
 
         // Update local state with the new image URL
         setRecipe((prevRecipe) => prevRecipe && { ...prevRecipe, imageURL: data.imageUrl });
+
+        // Award points for generating image
+        await handlePointsAward(
+          'GENERATE_IMAGE',
+          id as string,
+          'Recipe image generated!'
+        );
       }
     } catch (error) {
       console.error("Error generating image:", error);
