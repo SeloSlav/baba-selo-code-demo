@@ -310,7 +310,6 @@ const SpoonStats = () => {
                 <li>Generating AI recipe images (10 points)</li>
                 <li>Uploading your own recipe photos (25 points)</li>
                 <li>Chatting with Baba about your recipe (5 points per meaningful interaction)</li>
-                <li>Pinning favorite recipes (5 points)</li>
                 <li>Having others save your shared recipes (10 points per save)</li>
               </ul>
             </div>
@@ -322,6 +321,16 @@ const SpoonStats = () => {
                 <li>Regular interactions with Baba unlock special achievements</li>
                 <li>Try asking Baba about traditional cooking techniques</li>
                 <li>Share your recipes to earn points from the community</li>
+              </ul>
+            </div>
+
+            <div className="bg-blue-50 rounded-lg p-4">
+              <p className="font-semibold text-blue-800">⚡ Important Notes:</p>
+              <ul className="list-disc list-inside space-y-1 ml-2 text-blue-800">
+                <li>Each activity has hourly and daily limits - experiment to discover them!</li>
+                <li>Submitting the same recipes repeatedly won't earn points - get creative!</li>
+                <li>Points are awarded for meaningful interactions, not repetitive actions</li>
+                <li>The more unique and diverse your contributions, the more points you can earn</li>
               </ul>
             </div>
           </div>

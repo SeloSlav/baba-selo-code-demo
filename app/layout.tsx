@@ -1,6 +1,7 @@
 import "./globals.css";
 import { AuthProvider } from "./context/AuthContext";
 import { DeleteRecipeProvider } from "./context/DeleteRecipeContext";
+import { PointsProvider } from "./context/PointsContext";
 
 export const metadata = {
   title: "Baba Selo - Your Magical Recipe Companion",
@@ -77,7 +78,9 @@ export default function RootLayout({
       <body>
         <AuthProvider>
           <DeleteRecipeProvider>
-            {children}
+            <PointsProvider>
+              {children}
+            </PointsProvider>
           </DeleteRecipeProvider>
         </AuthProvider>
       </body>

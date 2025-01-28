@@ -59,9 +59,14 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
                     </Link>
                 </li>
                 <li className="flex items-center px-4 py-2 rounded-md hover:bg-gray-100 cursor-pointer">
-                    <Link href="/spoon-stats" className="flex items-center w-full">
-                        <FontAwesomeIcon icon={faSpoon} className="text-[#5d5d5d] mr-3" />
-                        <span>Spoon Stats</span>
+                    <Link href="/spoons" className="flex items-center w-full justify-between">
+                        <div className="flex items-center">
+                            <FontAwesomeIcon icon={faSpoon} className="text-[#5d5d5d] mr-3" />
+                            <span>Spoons</span>
+                        </div>
+                        <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full">
+                            Earn! ✨
+                        </span>
                     </Link>
                 </li>
                 <hr />

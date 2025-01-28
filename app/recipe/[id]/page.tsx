@@ -13,6 +13,9 @@ import { RecipeChatBubble } from "../../components/RecipeChatBubble";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { useDeleteRecipe } from "../../context/DeleteRecipeContext";
+import { usePoints } from '../../context/PointsContext';
+import { SpoonPointSystem } from '../../lib/spoonPoints';
+import { useAuth } from '../../context/AuthContext';
 
 interface Recipe {
   recipeTitle: string;
@@ -99,6 +102,8 @@ const RecipeDetails = () => {
   const menuRef = useRef<HTMLDivElement>(null);
   const [copySuccess, setCopySuccess] = useState(false);
   const { showDeletePopup } = useDeleteRecipe();
+  const { user } = useAuth();
+  const { showPointsToast } = usePoints();
 
   useEffect(() => {
     if (!id) return; // If no id, do nothing
@@ -347,100 +352,130 @@ const RecipeDetails = () => {
     };
   };
 
-  // Update the macro info handler
+  // Function to handle points award
+  const handlePointsAward = async (actionType: string, targetId: string, message: string) => {
+    if (!user) return;
+    
+    const result = await SpoonPointSystem.awardPoints(user.uid, actionType, targetId);
+    if (result.success) {
+      showPointsToast(result.points!, message);
+    }
+  };
+
+  // Update the generateSummary function
+  const generateSummary = async () => {
+    if (!recipe || !user || typeof id !== 'string') return;
+    
+    setLoadingSummary(true);
+    try {
+      const response = await fetch("/api/generateSummary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: recipe.recipeTitle,
+          ingredients: recipe.ingredients,
+          directions: recipe.directions,
+          cuisineType: recipe.cuisineType,
+          diet: recipe.diet,
+          cookingTime: recipe.cookingTime,
+          cookingDifficulty: recipe.cookingDifficulty,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const recipeRef = doc(db, "recipes", id);
+        await updateDoc(recipeRef, { recipeSummary: data.summary });
+        setRecipe((prev) => (prev ? { ...prev, recipeSummary: data.summary } : null));
+        
+        // Award points for generating summary
+        await handlePointsAward(
+          'GENERATE_SUMMARY',
+          id,
+          'Recipe summary generated!'
+        );
+      }
+    } catch (error) {
+      console.error("Error generating summary:", error);
+    } finally {
+      setLoadingSummary(false);
+    }
+  };
+
+  // Update the handleMacroCalculation function
   const handleMacroCalculation = async () => {
+    if (!recipe || !user || typeof id !== 'string') return;
+    
     setLoadingMacros(true);
     try {
       const response = await fetch("/api/macroInfo", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          recipe: `Title: ${recipe.recipeTitle}
-          Ingredients:
-          ${recipe.ingredients.join('\n')}
-          Directions:
-          ${recipe.directions.join('\n')}`
+          recipe: `${recipe.recipeTitle}\nIngredients:\n${recipe.ingredients.join("\n")}\nDirections:\n${recipe.directions.join("\n")}`,
         }),
       });
 
-      const data = await response.json();
-      
-      if (data.error) {
-        console.error("Error from macroInfo API:", data.error);
-        return;
-      }
-
-      if (data.macros && 
-          typeof data.macros.servings === 'number' && 
-          data.macros.total && 
-          data.macros.per_serving) {
-        // Ensure all required numeric fields exist and are numbers
-        const validatedMacros = {
-          servings: data.macros.servings,
-          total: {
-            calories: Number(data.macros.total.calories) || 0,
-            proteins: Number(data.macros.total.proteins) || 0,
-            carbs: Number(data.macros.total.carbs) || 0,
-            fats: Number(data.macros.total.fats) || 0
-          },
-          per_serving: {
-            calories: Number(data.macros.per_serving.calories) || 0,
-            proteins: Number(data.macros.per_serving.proteins) || 0,
-            carbs: Number(data.macros.per_serving.carbs) || 0,
-            fats: Number(data.macros.per_serving.fats) || 0
-          }
-        };
-
-        // Save to Firestore
-        const recipeDocRef = doc(db, "recipes", id as string);
-        await updateDoc(recipeDocRef, { macroInfo: validatedMacros });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.macros) {
+          // Save to Firestore
+          const recipeRef = doc(db, "recipes", id);
+          await updateDoc(recipeRef, { macroInfo: data.macros });
+          
+          // Update local state
+          setMacroInfo(data.macros);
+          setRecipe(prev => prev ? { ...prev, macroInfo: data.macros } : null);
+        }
         
-        // Update local state
-        setMacroInfo(validatedMacros);
-        setRecipe(prev => prev ? { ...prev, macroInfo: validatedMacros } : null);
-      } else {
-        console.error("Invalid macro data structure:", data);
+        // Award points for generating nutrition info
+        await handlePointsAward(
+          'GENERATE_NUTRITION',
+          id,
+          'Nutritional information calculated!'
+        );
       }
     } catch (error) {
-      console.error("Error generating macro info:", error);
+      console.error("Error calculating macros:", error);
     } finally {
       setLoadingMacros(false);
     }
   };
 
-  // Update the dish pairings handler
-  const handlePairingsGeneration = async () => {
+  // Update the handleGetPairings function
+  const handleGetPairings = async () => {
+    if (!recipe || !user || typeof id !== 'string') return;
+    
     setLoadingPairings(true);
     try {
       const response = await fetch("/api/dishPairing", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          recipe: `Title: ${recipe.recipeTitle}
-          Cuisine: ${recipe.cuisineType}
-          Ingredients:
-          ${recipe.ingredients.join('\n')}
-          Directions:
-          ${recipe.directions.join('\n')}`
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recipe: recipe.recipeTitle }),
       });
 
-      const data = await response.json();
-      if (data.suggestion) {
-        // Save to Firestore
-        const recipeDocRef = doc(db, "recipes", id as string);
-        await updateDoc(recipeDocRef, { dishPairings: data.suggestion });
+      if (response.ok) {
+        const data = await response.json();
         
-        // Update local state
-        setDishPairings(data.suggestion);
-        setRecipe(prev => prev ? { ...prev, dishPairings: data.suggestion } : null);
+        if (data.suggestion) {  // API returns suggestion, not pairings
+          // Save to Firestore
+          const recipeRef = doc(db, "recipes", id);
+          await updateDoc(recipeRef, { dishPairings: data.suggestion });
+          
+          // Update local state
+          setDishPairings(data.suggestion);
+          setRecipe(prev => prev ? { ...prev, dishPairings: data.suggestion } : null);
+          
+          // Award points for generating pairings
+          await handlePointsAward(
+            'GENERATE_PAIRINGS',
+            id,
+            'Perfect pairings discovered!'
+          );
+        }
       }
     } catch (error) {
-      console.error("Error generating pairings:", error);
+      console.error("Error getting pairings:", error);
     } finally {
       setLoadingPairings(false);
     }
@@ -719,37 +754,7 @@ const RecipeDetails = () => {
                     <p className="text-gray-600 text-lg leading-relaxed">{recipe.recipeSummary}</p>
                     {isOwner && (
                       <button
-                        onClick={async () => {
-                          setLoadingSummary(true);
-                          try {
-                            const response = await fetch("/api/generateSummary", {
-                              method: "POST",
-                              headers: {
-                                "Content-Type": "application/json",
-                              },
-                              body: JSON.stringify({
-                                title: recipe.recipeTitle,
-                                ingredients: recipe.ingredients,
-                                directions: recipe.directions,
-                                cuisineType: recipe.cuisineType,
-                                diet: recipe.diet,
-                                cookingTime: recipe.cookingTime,
-                                cookingDifficulty: recipe.cookingDifficulty,
-                              }),
-                            });
-
-                            const data = await response.json();
-                            if (data.summary) {
-                              const recipeDocRef = doc(db, "recipes", id as string);
-                              await updateDoc(recipeDocRef, { recipeSummary: data.summary });
-                              setRecipe(prev => prev ? { ...prev, recipeSummary: data.summary } : null);
-                            }
-                          } catch (error) {
-                            console.error("Error generating summary:", error);
-                          } finally {
-                            setLoadingSummary(false);
-                          }
-                        }}
+                        onClick={generateSummary}
                         disabled={loadingSummary}
                         className="opacity-0 group-hover:opacity-100 absolute top-0 right-0 md:relative md:ml-4 bg-white text-gray-600 px-2 py-1 text-xs rounded-md shadow-sm hover:bg-gray-50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center whitespace-nowrap"
                       >
@@ -770,37 +775,7 @@ const RecipeDetails = () => {
                 ) : (
                   <div className="flex justify-center">
                     <button
-                      onClick={async () => {
-                        setLoadingSummary(true);
-                        try {
-                          const response = await fetch("/api/generateSummary", {
-                            method: "POST",
-                            headers: {
-                              "Content-Type": "application/json",
-                            },
-                            body: JSON.stringify({
-                              title: recipe.recipeTitle,
-                              ingredients: recipe.ingredients,
-                              directions: recipe.directions,
-                              cuisineType: recipe.cuisineType,
-                              diet: recipe.diet,
-                              cookingTime: recipe.cookingTime,
-                              cookingDifficulty: recipe.cookingDifficulty,
-                            }),
-                          });
-
-                          const data = await response.json();
-                          if (data.summary) {
-                            const recipeDocRef = doc(db, "recipes", id as string);
-                            await updateDoc(recipeDocRef, { recipeSummary: data.summary });
-                            setRecipe(prev => prev ? { ...prev, recipeSummary: data.summary } : null);
-                          }
-                        } catch (error) {
-                          console.error("Error generating summary:", error);
-                        } finally {
-                          setLoadingSummary(false);
-                        }
-                      }}
+                      onClick={generateSummary}
                       disabled={loadingSummary}
                       className="bg-white text-gray-800 px-4 py-2 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -1041,7 +1016,7 @@ const RecipeDetails = () => {
                     </div>
                     {dishPairings && (
                       <button
-                        onClick={handlePairingsGeneration}
+                        onClick={handleGetPairings}
                         disabled={loadingPairings}
                         className="opacity-0 group-hover:opacity-100 absolute top-2 right-2 md:relative md:ml-4 bg-white text-gray-600 px-2 py-1 text-xs rounded-md shadow-sm hover:bg-gray-50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center whitespace-nowrap"
                       >
@@ -1062,7 +1037,7 @@ const RecipeDetails = () => {
                 ) : (
                   <div className="flex justify-center">
                     <button
-                      onClick={handlePairingsGeneration}
+                      onClick={handleGetPairings}
                       disabled={loadingPairings}
                       className="bg-white text-gray-800 px-4 py-2 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
