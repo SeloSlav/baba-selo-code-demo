@@ -3,11 +3,12 @@
 import React, { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTimes, faMagicWandSparkles } from "@fortawesome/free-solid-svg-icons";
+import { useAuth } from "../context/AuthContext";
 
 interface DrawImagePopupProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (prompt: string) => void;
+  onSubmit: (prompt: string, userId: string | null) => void;
 }
 
 export const DrawImagePopup: React.FC<DrawImagePopupProps> = ({
@@ -17,13 +18,14 @@ export const DrawImagePopup: React.FC<DrawImagePopupProps> = ({
 }) => {
   const [prompt, setPrompt] = useState("");
   const [error, setError] = useState("");
+  const { user } = useAuth();
 
   const handleSubmit = () => {
     if (!prompt.trim()) {
       setError("Please enter a description for what you'd like Baba to draw.");
       return;
     }
-    onSubmit(prompt.trim());
+    onSubmit(prompt.trim(), user?.uid || null);
     setPrompt("");
     setError("");
     onClose();

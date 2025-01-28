@@ -229,6 +229,9 @@ const RecipeDetails = () => {
     setLoadingImage(true);
 
     try {
+      const auth = getAuth();
+      const userId = auth.currentUser?.uid;
+
       const response = await fetch("/api/generateImage", {
         method: "POST",
         headers: {
@@ -237,6 +240,7 @@ const RecipeDetails = () => {
         body: JSON.stringify({
           prompt: `A rustic dish representation for ${recipe.recipeTitle}`,
           recipeId: id,
+          userId: userId
         }),
       });
 
@@ -846,7 +850,7 @@ const RecipeDetails = () => {
                       ? "line-through text-gray-400" 
                       : "text-gray-700"
                   }`}>
-                    {ingredient}
+                  {ingredient}
                   </span>
                 </li>
               ))}
@@ -870,8 +874,8 @@ const RecipeDetails = () => {
                   onClick={() => toggleDirectionCheck(index)}
                 >
                   <div className="flex-shrink-0">
-                    <FontAwesomeIcon
-                      icon={checkedDirections[index] ? faCheckCircle : faCircle}
+                  <FontAwesomeIcon
+                    icon={checkedDirections[index] ? faCheckCircle : faCircle}
                       className={`mr-3 transform transition-transform duration-300 ${
                         checkedDirections[index] 
                           ? "text-blue-500 scale-110" 
@@ -884,7 +888,7 @@ const RecipeDetails = () => {
                       ? "line-through text-gray-400" 
                       : "text-gray-700"
                   }`}>
-                    {direction}
+                  {direction}
                   </span>
                 </li>
               ))}

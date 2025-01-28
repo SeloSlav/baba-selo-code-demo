@@ -5,13 +5,41 @@ import { useAuth } from "../context/AuthContext"; // Adjust if your AuthContext 
 import { db } from "../firebase/firebase";        // Adjust if firebase config is in a different path
 import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
 
+// Image style options with their prompts
+const imageStyleOptions = {
+  "rustic-traditional": {
+    name: "Rustic Traditional",
+    description: "Warm, nostalgic pen and ink drawings with watercolor on aged parchment",
+    prompt: "Create this in a rustic, traditional art style reminiscent of old European pen and ink drawings with watercolor washes on aged parchment paper. The style should be warm and charming, with a handcrafted feel like something a grandmother would lovingly sketch. Use a muted, earthy color palette with touches of warm browns, soft yellows, and gentle greens. Add subtle textures that suggest the grain of parchment paper and delicate ink lines. The overall effect should be nostalgic and heartwarming, like finding an old recipe book illustration."
+  },
+  "modern-cookbook": {
+    name: "Modern Cookbook",
+    description: "Clean, professional food photography style with soft lighting",
+    prompt: "Create this in a modern cookbook photography style with clean, professional lighting. Use soft, natural light with subtle shadows to highlight textures and details. The style should be crisp and appetizing with a shallow depth of field effect. Add a hint of styled food photography elements like carefully placed herbs or droplets. The overall effect should be contemporary and magazine-worthy."
+  },
+  "vintage-poster": {
+    name: "Vintage Poster",
+    description: "Bold, retro poster art style with vibrant colors",
+    prompt: "Create this in a vintage advertising poster style from the 1950s-60s. Use bold, saturated colors and simplified shapes with a slightly textured, printed look. The style should be reminiscent of mid-century commercial art with clean lines and graphic elements. Add subtle halftone patterns and slight misalignment effects to simulate vintage printing. The overall effect should be retro and cheerful."
+  },
+  "whimsical-cartoon": {
+    name: "Whimsical Cartoon",
+    description: "Playful, animated style with charming character",
+    prompt: "Create this in a whimsical, animated style with exaggerated, friendly features. Use bright, cheerful colors and smooth, rounded shapes. The style should be reminiscent of modern animated films with a touch of Studio Ghibli charm. Add subtle textures and warm lighting effects. The overall effect should be playful and inviting."
+  }
+} as const;
+
+type ImageStyle = keyof typeof imageStyleOptions;
+
 export default function SettingsPage() {
   // 1) Get current user from AuthContext
   const { user, loading } = useAuth();
 
   // 2) Local state
+  const [username, setUsername] = useState<string>("");
   const [dietaryPreferences, setDietaryPreferences] = useState<string[]>([]);
   const [preferredCookingOil, setPreferredCookingOil] = useState<string>("");
+  const [preferredImageStyle, setPreferredImageStyle] = useState<ImageStyle>("rustic-traditional");
 
   // For handling the auto-complete filters
   const [dietarySearch, setDietarySearch] = useState("");
@@ -67,9 +95,10 @@ export default function SettingsPage() {
 
         if (userDocSnap.exists()) {
           const userData = userDocSnap.data();
+          setUsername(userData.username || "");
           setDietaryPreferences(userData.dietaryPreferences || []);
           setPreferredCookingOil(userData.preferredCookingOil || "");
-          // Show the oil in the input field
+          setPreferredImageStyle(userData.preferredImageStyle || "rustic-traditional");
           setOilSearch(userData.preferredCookingOil || "");
         }
       } catch (error) {
@@ -111,23 +140,30 @@ export default function SettingsPage() {
     try {
       const userDocRef = doc(db, "users", user.uid);
       await updateDoc(userDocRef, {
+        username,
         dietaryPreferences,
         preferredCookingOil,
+        preferredImageStyle,
       }).catch(async (err) => {
-        // If doc doesn't exist yet, create it
         if (err.code === "not-found") {
           await setDoc(userDocRef, {
+            username,
             dietaryPreferences,
             preferredCookingOil,
+            preferredImageStyle,
           });
         } else {
           throw err;
         }
       });
+
+      // Also update the spoonPoints document with the new username
+      const spoonRef = doc(db, "spoonPoints", user.uid);
+      await setDoc(spoonRef, { username }, { merge: true });
+
     } catch (error) {
       console.error("Error saving settings:", error);
     } finally {
-      // Revert button text
       setIsSaving(false);
     }
   };
@@ -202,7 +238,69 @@ export default function SettingsPage() {
     <div className="max-w-5xl mx-auto px-4 py-10">
       <h2 className="text-3xl font-bold text-center mb-12">Settings</h2>
 
-      <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-8">
+        {/* Username Section */}
+        <div className="p-8 border border-gray-200 rounded-2xl shadow-sm bg-white flex flex-col transition-shadow hover:shadow-md">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-green-50 rounded-xl">
+              <span className="text-xl">👤</span>
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold">Username</h3>
+              <p className="text-sm text-gray-500">
+                Choose how you'll appear on the leaderboard.
+              </p>
+            </div>
+          </div>
+
+          <input
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Enter your username"
+            className="w-full p-3 border border-gray-300 rounded-xl focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all"
+          />
+        </div>
+
+        {/* Image Style Preferences */}
+        <div className="p-8 border border-gray-200 rounded-2xl shadow-sm bg-white flex flex-col transition-shadow hover:shadow-md">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-purple-50 rounded-xl">
+              <span className="text-xl">🎨</span>
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold">Image Generation Style</h3>
+              <p className="text-sm text-gray-500">
+                Choose how Baba should draw images for you.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {Object.entries(imageStyleOptions).map(([key, style]) => (
+              <div
+                key={key}
+                onClick={() => setPreferredImageStyle(key as ImageStyle)}
+                className={`p-4 border rounded-xl cursor-pointer transition-all ${
+                  preferredImageStyle === key
+                    ? "border-purple-500 bg-purple-50"
+                    : "border-gray-200 hover:border-purple-200 hover:bg-purple-50/50"
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <div className={`w-4 h-4 rounded-full border ${
+                    preferredImageStyle === key
+                      ? "border-4 border-purple-500"
+                      : "border-gray-300"
+                  }`} />
+                  <h4 className="font-semibold">{style.name}</h4>
+                </div>
+                <p className="text-sm text-gray-600 ml-6">{style.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Dietary Preferences */}
         <div className="p-8 border border-gray-200 rounded-2xl shadow-sm bg-white flex flex-col transition-shadow hover:shadow-md">
           <div className="flex items-center gap-3 mb-4">

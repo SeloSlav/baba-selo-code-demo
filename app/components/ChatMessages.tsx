@@ -6,6 +6,7 @@ import { LoadingSpinner } from "./LoadingSpinner";
 import { MessageRenderer } from "./MessageRenderer";
 import { Message, RecipeClassification } from "./types";
 import { parseRecipe, isRecipe } from "./messageUtils";
+import { SpoonPointSystem } from "../lib/spoonPoints";
 
 interface ChatMessagesProps {
     messages: Message[];
@@ -117,7 +118,7 @@ const renderNutritionInfo = (macros: any) => {
                 </div>
             </div>
         </div>
-    );  
+    );
 };
 
 // Add this helper function to handle dish pairing links
@@ -195,6 +196,17 @@ const formatDishPairings = async (text: string): Promise<string> => {
     }
 };
 
+// Function to create a simple hash of the recipe content
+const createRecipeHash = (content: string): string => {
+    let hash = 0;
+    for (let i = 0; i < content.length; i++) {
+        const char = content.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32-bit integer
+    }
+    return hash.toString(36); // Convert to base36 for shorter hash
+};
+
 export const ChatMessages: React.FC<ChatMessagesProps> = ({
     messages,
     loading,
@@ -229,6 +241,9 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
             const { title } = parseRecipe(msg);
             const docId = userId + "-" + Date.now();
 
+            // Create a hash of the recipe content
+            const recipeHash = createRecipeHash(msg);
+
             const response = await fetch("/api/saveRecipe", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -244,9 +259,23 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
             });
 
             if (response.ok) {
-                onAssistantResponse(
-                    `Your <a href="/recipe/${docId}" target="_blank" rel="noopener noreferrer" class="underline text-blue-600"> ${title}</a> recipe has been tucked away in the kitchen vault, ready for use!`
+                // Award spoon points for saving the recipe
+                const pointsResult = await SpoonPointSystem.awardPoints(
+                    userId,
+                    'SAVE_RECIPE',
+                    recipeHash // Use the recipe hash instead of docId
                 );
+
+                let message = `Your <a href="/recipe/${docId}" target="_blank" rel="noopener noreferrer" class="underline text-blue-600"> ${title}</a> recipe has been tucked away in the kitchen vault, ready for use!`;
+                
+                if (pointsResult.success) {
+                    message += ` You earned ${pointsResult.points} spoon points! 🥄✨`;
+                } else if (pointsResult.error) {
+                    // Optionally show why points weren't awarded
+                    console.log('Points not awarded:', pointsResult.error);
+                }
+
+                onAssistantResponse(message);
             } else {
                 const errorData = await response.json();
                 console.error("Failed to save recipe:", errorData.error);
@@ -349,7 +378,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                 const isAssistant = msg.role === "assistant";
                 const messageRef = isAssistant && isLastItem ? lastAssistantRef : null;
 
-                return (
+                    return (
                     <MessageRenderer
                         key={actualIndex}
                         message={msg}

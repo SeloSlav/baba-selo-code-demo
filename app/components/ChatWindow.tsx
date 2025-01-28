@@ -270,7 +270,7 @@ export const ChatWindow = forwardRef(
     };
 
     // Add handler for draw image submit
-    const handleDrawImageSubmit = async (prompt: string) => {
+    const handleDrawImageSubmit = async (prompt: string, userId: string | null) => {
       setLoading(true);
       try {
         const response = await fetch('/api/generateImage', {
@@ -278,7 +278,7 @@ export const ChatWindow = forwardRef(
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ prompt }),
+          body: JSON.stringify({ prompt, userId }),
         });
 
         const data = await response.json();
@@ -306,7 +306,7 @@ export const ChatWindow = forwardRef(
             { role: 'assistant', content: "Oh dear, my artistic vision seems a bit clouded today. Could you try asking again? Sometimes my paintbrush needs a little rest!" }
           ]);
         }
-      } catch (error: unknown) {
+      } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
         console.log('Error in image generation:', errorMessage);
         setMessages(prev => [
@@ -500,7 +500,7 @@ export const ChatWindow = forwardRef(
         <DrawImagePopup
           isOpen={isDrawImageOpen}
           onClose={() => setIsDrawImageOpen(false)}
-          onSubmit={handleDrawImageSubmit}
+          onSubmit={(prompt, userId) => handleDrawImageSubmit(prompt, userId)}
         />
       </div>
     );
