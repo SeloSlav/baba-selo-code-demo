@@ -26,9 +26,8 @@ export async function POST(req) {
         messages: [
           {
             role: "system",
-            content: `You are a nutritionist. Based on a given recipe, calculate the total calories and macros (proteins, carbs, fats) for the entire recipe and per serving. First, determine the number of servings based on the recipe portions or ingredients. Then provide concise output with the total values for calories, proteins, carbs, and fats in grams, along with the number of servings. Do not include a detailed breakdown of each ingredient. Structure the response as JSON with "servings" (number), "total" and "per_serving" keys.
+            content: `You are a nutritionist API that ONLY responds with JSON. Based on a given recipe, calculate the total calories and macros (proteins, carbs, fats) for the entire recipe and per serving. First, determine the number of servings based on the recipe portions or ingredients. Then provide the total values for calories, proteins, carbs, and fats in grams, along with the number of servings. Structure the response EXACTLY as shown, with NO additional text or explanation:
 
-Example response format:
 {
   "servings": 4,
   "total": {
@@ -51,26 +50,38 @@ Example response format:
     });
 
     const data = await response.json();
-    // console.log("OpenAI API raw response:", data); // Debug raw response
 
     if (!response.ok || !data.choices || !data.choices[0] || !data.choices[0].message || !data.choices[0].message.content) {
       console.error("Unexpected OpenAI API response structure:", data);
       return NextResponse.json({ error: "Failed to fetch calorie and macro info" }, { status: 500 });
     }
 
-    // Strip backticks and parse JSON
-    let rawContent = data.choices[0].message.content;
     try {
-      // Remove triple backticks and "json" tag if present
-      rawContent = rawContent.replace(/^```json\s*|```$/g, "").trim();
-      const nutritionData = JSON.parse(rawContent); // Parse as JSON
-      // console.log("Parsed nutrition data:", nutritionData); // Debug parsed data
+      // Get the raw content and clean it up
+      let rawContent = data.choices[0].message.content;
+      
+      // Remove any markdown code block syntax and whitespace
+      rawContent = rawContent.replace(/```json\s*|\s*```/g, '').trim();
+      
+      // Additional cleanup to handle potential text before or after JSON
+      const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error('No valid JSON found in response');
+      }
+      
+      const nutritionData = JSON.parse(jsonMatch[0]);
+      
+      // Validate the structure
+      if (!nutritionData.servings || !nutritionData.total || !nutritionData.per_serving) {
+        throw new Error('Invalid nutrition data structure');
+      }
+
       return NextResponse.json({
         macros: nutritionData,
       });
     } catch (parseError) {
       console.error("Error parsing OpenAI API response:", parseError);
-      console.error("Raw message content:", rawContent);
+      console.error("Raw message content:", data.choices[0].message.content);
       return NextResponse.json({ error: "Invalid response format from OpenAI" }, { status: 500 });
     }
   } catch (error) {

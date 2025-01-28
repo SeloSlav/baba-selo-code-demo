@@ -34,8 +34,8 @@ export const RecipeChatBubble: React.FC<RecipeChatBubbleProps> = ({ recipeConten
         "How many people does this recipe serve?",
         "What should I watch out for when making this?",
         "How do I know when it's perfectly cooked?",
-        "What dishes pair well with this recipe?",
-        "Can you tell me the calorie and nutritional info?"
+        "Can you tell me the calorie and nutritional info?",
+        "What dishes pair well with this recipe?"
     ];
 
     const scrollToLatestMessage = () => {
