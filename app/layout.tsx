@@ -1,5 +1,6 @@
 import "./globals.css";
-import { AuthProvider } from "./context/AuthContext"; // Ensure you have the AuthProvider
+import { AuthProvider } from "./context/AuthContext";
+import { DeleteRecipeProvider } from "./context/DeleteRecipeContext";
 
 export const metadata = {
   title: "Baba Selo - Your Magical Recipe Companion",
@@ -74,7 +75,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <DeleteRecipeProvider>
+            {children}
+          </DeleteRecipeProvider>
+        </AuthProvider>
       </body>
     </html>
   );

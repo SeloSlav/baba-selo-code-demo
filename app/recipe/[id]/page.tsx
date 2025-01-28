@@ -12,6 +12,7 @@ import Image from "next/image";
 import { RecipeChatBubble } from "../../components/RecipeChatBubble";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import { useDeleteRecipe } from "../../context/DeleteRecipeContext";
 
 interface Recipe {
   recipeTitle: string;
@@ -97,6 +98,7 @@ const RecipeDetails = () => {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const [copySuccess, setCopySuccess] = useState(false);
+  const { showDeletePopup } = useDeleteRecipe();
 
   useEffect(() => {
     if (!id) return; // If no id, do nothing
@@ -207,19 +209,16 @@ const RecipeDetails = () => {
 
   // Function to delete the recipe
   const handleDelete = async () => {
-    if (!id) return;
+    if (!id || !recipe || typeof id !== 'string') return;
 
-    // Show confirmation dialog
-    const isConfirmed = window.confirm("Are you sure you want to delete this recipe? This action cannot be undone.");
-    
-    if (!isConfirmed) return;
-
-    try {
-      await deleteDoc(doc(db, "recipes", id as string)); // Delete the recipe from Firestore
-      router.push("/recipes"); // Redirect to the /recipes page
-    } catch (error) {
-      console.error("Error deleting recipe:", error);
-    }
+    showDeletePopup(id, recipe.recipeTitle, async () => {
+      try {
+        await deleteDoc(doc(db, "recipes", id));
+        router.push("/recipes");
+      } catch (error) {
+        console.error("Error deleting recipe:", error);
+      }
+    });
   };
 
   // Function to generate a new recipe image using DALL·E

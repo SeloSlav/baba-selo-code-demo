@@ -18,6 +18,7 @@ import Image from "next/image";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSearch, faXmark, faEllipsisVertical, faThumbtack, faTrashCan } from "@fortawesome/free-solid-svg-icons";
 import { getAuth } from "firebase/auth";
+import { useDeleteRecipe } from "../context/DeleteRecipeContext";
 
 interface Recipe {
   id: string;
@@ -42,6 +43,7 @@ const Recipes = () => {
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const [loadingPinAction, setLoadingPinAction] = useState<string | null>(null);
   const auth = getAuth();
+  const { showDeletePopup } = useDeleteRecipe();
 
   // Split recipes into pinned and unpinned
   const pinnedRecipes = filteredRecipes.filter(recipe => recipe.pinned);
@@ -69,19 +71,18 @@ const Recipes = () => {
     }
   };
 
-  const handleDelete = async (recipeId: string) => {
-    const isConfirmed = window.confirm("Are you sure you want to delete this recipe? This action cannot be undone.");
-    if (!isConfirmed) return;
-
-    try {
-      await deleteDoc(doc(db, "recipes", recipeId));
-      const updatedRecipes = recipes.filter(recipe => recipe.id !== recipeId);
-      setRecipes(updatedRecipes);
-      setFilteredRecipes(updatedRecipes);
-      setMenuOpen(null);
-    } catch (error) {
-      console.error("Error deleting recipe:", error);
-    }
+  const handleDelete = async (recipeId: string, recipeTitle: string) => {
+    showDeletePopup(recipeId, recipeTitle, async () => {
+      try {
+        await deleteDoc(doc(db, "recipes", recipeId));
+        const updatedRecipes = recipes.filter(recipe => recipe.id !== recipeId);
+        setRecipes(updatedRecipes);
+        setFilteredRecipes(updatedRecipes);
+        setMenuOpen(null);
+      } catch (error) {
+        console.error("Error deleting recipe:", error);
+      }
+    });
   };
 
   const renderMenu = (recipe: Recipe) => {
@@ -134,7 +135,7 @@ const Recipes = () => {
                     <button
                       onClick={(e) => {
                         e.preventDefault();
-                        handleDelete(recipe.id);
+                        handleDelete(recipe.id, recipe.recipeTitle);
                       }}
                       className="w-full px-4 py-2 text-sm flex items-center text-red-600 hover:bg-gray-100 transition-colors"
                     >
