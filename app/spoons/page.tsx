@@ -10,6 +10,9 @@ import { useAuth } from '../context/AuthContext';
 import { doc, getDoc, setDoc, collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
 import Link from 'next/link';
+import { format } from 'date-fns';
+import { Timestamp } from 'firebase/firestore';
+import { POINT_ACTIONS } from '../lib/spoonPoints';
 
 // Register ChartJS components
 ChartJS.register(
@@ -23,14 +26,17 @@ ChartJS.register(
   TimeScale
 );
 
-interface SpoonPoints {
-  date: string;
+interface PointTransaction {
+  actionType: string;
   points: number;
+  timestamp: Timestamp;
+  details?: string;
+  targetId?: string;
 }
 
 interface UserSpoonData {
   totalPoints: number;
-  pointsHistory: SpoonPoints[];
+  transactions: PointTransaction[];
   username: string;
 }
 
@@ -44,7 +50,6 @@ const SpoonStats = () => {
   const { user } = useAuth();
   const [userData, setUserData] = useState<UserSpoonData | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [timeRange, setTimeRange] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('daily');
   const [isLoading, setIsLoading] = useState(true);
   const [isInfoExpanded, setIsInfoExpanded] = useState(false);
 
@@ -90,15 +95,13 @@ const SpoonStats = () => {
       if (!user) return;
 
       try {
-        // Get user's spoon data
         const userSpoonRef = doc(db, 'spoonPoints', user.uid);
         const userSpoonDoc = await getDoc(userSpoonRef);
 
         if (!userSpoonDoc.exists()) {
-          // Initialize with empty data for new users
           const initialData = {
             totalPoints: 0,
-            pointsHistory: [],
+            transactions: [],
             username: 'Anonymous Chef'
           };
           await setDoc(userSpoonRef, initialData);
@@ -107,7 +110,6 @@ const SpoonStats = () => {
           setUserData(userSpoonDoc.data() as UserSpoonData);
         }
 
-        // Fetch leaderboard
         await fetchLeaderboard();
         setIsLoading(false);
       } catch (error) {
@@ -119,126 +121,21 @@ const SpoonStats = () => {
     fetchData();
   }, [user]);
 
-  // Function to aggregate data based on time range
-  const aggregateDataByTimeRange = (data: SpoonPoints[]) => {
-    if (!data.length) return [];
-    
-    const aggregated = new Map<string, number>();
-    
-    data.forEach(point => {
-      const date = new Date(point.date);
-      let key: string;
-      
-      switch (timeRange) {
-        case 'weekly':
-          // Get the Monday of the week
-          const day = date.getDay();
-          const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-          const monday = new Date(date.setDate(diff));
-          key = monday.toISOString().split('T')[0];
-          break;
-        case 'monthly':
-          key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
-          break;
-        case 'yearly':
-          key = `${date.getFullYear()}-01-01`;
-          break;
-        default: // daily
-          key = point.date;
-      }
-      
-      aggregated.set(key, (aggregated.get(key) || 0) + point.points);
-    });
-    
-    return Array.from(aggregated.entries())
-      .map(([date, points]) => ({ date, points }))
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  };
-
-  // Chart configuration
-  const chartData = {
-    datasets: [
-      {
-        label: timeRange === 'daily' ? 'Daily Points' :
-               timeRange === 'weekly' ? 'Weekly Points' :
-               timeRange === 'monthly' ? 'Monthly Points' : 'Yearly Points',
-        data: aggregateDataByTimeRange(userData?.pointsHistory || []).map(point => ({
-          x: point.date,
-          y: point.points,
-        })),
-        borderColor: 'rgb(75, 192, 192)',
-        tension: 0.1,
-        pointRadius: 4,
-        pointHoverRadius: 6,
-      },
-    ],
-  };
-
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    scales: {
-      x: {
-        type: 'time' as const,
-        time: {
-          unit: timeRange === 'daily' ? 'day' as const :
-                timeRange === 'weekly' ? 'week' as const :
-                timeRange === 'monthly' ? 'month' as const : 'year' as const,
-          displayFormats: {
-            day: 'MMM d',
-            week: 'MMM d',
-            month: 'MMM yyyy',
-            year: 'yyyy'
-          },
-        },
-        title: {
-          display: true,
-          text: 'Date',
-        },
-        ticks: {
-          maxRotation: 45,
-          minRotation: 45,
-        },
-      },
-      y: {
-        beginAtZero: true,
-        title: {
-          display: true,
-          text: timeRange === 'daily' ? 'Daily Points' :
-                timeRange === 'weekly' ? 'Points per Week' :
-                timeRange === 'monthly' ? 'Points per Month' : 'Points per Year',
-        },
-      },
-    },
-    plugins: {
-      legend: {
-        position: 'top' as const,
-      },
-      title: {
-        display: true,
-        text: `${timeRange.charAt(0).toUpperCase() + timeRange.slice(1)} Points Over Time`,
-      },
-      tooltip: {
-        callbacks: {
-          title: (context: any) => {
-            const date = new Date(context[0].raw.x);
-            switch (timeRange) {
-              case 'weekly':
-                return `Week of ${date.toLocaleDateString()}`;
-              case 'monthly':
-                return date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-              case 'yearly':
-                return date.getFullYear().toString();
-              default:
-                return date.toLocaleDateString();
-            }
-          },
-          label: (context: any) => {
-            return `${context.dataset.label}: ${context.raw.y}`;
-          }
-        }
-      }
-    },
+  // Function to render a transaction row
+  const renderTransaction = (transaction: PointTransaction) => {
+    const date = transaction.timestamp.toDate();
+    return (
+      <div key={date.getTime()} className="flex items-center justify-between p-4 border-b border-gray-100 hover:bg-gray-50">
+        <div className="flex-1">
+          <div className="font-medium">{transaction.details || POINT_ACTIONS[transaction.actionType]?.displayName}</div>
+          <div className="text-sm text-gray-500">{format(date, 'MMM d, yyyy h:mm a')}</div>
+        </div>
+        <div className="flex items-center text-yellow-600">
+          <FontAwesomeIcon icon={faSpoon} className="mr-2" />
+          <span className="font-bold">+{transaction.points}</span>
+        </div>
+      </div>
+    );
   };
 
   if (isLoading) {
@@ -348,28 +245,19 @@ const SpoonStats = () => {
         )}
       </div>
 
-      {/* Chart section */}
+      {/* Replace Chart section with Transaction History */}
       <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <h2 className="text-xl font-semibold">Points History</h2>
-          <div className="flex flex-wrap gap-2">
-            {(['daily', 'weekly', 'monthly', 'yearly'] as const).map((range) => (
-              <button
-                key={range}
-                onClick={() => setTimeRange(range)}
-                className={`px-4 py-2 rounded-full text-sm transition-colors ${
-                  timeRange === range
-                    ? 'bg-yellow-600 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                {range.charAt(0).toUpperCase() + range.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="h-[300px] sm:h-[400px]">
-          <Line data={chartData} options={chartOptions} />
+        <h2 className="text-xl font-semibold mb-6">Points History</h2>
+        <div className="divide-y divide-gray-100">
+          {userData?.transactions && userData.transactions.length > 0 ? (
+            userData.transactions
+              .sort((a, b) => b.timestamp.toDate().getTime() - a.timestamp.toDate().getTime())
+              .map(renderTransaction)
+          ) : (
+            <div className="text-center text-gray-500 py-8">
+              No points history yet. Start interacting with recipes to earn points!
+            </div>
+          )}
         </div>
       </div>
 

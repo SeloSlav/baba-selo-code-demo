@@ -10,6 +10,7 @@ interface PointAction {
   requiresUnique?: boolean; // if true, checks if this exact action was done before
   context?: Record<string, any>; // additional data for validation
   getPoints?: (context?: Record<string, any>) => number; // Optional function to calculate dynamic points
+  displayName: string; // Human-readable name for the action
 }
 
 interface PointTransaction {
@@ -19,6 +20,7 @@ interface PointTransaction {
   timestamp: Timestamp;
   context?: Record<string, any>;
   targetId?: string; // e.g., recipeId for recipe-related actions
+  details?: string; // Additional details about the transaction
 }
 
 // Configuration for different point-earning actions
@@ -28,36 +30,42 @@ export const POINT_ACTIONS: Record<string, PointAction> = {
     points: 5,
     cooldown: 1, // 1 minute cooldown
     requiresUnique: true, // prevent saving the same recipe multiple times
+    displayName: 'Recipe Saved'
   },
   GENERATE_RECIPE: {
     type: 'GENERATE_RECIPE',
     points: 5,
     cooldown: 5, // 5 minutes cooldown
     maxPerDay: 10,
+    displayName: 'Recipe Generated'
   },
   GENERATE_SUMMARY: {
     type: 'GENERATE_SUMMARY',
     points: 15,
     cooldown: 30,
     requiresUnique: true, // prevent regenerating same recipe summary
+    displayName: 'Summary Generated'
   },
   GENERATE_NUTRITION: {
     type: 'GENERATE_NUTRITION',
     points: 20,
     cooldown: 60,
     requiresUnique: true,
+    displayName: 'Nutrition Info Generated'
   },
   GENERATE_PAIRINGS: {
     type: 'GENERATE_PAIRINGS',
     points: 15,
     cooldown: 30,
     requiresUnique: true,
+    displayName: 'Pairings Generated'
   },
   GENERATE_IMAGE: {
     type: 'GENERATE_IMAGE',
     points: 10,
     cooldown: 15,
     maxPerDay: 20,
+    displayName: 'AI Image Generated'
   },
   UPLOAD_IMAGE: {
     type: 'UPLOAD_IMAGE',
@@ -67,19 +75,22 @@ export const POINT_ACTIONS: Record<string, PointAction> = {
     getPoints: (context?: Record<string, any>) => {
       // If we have a score from the analysis, use it, otherwise use base points
       return context?.score || 25;
-    }
+    },
+    displayName: 'Photo Uploaded'
   },
   CHAT_INTERACTION: {
     type: 'CHAT_INTERACTION',
     points: 5,
     cooldown: 1,
     maxPerDay: 50,
+    displayName: 'Chat Interaction'
   },
   RECIPE_SAVED_BY_OTHER: {
     type: 'RECIPE_SAVED_BY_OTHER',
     points: 10,
     cooldown: 0, // no cooldown for community actions
     requiresUnique: true,
+    displayName: 'Recipe Saved by Another User'
   }
 };
 
@@ -160,20 +171,22 @@ export class SpoonPointSystem {
         return { success: false, error: 'Invalid action type' };
       }
 
-      // Validate the action
       const validation = await this.validateAction(userId, action, targetId, context);
       if (!validation.valid) {
         return { success: false, error: validation.reason };
       }
 
-      // Create transaction record
+      const points = action.getPoints ? action.getPoints(context) : action.points;
+
+      // Create transaction record with more details
       const transaction: PointTransaction = {
         userId,
         actionType,
-        points: action.getPoints ? action.getPoints(context) : action.points,
+        points,
         timestamp: Timestamp.now(),
         targetId: targetId || null,
-        context: context || null
+        context: context || null,
+        details: this.generateTransactionDetails(action, context)
       };
 
       // Get reference to user's points document
@@ -181,32 +194,34 @@ export class SpoonPointSystem {
       const userPointsDoc = await getDoc(userPointsRef);
 
       if (!userPointsDoc.exists()) {
-        // Initialize the document if it doesn't exist
         await setDoc(userPointsRef, {
-          totalPoints: transaction.points,
-          pointsHistory: [{
-            date: transaction.timestamp.toDate().toISOString().split('T')[0],
-            points: transaction.points
-          }],
+          totalPoints: points,
           transactions: [transaction]
         });
       } else {
-        // Update existing document
         await updateDoc(userPointsRef, {
-          totalPoints: increment(transaction.points),
-          pointsHistory: arrayUnion({
-            date: transaction.timestamp.toDate().toISOString().split('T')[0],
-            points: transaction.points
-          }),
+          totalPoints: increment(points),
           transactions: arrayUnion(transaction)
         });
       }
 
-      return { success: true, points: transaction.points };
+      return { success: true, points };
     } catch (error) {
       console.error('Error awarding points:', error);
       return { success: false, error: 'Internal error' };
     }
+  }
+
+  private static generateTransactionDetails(action: PointAction, context?: Record<string, any>): string {
+    let details = action.displayName;
+    
+    if (action.type === 'UPLOAD_IMAGE' && context?.score) {
+      details += ` (Quality Score: ${context.score})`;
+    } else if (action.type === 'RECIPE_SAVED_BY_OTHER' && context?.savedBy) {
+      details += ` by ${context.savedBy}`;
+    }
+
+    return details;
   }
 
   // Helper method to check if an action is available
