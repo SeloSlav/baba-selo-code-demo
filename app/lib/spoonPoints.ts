@@ -9,6 +9,7 @@ interface PointAction {
   maxPerDay?: number;
   requiresUnique?: boolean; // if true, checks if this exact action was done before
   context?: Record<string, any>; // additional data for validation
+  getPoints?: (context?: Record<string, any>) => number; // Optional function to calculate dynamic points
 }
 
 interface PointTransaction {
@@ -60,21 +61,19 @@ export const POINT_ACTIONS: Record<string, PointAction> = {
   },
   UPLOAD_IMAGE: {
     type: 'UPLOAD_IMAGE',
-    points: 25,
+    points: 25, // Base points, will be overridden by the score from analysis
     cooldown: 60,
     requiresUnique: true,
+    getPoints: (context?: Record<string, any>) => {
+      // If we have a score from the analysis, use it, otherwise use base points
+      return context?.score || 25;
+    }
   },
   CHAT_INTERACTION: {
     type: 'CHAT_INTERACTION',
     points: 5,
     cooldown: 1,
     maxPerDay: 50,
-  },
-  PIN_RECIPE: {
-    type: 'PIN_RECIPE',
-    points: 5,
-    cooldown: 1,
-    requiresUnique: true,
   },
   RECIPE_SAVED_BY_OTHER: {
     type: 'RECIPE_SAVED_BY_OTHER',
@@ -171,7 +170,7 @@ export class SpoonPointSystem {
       const transaction: PointTransaction = {
         userId,
         actionType,
-        points: action.points,
+        points: action.getPoints ? action.getPoints(context) : action.points,
         timestamp: Timestamp.now(),
         targetId: targetId || null,
         context: context || null
@@ -184,26 +183,26 @@ export class SpoonPointSystem {
       if (!userPointsDoc.exists()) {
         // Initialize the document if it doesn't exist
         await setDoc(userPointsRef, {
-          totalPoints: action.points,
+          totalPoints: transaction.points,
           pointsHistory: [{
             date: transaction.timestamp.toDate().toISOString().split('T')[0],
-            points: action.points
+            points: transaction.points
           }],
           transactions: [transaction]
         });
       } else {
         // Update existing document
         await updateDoc(userPointsRef, {
-          totalPoints: increment(action.points),
+          totalPoints: increment(transaction.points),
           pointsHistory: arrayUnion({
             date: transaction.timestamp.toDate().toISOString().split('T')[0],
-            points: action.points
+            points: transaction.points
           }),
           transactions: arrayUnion(transaction)
         });
       }
 
-      return { success: true, points: action.points };
+      return { success: true, points: transaction.points };
     } catch (error) {
       console.error('Error awarding points:', error);
       return { success: false, error: 'Internal error' };

@@ -249,7 +249,7 @@ const RecipeDetails = () => {
 
   // Add new function to handle image upload
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || !e.target.files[0] || !id) return;
+    if (!e.target.files || !e.target.files[0] || !id || !recipe || !user) return;
 
     setUploadingImage(true);
     const file = e.target.files[0];
@@ -272,6 +272,58 @@ const RecipeDetails = () => {
       setRecipe((prevRecipe) => prevRecipe && { ...prevRecipe, imageURL: downloadURL });
       setImageError(false);
       setIsImageLoading(true);
+
+      // Analyze the uploaded photo and award points
+      try {
+        console.log("Analyzing uploaded photo...");
+        const analysisResponse = await fetch("/api/analyzeRecipePhoto", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            imageUrl: downloadURL,
+            recipe: {
+              recipeTitle: recipe.recipeTitle,
+              ingredients: recipe.ingredients,
+              directions: recipe.directions
+            }
+          }),
+        });
+
+        if (analysisResponse.ok) {
+          const analysis = await analysisResponse.json();
+          console.log("Photo analysis result:", analysis);
+          
+          if (analysis.score === 0) {
+            // If the image is unrelated, show a message but don't award points
+            showPointsToast(0, analysis.explanation);
+          } else {
+            // Award points based on the analysis score
+            const pointsResult = await SpoonPointSystem.awardPoints(
+              user.uid,
+              'UPLOAD_IMAGE',
+              id as string,
+              { score: analysis.score }
+            );
+
+            console.log("Points award result:", pointsResult);
+
+            if (pointsResult.success) {
+              await handlePointsAward(
+                'UPLOAD_IMAGE',
+                id as string,
+                `Photo quality score: ${analysis.score}/100 - ${analysis.explanation}`
+              );
+            } else {
+              // If points weren't awarded (e.g., already awarded for this recipe)
+              showPointsToast(0, "No points awarded - you've already uploaded a photo for this recipe!");
+            }
+          }
+        } else {
+          console.error("Failed to analyze photo:", await analysisResponse.text());
+        }
+      } catch (error) {
+        console.error("Error analyzing photo:", error);
+      }
     } catch (error) {
       console.error("Error uploading image:", error);
     } finally {
@@ -284,19 +336,12 @@ const RecipeDetails = () => {
     if (!id || !recipe?.imageURL) return;
 
     try {
-      // Delete from Storage
-      const storageRef = ref(storage, `recipe-images/${id}`);
-      await deleteObject(storageRef);
-
-      // Update Firestore
       const recipeDocRef = doc(db, "recipes", id as string);
       await updateDoc(recipeDocRef, { imageURL: "" });
-
-      // Update local state
       setRecipe((prevRecipe) => prevRecipe && { ...prevRecipe, imageURL: "" });
       setImageError(false);
     } catch (error) {
-      console.error("Error deleting image:", error);
+      console.error("Error clearing image URL:", error);
     }
   };
 
