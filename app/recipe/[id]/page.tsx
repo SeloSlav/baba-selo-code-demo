@@ -5,8 +5,8 @@ import { db } from "../../firebase/firebase"; // Import Firestore db
 import { doc, getDoc, deleteDoc, updateDoc } from "firebase/firestore"; // Firestore methods
 import { useEffect, useState, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCircle, faCheckCircle, faTrashCan } from "@fortawesome/free-regular-svg-icons";
-import { faUpload, faTrash, faSave } from "@fortawesome/free-solid-svg-icons";
+import { faCircle, faCheckCircle, faTrashCan, faCopy } from "@fortawesome/free-regular-svg-icons";
+import { faUpload, faTrash, faSave, faThumbtack, faEllipsisVertical } from "@fortawesome/free-solid-svg-icons";
 import { getAuth } from "firebase/auth"; // Import Firebase auth
 import Image from "next/image";
 import { RecipeChatBubble } from "../../components/RecipeChatBubble";
@@ -43,6 +43,8 @@ interface Recipe {
     };
   };
   dishPairings?: string;
+  pinned?: boolean;
+  lastPinnedAt?: string;
 }
 
 const shimmer = (w: number, h: number) => `
@@ -92,6 +94,9 @@ const RecipeDetails = () => {
   const notesRef = useRef(null);
   const macroInfoRef = useRef(null);
   const pairingsRef = useRef(null);
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   useEffect(() => {
     if (!id) return; // If no id, do nothing
@@ -124,6 +129,8 @@ const RecipeDetails = () => {
             recipeNotes: data.recipeNotes || "",
             macroInfo: data.macroInfo || null,
             dishPairings: data.dishPairings || "",
+            pinned: data.pinned || false,
+            lastPinnedAt: data.lastPinnedAt || null,
           });
           setNotes(data.recipeNotes || "");
           // Set the states from saved data if they exist
@@ -436,10 +443,127 @@ const RecipeDetails = () => {
     }
   };
 
+  // Add click outside handler for menu
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Function to handle pinning/unpinning
+  const handlePinToggle = async () => {
+    if (!id || !isOwner) return;
+    try {
+      const recipeDocRef = doc(db, "recipes", id as string);
+      const newPinnedState = !recipe?.pinned;
+      
+      // Update Firestore with consistent property names
+      await updateDoc(recipeDocRef, { 
+        pinned: newPinnedState,
+        lastPinnedAt: newPinnedState ? new Date().toISOString() : null
+      });
+      
+      // Update local state
+      setRecipe(prev => prev ? { 
+        ...prev, 
+        pinned: newPinnedState,
+        lastPinnedAt: newPinnedState ? new Date().toISOString() : null
+      } : null);
+    } catch (error) {
+      console.error("Error toggling pin status:", error);
+    }
+  };
+
+  // Function to copy recipe URL to clipboard
+  const handleCopyRecipe = () => {
+    if (!recipe) return;
+    
+    const recipeUrl = `https://www.babaselo.com/recipe/${id}`;
+
+    navigator.clipboard.writeText(recipeUrl).then(() => {
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+      setShowMenu(false);
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 py-8 px-4">
       {recipe ? (
         <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-6">
+          {/* Recipe Classifications */}
+          <div className="mb-6 flex flex-wrap gap-3">
+            {recipe.diet.length > 0 && (
+              <div className="flex items-center bg-gray-100 border border-gray-300 shadow-sm rounded-full px-3 py-1.5 text-sm">
+                <span className="font-semibold mr-2">🍲</span>
+                <span>{recipe.diet.map((d) => d.charAt(0).toUpperCase() + d.slice(1)).join(", ")}</span>
+              </div>
+            )}
+            {recipe.cuisineType && (
+              <div className="flex items-center bg-gray-100 border border-gray-300 shadow-sm rounded-full px-3 py-1.5 text-sm">
+                <span className="font-semibold mr-2">🍽️</span>
+                <span>{recipe.cuisineType.charAt(0).toUpperCase() + recipe.cuisineType.slice(1)}</span>
+              </div>
+            )}
+            {recipe.cookingTime && (
+              <div className="flex items-center bg-gray-100 border border-gray-300 shadow-sm rounded-full px-3 py-1.5 text-sm">
+                <span className="font-semibold mr-2">⏲️</span>
+                <span>{recipe.cookingTime}</span>
+              </div>
+            )}
+            {recipe.cookingDifficulty && (
+              <div className="flex items-center bg-gray-100 border border-gray-300 shadow-sm rounded-full px-3 py-1.5 text-sm">
+                <span className="font-semibold mr-2">🧩</span>
+                <span>{recipe.cookingDifficulty.charAt(0).toUpperCase() + recipe.cookingDifficulty.slice(1)}</span>
+              </div>
+            )}
+          </div>
+
+          {/* New Action Bar */}
+          <div className="flex flex-wrap gap-3 mb-8 items-center border-t border-b border-gray-200 py-4">
+            <button
+              onClick={handleCopyRecipe}
+              className="flex items-center text-gray-700 hover:text-gray-900 transition-colors duration-200"
+            >
+              <FontAwesomeIcon icon={faCopy} className="w-5 h-5" />
+              <span className="ml-2 text-sm">{copySuccess ? 'Link Copied!' : 'Share Recipe'}</span>
+            </button>
+
+            {isOwner && (
+              <>
+                <div className="w-px h-6 bg-gray-200" /> {/* Divider */}
+                <button
+                  onClick={handlePinToggle}
+                  className={`flex items-center transition-colors duration-200 ${
+                    recipe.pinned ? 'text-blue-500 hover:text-blue-600' : 'text-gray-700 hover:text-gray-900'
+                  }`}
+                >
+                  <FontAwesomeIcon 
+                    icon={faThumbtack} 
+                    className={`w-5 h-5 transform transition-all duration-300 ${
+                      recipe.pinned ? 'rotate-[45deg] scale-110' : 'hover:scale-110'
+                    }`}
+                  />
+                  <span className="ml-2 text-sm">{recipe.pinned ? 'Pinned' : 'Pin Recipe'}</span>
+                </button>
+
+                <div className="w-px h-6 bg-gray-200" /> {/* Divider */}
+                <button
+                  onClick={handleDelete}
+                  className="flex items-center text-gray-700 hover:text-red-600 transition-colors duration-200"
+                >
+                  <FontAwesomeIcon icon={faTrashCan} className="w-5 h-5" />
+                  <span className="ml-2 text-sm">Delete Recipe</span>
+                </button>
+              </>
+            )}
+          </div>
+
           {/* Recipe Image with optimizations */}
           <div className="relative aspect-video w-full mb-6 bg-gray-100 rounded-lg overflow-hidden group">
             {recipe.imageURL && !imageError ? (
@@ -581,34 +705,6 @@ const RecipeDetails = () => {
                 </button>
               )}
             </div>
-          </div>
-
-          {/* Moved Classification section here */}
-          <div className="mb-6 flex flex-wrap gap-3">
-            {recipe.diet.length > 0 && (
-              <div className="flex items-center bg-gray-100 border border-gray-300 shadow-sm rounded-full px-3 py-1.5 text-sm">
-                <span className="font-semibold mr-2">🍲</span>
-                <span>{recipe.diet.map((d) => d.charAt(0).toUpperCase() + d.slice(1)).join(", ")}</span>
-              </div>
-            )}
-            {recipe.cuisineType && (
-              <div className="flex items-center bg-gray-100 border border-gray-300 shadow-sm rounded-full px-3 py-1.5 text-sm">
-                <span className="font-semibold mr-2">🍽️</span>
-                <span>{recipe.cuisineType.charAt(0).toUpperCase() + recipe.cuisineType.slice(1)}</span>
-              </div>
-            )}
-            {recipe.cookingTime && (
-              <div className="flex items-center bg-gray-100 border border-gray-300 shadow-sm rounded-full px-3 py-1.5 text-sm">
-                <span className="font-semibold mr-2">⏲️</span>
-                <span>{recipe.cookingTime}</span>
-              </div>
-            )}
-            {recipe.cookingDifficulty && (
-              <div className="flex items-center bg-gray-100 border border-gray-300 shadow-sm rounded-full px-3 py-1.5 text-sm">
-                <span className="font-semibold mr-2">🧩</span>
-                <span>{recipe.cookingDifficulty.charAt(0).toUpperCase() + recipe.cookingDifficulty.slice(1)}</span>
-              </div>
-            )}
           </div>
 
           {/* Recipe Summary Section */}
