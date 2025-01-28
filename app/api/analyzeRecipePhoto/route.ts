@@ -8,8 +8,10 @@ const openai = new OpenAI({
 export async function POST(req: Request) {
     try {
         const { imageUrl, recipe } = await req.json();
+        console.log("📸 Analyzing recipe photo - Request received");
 
         if (!imageUrl || !recipe) {
+            console.log("❌ Missing image URL or recipe data");
             return NextResponse.json({ error: "Missing image URL or recipe data" }, { status: 400 });
         }
 
@@ -43,6 +45,7 @@ For matching images:
 For unrelated images:
 {"score": 0, "explanation": "Image is unrelated to the recipe"}`;
 
+        console.log("🤖 Calling GPT-4 for analysis...");
         const response = await openai.chat.completions.create({
             model: "gpt-4o-mini",
             messages: [
@@ -67,13 +70,14 @@ For unrelated images:
         try {
             // Parse the response as JSON
             const analysis = JSON.parse(response.choices[0].message.content || "{}");
+            console.log("✅ Analysis complete:", analysis);
             return NextResponse.json(analysis);
         } catch (error) {
-            console.error("Error parsing GPT response:", error);
+            console.error("❌ Error parsing GPT response:", error);
             return NextResponse.json({ error: "Invalid response format" }, { status: 500 });
         }
     } catch (error) {
-        console.error("Error analyzing recipe photo:", error);
+        console.error("❌ Error analyzing recipe photo:", error);
         return NextResponse.json({ error: "Failed to analyze photo" }, { status: 500 });
     }
 } 

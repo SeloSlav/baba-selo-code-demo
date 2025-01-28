@@ -275,7 +275,7 @@ const RecipeDetails = () => {
 
       // Analyze the uploaded photo and award points
       try {
-        console.log("Analyzing uploaded photo...");
+        console.log("📸 Sending photo for analysis...");
         const analysisResponse = await fetch("/api/analyzeRecipePhoto", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -289,14 +289,19 @@ const RecipeDetails = () => {
           }),
         });
 
+        console.log("📨 Analysis response status:", analysisResponse.status);
+        const responseText = await analysisResponse.text();
+        console.log("📝 Raw response:", responseText);
+
         if (analysisResponse.ok) {
-          const analysis = await analysisResponse.json();
-          console.log("Photo analysis result:", analysis);
+          const analysis = JSON.parse(responseText);
+          console.log("✅ Parsed analysis result:", analysis);
           
           if (analysis.score === 0) {
-            // If the image is unrelated, show a message but don't award points
+            console.log("⚠️ Image unrelated to recipe");
             showPointsToast(0, analysis.explanation);
           } else {
+            console.log("🎯 Valid image score:", analysis.score);
             // Award points based on the analysis score
             const pointsResult = await SpoonPointSystem.awardPoints(
               user.uid,
@@ -305,24 +310,22 @@ const RecipeDetails = () => {
               { score: analysis.score }
             );
 
-            console.log("Points award result:", pointsResult);
+            console.log("🎉 Points award result:", pointsResult);
 
             if (pointsResult.success) {
-              await handlePointsAward(
-                'UPLOAD_IMAGE',
-                id as string,
-                `Photo quality score: ${analysis.score}/100 - ${analysis.explanation}`
-              );
+              showPointsToast(analysis.score, `Photo quality: ${analysis.score} points!`);
             } else {
-              // If points weren't awarded (e.g., already awarded for this recipe)
-              showPointsToast(0, "No points awarded - you've already uploaded a photo for this recipe!");
+              console.log("⚠️ No points awarded:", pointsResult.error);
+              showPointsToast(0, "Already uploaded a photo for this recipe");
             }
           }
         } else {
-          console.error("Failed to analyze photo:", await analysisResponse.text());
+          console.error("❌ Failed to analyze photo:", responseText);
+          showPointsToast(0, "Failed to analyze photo");
         }
       } catch (error) {
-        console.error("Error analyzing photo:", error);
+        console.error("❌ Error in photo analysis:", error);
+        showPointsToast(0, "Error analyzing photo");
       }
     } catch (error) {
       console.error("Error uploading image:", error);
