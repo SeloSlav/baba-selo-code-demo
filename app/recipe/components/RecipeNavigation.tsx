@@ -40,7 +40,7 @@ export const RecipeNavigation = ({
                     : 'bg-gray-100 hover:bg-gray-200'
                 }`}
               >
-                Ingredients
+                📝 Ingredients
               </button>
               <button
                 onClick={() => scrollToSection(directionsRef)}
@@ -50,7 +50,7 @@ export const RecipeNavigation = ({
                     : 'bg-gray-100 hover:bg-gray-200'
                 }`}
               >
-                Directions
+                👩‍🍳 Directions
               </button>
               <button
                 onClick={() => scrollToSection(notesRef)}
@@ -60,7 +60,7 @@ export const RecipeNavigation = ({
                     : 'bg-gray-100 hover:bg-gray-200'
                 }`}
               >
-                Notes
+                📝 Notes
               </button>
               <button
                 onClick={() => scrollToSection(macroInfoRef)}
@@ -70,7 +70,7 @@ export const RecipeNavigation = ({
                     : 'bg-gray-100 hover:bg-gray-200'
                 }`}
               >
-                Nutrition
+                📊 Nutrition
               </button>
               <button
                 onClick={() => scrollToSection(pairingsRef)}
@@ -80,7 +80,7 @@ export const RecipeNavigation = ({
                     : 'bg-gray-100 hover:bg-gray-200'
                 }`}
               >
-                Pairings
+                🍷 Pairings
               </button>
             </div>
           </div>
@@ -153,7 +153,7 @@ export const RecipeNavigation = ({
                       : 'bg-gray-100 hover:bg-gray-200'
                   }`}
                 >
-                  Ingredients
+                  📝 Ingredients
                 </button>
                 <button
                   onClick={() => scrollToSection(directionsRef)}
@@ -163,7 +163,7 @@ export const RecipeNavigation = ({
                       : 'bg-gray-100 hover:bg-gray-200'
                   }`}
                 >
-                  Directions
+                  👩‍🍳 Directions
                 </button>
                 <button
                   onClick={() => scrollToSection(notesRef)}
@@ -173,7 +173,7 @@ export const RecipeNavigation = ({
                       : 'bg-gray-100 hover:bg-gray-200'
                   }`}
                 >
-                  Notes
+                  📝 Notes
                 </button>
                 <button
                   onClick={() => scrollToSection(macroInfoRef)}
@@ -183,7 +183,7 @@ export const RecipeNavigation = ({
                       : 'bg-gray-100 hover:bg-gray-200'
                   }`}
                 >
-                  Nutrition
+                  📊 Nutrition
                 </button>
                 <button
                   onClick={() => scrollToSection(pairingsRef)}
@@ -193,7 +193,7 @@ export const RecipeNavigation = ({
                       : 'bg-gray-100 hover:bg-gray-200'
                   }`}
                 >
-                  Pairings
+                  🍷 Pairings
                 </button>
               </div>
             </div>
