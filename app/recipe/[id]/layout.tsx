@@ -2,9 +2,14 @@ import { Metadata } from 'next';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/firebase';
 
-export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+type Props = {
+  params: Promise<{ id: string }>;
+}
+
+export async function generateMetadata(props: Props): Promise<Metadata> {
   try {
-    const recipeDoc = await getDoc(doc(db, "recipes", params.id));
+    const { id } = await props.params;
+    const recipeDoc = await getDoc(doc(db, "recipes", id));
     const recipe = recipeDoc.exists() ? recipeDoc.data() : null;
 
     // Default values
