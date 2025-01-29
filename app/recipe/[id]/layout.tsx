@@ -72,5 +72,5 @@ export default function Layout({
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>;
+  return <div className="recipe-layout">{children}</div>;
 } 
