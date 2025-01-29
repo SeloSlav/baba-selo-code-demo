@@ -1,8 +1,9 @@
 "use client"; // This marks this file as a client component
 
 import { useParams, useRouter } from "next/navigation"; // Use useParams and useRouter for navigation
-import { db } from "../../firebase/firebase"; // Import Firestore db
+import { db, storage } from "../../firebase/firebase"; // Import Firestore db and storage
 import { doc, getDoc, deleteDoc, updateDoc } from "firebase/firestore"; // Firestore methods
+import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { useEffect, useState, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircle, faCheckCircle, faTrashCan, faCopy } from "@fortawesome/free-regular-svg-icons";
@@ -11,7 +12,6 @@ import { getAuth } from "firebase/auth"; // Import Firebase auth
 import Image from "next/image";
 import { RecipeChatBubble } from "../../components/RecipeChatBubble";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
-import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { useDeleteRecipe } from "../../context/DeleteRecipeContext";
 import { usePoints } from '../../context/PointsContext';
 import { SpoonPointSystem } from '../../lib/spoonPoints';
@@ -66,7 +66,6 @@ const RecipeDetails = () => {
   const [imageError, setImageError] = useState(false);
   const [isImageLoading, setIsImageLoading] = useState(true);
   const [uploadingImage, setUploadingImage] = useState(false);
-  const storage = getStorage();
   const [notes, setNotes] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
   const [hasNoteChanges, setHasNoteChanges] = useState(false);
@@ -206,12 +205,13 @@ const RecipeDetails = () => {
 
   // Function to generate a new recipe image using DALL·E
   const handleGenerateImage = async () => {
-    if (!recipe || !id || !user) return;  // Add user check
+    if (!recipe || !id || !user) return;
 
     setLoadingImage(true);
     try {
       console.log("Generating image with user ID:", user.uid);
 
+      // Generate image and get permanent Firebase Storage URL
       const response = await fetch("/api/generateImage", {
         method: "POST",
         headers: {
@@ -219,18 +219,18 @@ const RecipeDetails = () => {
         },
         body: JSON.stringify({
           prompt: `A rustic dish representation for ${recipe.recipeTitle}`,
-          userId: user.uid  // Use user.uid directly
+          userId: user.uid,
+          recipeId: id
         }),
       });
 
       const data = await response.json();
       if (data.imageUrl) {
+        // Update Firestore with the permanent URL
         const recipeDocRef = doc(db, "recipes", id as string);
-
-        // Save the absolute URL to Firestore
         await updateDoc(recipeDocRef, { imageURL: data.imageUrl });
 
-        // Update local state with the new image URL
+        // Update local state
         setRecipe((prevRecipe) => prevRecipe && { ...prevRecipe, imageURL: data.imageUrl });
 
         // Award points for generating image
@@ -245,6 +245,34 @@ const RecipeDetails = () => {
     }
 
     setLoadingImage(false);
+  };
+
+  // Function to handle image deletion
+  const handleDeleteImage = async () => {
+    if (!id || !recipe?.imageURL) return;
+
+    try {
+      // 1. Create a reference to the image in Firebase Storage
+      const storageRef = ref(storage, `recipe-images/${id}`);
+
+      try {
+        // 2. Delete the image from Firebase Storage
+        await deleteObject(storageRef);
+      } catch (error) {
+        // If the file doesn't exist in storage, just continue
+        console.log("Image might not exist in storage:", error);
+      }
+
+      // 3. Update Firestore to remove the image URL
+      const recipeDocRef = doc(db, "recipes", id as string);
+      await updateDoc(recipeDocRef, { imageURL: "" });
+
+      // 4. Update local state
+      setRecipe((prevRecipe) => prevRecipe && { ...prevRecipe, imageURL: "" });
+      setImageError(false);
+    } catch (error) {
+      console.error("Error deleting image:", error);
+    }
   };
 
   // Add new function to handle image upload
@@ -331,20 +359,6 @@ const RecipeDetails = () => {
       console.error("Error uploading image:", error);
     } finally {
       setUploadingImage(false);
-    }
-  };
-
-  // Add function to handle image deletion
-  const handleDeleteImage = async () => {
-    if (!id || !recipe?.imageURL) return;
-
-    try {
-      const recipeDocRef = doc(db, "recipes", id as string);
-      await updateDoc(recipeDocRef, { imageURL: "" });
-      setRecipe((prevRecipe) => prevRecipe && { ...prevRecipe, imageURL: "" });
-      setImageError(false);
-    } catch (error) {
-      console.error("Error clearing image URL:", error);
     }
   };
 

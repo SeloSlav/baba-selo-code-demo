@@ -3,7 +3,8 @@ const nextConfig = {
     images: {
       domains: [
         'firebasestorage.googleapis.com',
-        'oaidalleapiprodscus.blob.core.windows.net'
+        'oaidalleapiprodscus.blob.core.windows.net',
+        'storage.googleapis.com'
       ],
     },
   };
