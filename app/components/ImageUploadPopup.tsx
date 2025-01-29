@@ -96,7 +96,28 @@ export const ImageUploadPopup: React.FC<ImageUploadPopupProps> = ({
             </div>
             <div>
               <h2 className="text-xl font-bold">Share Your Dish</h2>
-              <p className="text-sm text-gray-600">Let Baba see what you're cooking</p>
+              <div className="flex items-center gap-1">
+                <p className="text-sm text-gray-600">Let Baba see what you're cooking</p>
+                <div className="group relative">
+                  <FontAwesomeIcon 
+                    icon={faCircleInfo} 
+                    className="text-gray-400 hover:text-gray-600 text-sm cursor-help"
+                  />
+                  <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 p-3 bg-black text-white text-xs rounded-xl shadow-lg z-50">
+                    <div className="relative">
+                      Upload any image:
+                      <ul className="mt-2 ml-2 space-y-1.5">
+                        <li>• Your fridge contents</li>
+                        <li>• Ingredients you have</li>
+                        <li>• A dish you made</li>
+                        <li>• Recipe inspiration</li>
+                        <li>• Your grandson</li>
+                      </ul>
+                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 translate-y-full w-2 h-2 bg-black rotate-45"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
           <button
@@ -162,25 +183,6 @@ export const ImageUploadPopup: React.FC<ImageUploadPopupProps> = ({
               onDragOver={handleDragOver}
               className="relative border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:bg-gray-50 transition-colors cursor-pointer"
             >
-              <div className="absolute top-3 right-3 group">
-                <FontAwesomeIcon 
-                  icon={faCircleInfo} 
-                  className="text-gray-400 hover:text-gray-600 text-sm cursor-help"
-                />
-                <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 absolute right-0 bottom-full mb-2 w-64 p-3 bg-black text-white text-xs rounded-xl shadow-lg z-50">
-                  <div className="relative">
-                    Upload any image:
-                    <ul className="mt-2 ml-2 space-y-1.5">
-                      <li>• Your fridge contents</li>
-                      <li>• Ingredients you have</li>
-                      <li>• A dish you made</li>
-                      <li>• Recipe inspiration</li>
-                      <li>• Your grandson</li>
-                    </ul>
-                    <div className="absolute -bottom-1 right-3 translate-y-full w-2 h-2 bg-black rotate-45"></div>
-                  </div>
-                </div>
-              </div>
               <p className="text-gray-600 mb-2">
                 Or drag & drop your image here
               </p>
