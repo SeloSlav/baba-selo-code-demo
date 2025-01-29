@@ -2,13 +2,19 @@ import { Metadata, ResolvingMetadata } from 'next';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/firebase';
 
-// Add generateMetadata function
+interface GenerateMetadataProps {
+  params: {
+    id: string;
+  };
+  searchParams: { [key: string]: string | string[] | undefined };
+}
+
 export async function generateMetadata(
-  { params }: { params: { id: string } },
+  props: GenerateMetadataProps,
   parent: ResolvingMetadata
 ): Promise<Metadata> {
   // Get recipe data
-  const recipeDoc = await getDoc(doc(db, "recipes", params.id));
+  const recipeDoc = await getDoc(doc(db, "recipes", props.params.id));
   const recipe = recipeDoc.exists() ? recipeDoc.data() : null;
 
   // Default values
@@ -46,7 +52,7 @@ export async function generateMetadata(
       description,
       images: [image],
       type: 'website',
-      url: `https://www.babaselo.com/recipe/${params.id}`,
+      url: `https://www.babaselo.com/recipe/${props.params.id}`,
     },
     twitter: {
       card: 'summary_large_image',
@@ -57,10 +63,10 @@ export async function generateMetadata(
   };
 }
 
-export default function Layout({
-  children,
-}: {
+interface LayoutProps {
   children: React.ReactNode;
-}) {
+}
+
+export default function Layout({ children }: LayoutProps) {
   return <>{children}</>;
 } 
