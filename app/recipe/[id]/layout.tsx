@@ -2,14 +2,9 @@ import { Metadata, ResolvingMetadata } from 'next';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/firebase';
 
-type Props = {
-  params: { id: string }
-  searchParams: { [key: string]: string | string[] | undefined }
-}
-
 // Add generateMetadata function
 export async function generateMetadata(
-  { params }: Props,
+  { params }: { params: { id: string } },
   parent: ResolvingMetadata
 ): Promise<Metadata> {
   // Get recipe data
