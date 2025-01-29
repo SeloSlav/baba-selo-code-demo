@@ -177,7 +177,7 @@ export const ImageUploadPopup: React.FC<ImageUploadPopupProps> = ({
             </div>
 
             {/* Drag & Drop Area */}
-            <div
+            <div  
               onClick={() => fileInputRef.current?.click()}
               onDrop={handleDrop}
               onDragOver={handleDragOver}
