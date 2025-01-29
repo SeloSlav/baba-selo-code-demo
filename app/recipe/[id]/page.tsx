@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation"; // Use useParams and useRouter for navigation
 import { db, storage } from "../../firebase/firebase"; // Import Firestore db and storage
-import { doc, getDoc, deleteDoc, updateDoc } from "firebase/firestore"; // Firestore methods
+import { doc, getDoc, deleteDoc, updateDoc, query, getDocs, collection, where, addDoc, serverTimestamp } from "firebase/firestore"; // Firestore methods
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { useEffect, useState, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -28,6 +28,7 @@ import { RecipeMacros } from "../components/RecipeMacros";
 import { RecipePairings } from "../components/RecipePairings";
 import { RecipeTitle } from "../components/RecipeTitle";
 import { RecipeSummary } from "../components/RecipeSummary";
+import { generateImageHash } from '../../lib/imageUtils';
 
 const shimmer = (w: number, h: number) => `
 <svg width="${w}" height="${h}" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -283,6 +284,22 @@ const RecipeDetails = () => {
     const file = e.target.files[0];
 
     try {
+      // Generate hash of the image
+      const imageHash = await generateImageHash(file);
+
+      // Check if this hash exists in Firestore
+      const hashCheckQuery = query(
+        collection(db, "imageHashes"),
+        where("hash", "==", imageHash)
+      );
+      const hashCheckSnapshot = await getDocs(hashCheckQuery);
+
+      if (!hashCheckSnapshot.empty) {
+        setUploadingImage(false);
+        showPointsToast(0, "This image has already been uploaded before!");
+        return;
+      }
+
       // Create a reference to the storage location
       const storageRef = ref(storage, `recipe-images/${id}`);
 
@@ -291,6 +308,14 @@ const RecipeDetails = () => {
 
       // Get the download URL
       const downloadURL = await getDownloadURL(storageRef);
+
+      // Store the image hash in Firestore
+      await addDoc(collection(db, "imageHashes"), {
+        hash: imageHash,
+        userId: user.uid,
+        recipeId: id,
+        timestamp: serverTimestamp(),
+      });
 
       // Update Firestore with the new image URL
       const recipeDocRef = doc(db, "recipes", id as string);
