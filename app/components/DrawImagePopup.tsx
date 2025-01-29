@@ -25,7 +25,11 @@ export const DrawImagePopup: React.FC<DrawImagePopupProps> = ({
       setError("Please enter a description for what you'd like Baba to draw.");
       return;
     }
-    onSubmit(prompt.trim(), user?.uid || null);
+    if (!user) {
+      setError("Please sign in to use the drawing feature.");
+      return;
+    }
+    onSubmit(prompt.trim(), user.uid);
     setPrompt("");
     setError("");
     onClose();

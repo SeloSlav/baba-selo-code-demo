@@ -278,7 +278,11 @@ export const ChatWindow = forwardRef(
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ prompt, userId }),
+          body: JSON.stringify({ 
+            prompt, 
+            userId,
+            recipeId: `chat-${Date.now()}` // Unique ID for chat images
+          }),
         });
 
         const data = await response.json();
