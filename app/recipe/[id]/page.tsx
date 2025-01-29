@@ -28,7 +28,13 @@ import { RecipeMacros } from "../components/RecipeMacros";
 import { RecipePairings } from "../components/RecipePairings";
 import { RecipeTitle } from "../components/RecipeTitle";
 import { RecipeSummary } from "../components/RecipeSummary";
-import { generateImageHash } from '../../lib/imageUtils';
+import { 
+  generateImageHash, 
+  verifyImageContent, 
+  checkImageSimilarity, 
+  checkRecipeImageLimit, 
+  checkPreviousAnalyses 
+} from '../../lib/imageUtils';
 
 const shimmer = (w: number, h: number) => `
 <svg width="${w}" height="${h}" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -284,10 +290,18 @@ const RecipeDetails = () => {
     const file = e.target.files[0];
 
     try {
-      // Generate hash of the image
+      // 1. Verify image content type
+      const contentCheck = await verifyImageContent(file);
+      if (!contentCheck.isValid) {
+        setUploadingImage(false);
+        showPointsToast(0, contentCheck.message || "Invalid image format");
+        return;
+      }
+
+      // 2. Generate hash of the image
       const imageHash = await generateImageHash(file);
 
-      // Check if this hash exists in Firestore
+      // 3. Check if this hash exists in Firestore
       const hashCheckQuery = query(
         collection(db, "imageHashes"),
         where("hash", "==", imageHash)
@@ -297,6 +311,30 @@ const RecipeDetails = () => {
       if (!hashCheckSnapshot.empty) {
         setUploadingImage(false);
         showPointsToast(0, "This image has already been uploaded before!");
+        return;
+      }
+
+      // 4. Check image similarity with user's recent uploads
+      const isSimilarityValid = await checkImageSimilarity(imageHash, user.uid);
+      if (!isSimilarityValid) {
+        setUploadingImage(false);
+        showPointsToast(0, "This image is too similar to one of your recent uploads");
+        return;
+      }
+
+      // 5. Check recipe image limit
+      const recipeImageCheck = await checkRecipeImageLimit(id as string);
+      if (!recipeImageCheck.isValid) {
+        setUploadingImage(false);
+        showPointsToast(0, recipeImageCheck.message || "Maximum images reached");
+        return;
+      }
+
+      // 6. Check previous analyses
+      const analysisCheck = await checkPreviousAnalyses(imageHash);
+      if (!analysisCheck.isValid) {
+        setUploadingImage(false);
+        showPointsToast(0, analysisCheck.message || "Image previously rejected");
         return;
       }
 
@@ -334,6 +372,7 @@ const RecipeDetails = () => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             imageUrl: downloadURL,
+            imageHash,
             recipe: {
               recipeTitle: recipe.recipeTitle,
               ingredients: recipe.ingredients,
@@ -353,6 +392,14 @@ const RecipeDetails = () => {
           if (analysis.score === 0) {
             console.log("⚠️ Image unrelated to recipe");
             showPointsToast(0, analysis.explanation);
+            
+            // Store the failed analysis result
+            await addDoc(collection(db, "imageAnalyses"), {
+              imageHash,
+              score: 0,
+              explanation: analysis.explanation,
+              timestamp: serverTimestamp()
+            });
           } else {
             console.log("🎯 Valid image score:", analysis.score);
             // Award points based on the analysis score
@@ -362,6 +409,13 @@ const RecipeDetails = () => {
               id as string,
               { score: analysis.score }
             );
+
+            // Store the successful analysis result
+            await addDoc(collection(db, "imageAnalyses"), {
+              imageHash,
+              score: analysis.score,
+              timestamp: serverTimestamp()
+            });
 
             console.log("🎉 Points award result:", pointsResult);
 
