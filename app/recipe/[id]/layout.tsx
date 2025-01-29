@@ -1,72 +1,76 @@
-import { Metadata, ResolvingMetadata } from 'next';
+import { Metadata } from 'next';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/firebase';
 
-interface GenerateMetadataProps {
-  params: {
-    id: string;
-  };
-  searchParams: { [key: string]: string | string[] | undefined };
-}
+type GenerateMetadataParams = {
+  params: { id: string };
+};
 
-export async function generateMetadata(
-  props: GenerateMetadataProps,
-  parent: ResolvingMetadata
-): Promise<Metadata> {
-  // Get recipe data
-  const recipeDoc = await getDoc(doc(db, "recipes", props.params.id));
-  const recipe = recipeDoc.exists() ? recipeDoc.data() : null;
+export async function generateMetadata({ params }: GenerateMetadataParams): Promise<Metadata> {
+  try {
+    // Get recipe data
+    const recipeDoc = await getDoc(doc(db, "recipes", params.id));
+    const recipe = recipeDoc.exists() ? recipeDoc.data() : null;
 
-  // Default values
-  const defaultTitle = "Recipe | Baba Selo";
-  const defaultDescription = "Discover delicious recipes with Baba Selo";
-  const defaultImage = "https://www.babaselo.com/baba-removebg.png"; // Using the Baba Selo logo as default
+    // Default values
+    const defaultTitle = "Recipe | Baba Selo";
+    const defaultDescription = "Discover delicious recipes with Baba Selo";
+    const defaultImage = "https://www.babaselo.com/baba-removebg.png";
 
-  if (!recipe) {
-    return {
-      title: defaultTitle,
-      description: defaultDescription,
-      openGraph: {
+    if (!recipe) {
+      return {
+        metadataBase: new URL('https://www.babaselo.com'),
         title: defaultTitle,
         description: defaultDescription,
-        images: [defaultImage],
+        openGraph: {
+          title: defaultTitle,
+          description: defaultDescription,
+          images: [defaultImage],
+        },
+        twitter: {
+          card: 'summary_large_image',
+          title: defaultTitle,
+          description: defaultDescription,
+          images: [defaultImage],
+        },
+      };
+    }
+
+    const title = `${recipe.recipeTitle} | Baba Selo`;
+    const description = recipe.recipeSummary || `A delicious ${recipe.cuisineType} recipe for ${recipe.recipeTitle}`;
+    const image = recipe.imageURL || defaultImage;
+
+    return {
+      metadataBase: new URL('https://www.babaselo.com'),
+      title,
+      description,
+      openGraph: {
+        title,
+        description,
+        images: [image],
+        type: 'website',
       },
       twitter: {
         card: 'summary_large_image',
-        title: defaultTitle,
-        description: defaultDescription,
-        images: [defaultImage],
+        title,
+        description,
+        images: [image],
       },
     };
+  } catch (error) {
+    console.error('Error generating metadata:', error);
+    return {
+      metadataBase: new URL('https://www.babaselo.com'),
+      title: 'Recipe | Baba Selo',
+      description: 'Discover delicious recipes with Baba Selo',
+    };
   }
-
-  const title = `${recipe.recipeTitle} | Baba Selo`;
-  const description = recipe.recipeSummary || `A delicious ${recipe.cuisineType} recipe for ${recipe.recipeTitle}`;
-  const image = recipe.imageURL || defaultImage;
-
-  return {
-    title,
-    description,
-    openGraph: {
-      title,
-      description,
-      images: [image],
-      type: 'website',
-      url: `https://www.babaselo.com/recipe/${props.params.id}`,
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title,
-      description,
-      images: [image],
-    },
-  };
 }
 
-interface LayoutProps {
+export default function Layout({
+  children,
+}: {
   children: React.ReactNode;
-}
-
-export default function Layout({ children }: LayoutProps) {
+}) {
   return <>{children}</>;
 } 
