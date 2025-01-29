@@ -28,8 +28,6 @@ import { RecipeMacros } from "../components/RecipeMacros";
 import { RecipePairings } from "../components/RecipePairings";
 import { RecipeTitle } from "../components/RecipeTitle";
 import { RecipeSummary } from "../components/RecipeSummary";
-import { generateMetadata } from './metadata';
-export { generateMetadata };
 
 const shimmer = (w: number, h: number) => `
 <svg width="${w}" height="${h}" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
