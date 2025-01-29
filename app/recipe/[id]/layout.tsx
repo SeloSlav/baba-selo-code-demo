@@ -62,12 +62,10 @@ export async function generateMetadata(
   };
 }
 
-export default function RecipeLayout({
+export default function Layout({
   children,
-  params,
 }: {
   children: React.ReactNode;
-  params: { id: string };
 }) {
-  return children;
+  return <>{children}</>;
 } 
