@@ -8,7 +8,7 @@ import { useAuth } from "../context/AuthContext";
 interface DrawImagePopupProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (prompt: string, userId: string | null) => void;
+  onSubmit: (prompt: string, userId: string | null, drawingId: string) => void;
 }
 
 export const DrawImagePopup: React.FC<DrawImagePopupProps> = ({
@@ -29,10 +29,39 @@ export const DrawImagePopup: React.FC<DrawImagePopupProps> = ({
       setError("Please sign in to use the drawing feature.");
       return;
     }
-    onSubmit(prompt.trim(), user.uid);
+
+    // Check if the prompt is asking about Baba Selo herself
+    const babaSelfPromptPatterns = [
+      /baba\s*selo/i,
+      /yourself/i,
+      /your\s*portrait/i,
+      /draw\s*you/i,
+      /draw\s*baba/i,
+      /draw\s*yourself/i,
+      /what\s*do\s*you\s*look\s*like/i
+    ];
+
+    const isBabaSelfPortrait = babaSelfPromptPatterns.some(pattern => pattern.test(prompt.trim()));
+
+    // If it's a self-portrait request, use the consistent Baba Selo description
+    const finalPrompt = isBabaSelfPortrait
+      ? "A warm and lovable Croatian grandmother in her 70s wearing a traditional brown dress with a white apron and beige woven babushka headscarf, holding a wooden shepherd's crook. She has a kind, weathered face with laugh lines and wise eyes, standing in a rustic kitchen setting. Photorealistic style."
+      : prompt.trim();
+
+    // Generate a unique ID for the drawing
+    const drawingId = `drawing-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    onSubmit(finalPrompt, user.uid, drawingId);
     setPrompt("");
     setError("");
     onClose();
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      handleSubmit();
+    }
   };
 
   if (!isOpen) return null;
@@ -78,12 +107,15 @@ export const DrawImagePopup: React.FC<DrawImagePopupProps> = ({
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
+            onKeyDown={handleKeyDown}
             placeholder="E.g., Draw a cozy Balkan kitchen with a pot of sarma simmering on the stove, warm sunlight streaming through lace curtains..."
             className="w-full h-32 p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
           />
-          <p className="text-xs text-gray-500 mt-2">
-            Be descriptive! The more details you provide, the better Baba can bring your vision to life.
-          </p>
+          <div className="flex justify-between items-center mt-2">
+            <p className="text-xs text-gray-500">
+              Be descriptive! The more details you provide, the better Baba can bring your vision to life.
+            </p>
+          </div>
         </div>
 
         {/* Action Buttons */}

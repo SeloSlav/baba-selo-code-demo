@@ -270,10 +270,10 @@ export const ChatWindow = forwardRef(
     };
 
     // Add handler for draw image submit
-    const handleDrawImageSubmit = async (prompt: string, userId: string | null) => {
+    const handleDrawImageSubmit = async (prompt: string, userId: string | null, drawingId: string) => {
       setLoading(true);
       try {
-        const response = await fetch('/api/generateImage', {
+        const response = await fetch('/api/drawImage', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -281,7 +281,7 @@ export const ChatWindow = forwardRef(
           body: JSON.stringify({ 
             prompt, 
             userId,
-            recipeId: `chat-${Date.now()}` // Unique ID for chat images
+            recipeId: drawingId
           }),
         });
 
@@ -504,7 +504,7 @@ export const ChatWindow = forwardRef(
         <DrawImagePopup
           isOpen={isDrawImageOpen}
           onClose={() => setIsDrawImageOpen(false)}
-          onSubmit={(prompt, userId) => handleDrawImageSubmit(prompt, userId)}
+          onSubmit={(prompt, userId, drawingId) => handleDrawImageSubmit(prompt, userId, drawingId)}
         />
       </div>
     );

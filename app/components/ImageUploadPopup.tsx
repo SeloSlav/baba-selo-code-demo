@@ -103,15 +103,26 @@ export const ImageUploadPopup: React.FC<ImageUploadPopupProps> = ({
                     icon={faCircleInfo} 
                     className="text-gray-400 hover:text-gray-600 text-sm cursor-help"
                   />
-                  <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 p-3 bg-black text-white text-xs rounded-xl shadow-lg z-50">
+                  <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-56 md:w-64 p-3 bg-black text-white text-xs md:text-sm rounded-lg shadow-lg z-50">
                     <div className="relative">
-                      Upload any image:
-                      <ul className="mt-2 ml-2 space-y-1.5">
-                        <li>• Your fridge contents</li>
-                        <li>• Ingredients you have</li>
-                        <li>• A dish you made</li>
-                        <li>• Recipe inspiration</li>
-                        <li>• Your grandson</li>
+                      <p className="font-medium mb-1.5">Upload any image:</p>
+                      <ul className="space-y-1">
+                        <li className="flex items-center">
+                          <span className="mr-1.5">•</span>
+                          <span>Your fridge contents</span>
+                        </li>
+                        <li className="flex items-center">
+                          <span className="mr-1.5">•</span>
+                          <span>Ingredients you have</span>
+                        </li>
+                        <li className="flex items-center">
+                          <span className="mr-1.5">•</span>
+                          <span>A dish you made</span>
+                        </li>
+                        <li className="flex items-center">
+                          <span className="mr-1.5">•</span>
+                          <span>Your grandson</span>
+                        </li>
                       </ul>
                       <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 translate-y-full w-2 h-2 bg-black rotate-45"></div>
                     </div>
@@ -176,12 +187,12 @@ export const ImageUploadPopup: React.FC<ImageUploadPopupProps> = ({
               </button>
             </div>
 
-            {/* Drag & Drop Area */}
-            <div  
+            {/* Drag & Drop Area - Hidden on mobile */}
+            <div
               onClick={() => fileInputRef.current?.click()}
               onDrop={handleDrop}
               onDragOver={handleDragOver}
-              className="relative border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:bg-gray-50 transition-colors cursor-pointer"
+              className="hidden md:block relative border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:bg-gray-50 transition-colors cursor-pointer"
             >
               <p className="text-gray-600 mb-2">
                 Or drag & drop your image here
