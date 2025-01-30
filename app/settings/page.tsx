@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useAuth } from "../context/AuthContext"; // Adjust if your AuthContext is in a different path
 import { db } from "../firebase/firebase";        // Adjust if firebase config is in a different path
 import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
@@ -32,10 +32,9 @@ const imageStyleOptions = {
 type ImageStyle = keyof typeof imageStyleOptions;
 
 export default function SettingsPage() {
-  // 1) Get current user from AuthContext
   const { user, loading } = useAuth();
 
-  // 2) Local state
+  // Local state
   const [username, setUsername] = useState<string>("");
   const [dietaryPreferences, setDietaryPreferences] = useState<string[]>([]);
   const [preferredCookingOil, setPreferredCookingOil] = useState<string>("");
@@ -49,8 +48,16 @@ export default function SettingsPage() {
   const [showDietaryDropdown, setShowDietaryDropdown] = useState(false);
   const [showOilDropdown, setShowOilDropdown] = useState(false);
 
-  // Tracking when we're actually saving
+  // Save states
   const [isSaving, setIsSaving] = useState(false);
+  const [savingUsername, setSavingUsername] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const saveTimeoutRef = useRef<NodeJS.Timeout>();
+
+  // Refs for closing dropdown on outside click
+  const dietaryRef = useRef<HTMLDivElement>(null);
+  const oilRef = useRef<HTMLDivElement>(null);
 
   // The lists of valid options
   const dietaryOptions = [
@@ -78,9 +85,114 @@ export default function SettingsPage() {
     "sesame oil",
   ];
 
-  // Refs for closing dropdown on outside click
-  const dietaryRef = useRef<HTMLDivElement>(null);
-  const oilRef = useRef<HTMLDivElement>(null);
+  /**
+   * Filtered options
+   */
+  const filteredDietaryOptions = dietaryOptions.filter((opt) =>
+    opt.toLowerCase().includes(dietarySearch.toLowerCase())
+  );
+  const filteredOilOptions = cookingOilOptions.filter((oil) =>
+    oil.toLowerCase().includes(oilSearch.toLowerCase())
+  );
+
+  // Auto-save function for non-username settings
+  const autoSave = async (updates: Partial<{
+    dietaryPreferences: string[];
+    preferredCookingOil: string;
+    preferredImageStyle: ImageStyle;
+  }>) => {
+    if (!user) return;
+
+    setIsSaving(true);
+    setError(null);
+    try {
+      const userDocRef = doc(db, "users", user.uid);
+      await updateDoc(userDocRef, updates).catch(async (err) => {
+        if (err.code === "not-found") {
+          await setDoc(userDocRef, updates);
+        } else {
+          throw err;
+        }
+      });
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2000);
+    } catch (err) {
+      console.error("Error saving settings:", err);
+      setError("Failed to save settings. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Debounced auto-save
+  const debouncedSave = useCallback((updates: Parameters<typeof autoSave>[0]) => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    saveTimeoutRef.current = setTimeout(() => {
+      autoSave(updates);
+    }, 500);
+  }, [user]);
+
+  // Handle username save separately
+  const handleUsernameSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+
+    setSavingUsername(true);
+    setError(null);
+    try {
+      const userDocRef = doc(db, "users", user.uid);
+      await updateDoc(userDocRef, { username });
+      
+      // Also update the spoonPoints document with the new username
+      const spoonRef = doc(db, "spoonPoints", user.uid);
+      await setDoc(spoonRef, { username }, { merge: true });
+      
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2000);
+    } catch (err) {
+      console.error("Error saving username:", err);
+      setError("Failed to save username. Please try again.");
+    } finally {
+      setSavingUsername(false);
+    }
+  };
+
+  // Modified handlers to include auto-save
+  const handleSelectDietary = (option: string) => {
+    if (!dietaryPreferences.includes(option)) {
+      const newPreferences = [...dietaryPreferences, option];
+      setDietaryPreferences(newPreferences);
+      debouncedSave({ dietaryPreferences: newPreferences });
+    }
+    setDietarySearch("");
+    setShowDietaryDropdown(false);
+  };
+
+  const handleRemoveDietary = (option: string) => {
+    const newPreferences = dietaryPreferences.filter((item) => item !== option);
+    setDietaryPreferences(newPreferences);
+    debouncedSave({ dietaryPreferences: newPreferences });
+  };
+
+  const handleSelectOil = (oil: string) => {
+    setPreferredCookingOil(oil);
+    setOilSearch(oil);
+    setShowOilDropdown(false);
+    debouncedSave({ preferredCookingOil: oil });
+  };
+
+  const handleRemoveOil = () => {
+    setPreferredCookingOil("");
+    setOilSearch("");
+    debouncedSave({ preferredCookingOil: "" });
+  };
+
+  const handleImageStyleChange = (style: ImageStyle) => {
+    setPreferredImageStyle(style);
+    debouncedSave({ preferredImageStyle: style });
+  };
 
   /**
    * Fetch user's data from Firestore on mount
@@ -100,7 +212,7 @@ export default function SettingsPage() {
           setPreferredCookingOil(userData.preferredCookingOil || "");
           setPreferredImageStyle(userData.preferredImageStyle || "rustic-traditional");
           setOilSearch(userData.preferredCookingOil || "");
-        }
+      }
       } catch (error) {
         console.error("Error fetching user settings:", error);
       }
@@ -129,83 +241,6 @@ export default function SettingsPage() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
-
-  /**
-   * Save settings to Firestore
-   */
-  const handleSave = async () => {
-    if (!user) return;
-
-    setIsSaving(true);
-    try {
-      const userDocRef = doc(db, "users", user.uid);
-      await updateDoc(userDocRef, {
-        username,
-        dietaryPreferences,
-        preferredCookingOil,
-        preferredImageStyle,
-      }).catch(async (err) => {
-        if (err.code === "not-found") {
-          await setDoc(userDocRef, {
-            username,
-            dietaryPreferences,
-            preferredCookingOil,
-            preferredImageStyle,
-          });
-        } else {
-          throw err;
-        }
-      });
-
-      // Also update the spoonPoints document with the new username
-      const spoonRef = doc(db, "spoonPoints", user.uid);
-      await setDoc(spoonRef, { username }, { merge: true });
-
-    } catch (error) {
-      console.error("Error saving settings:", error);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  /**
-   * Filtered options
-   */
-  const filteredDietaryOptions = dietaryOptions.filter((opt) =>
-    opt.toLowerCase().includes(dietarySearch.toLowerCase())
-  );
-  const filteredOilOptions = cookingOilOptions.filter((oil) =>
-    oil.toLowerCase().includes(oilSearch.toLowerCase())
-  );
-
-  /**
-   * Handlers: multi-select dietary
-   */
-  const handleSelectDietary = (option: string) => {
-    if (!dietaryPreferences.includes(option)) {
-      setDietaryPreferences([...dietaryPreferences, option]);
-    }
-    setDietarySearch("");
-    setShowDietaryDropdown(false);
-  };
-  const handleRemoveDietary = (option: string) => {
-    setDietaryPreferences(
-      dietaryPreferences.filter((item) => item !== option)
-    );
-  };
-
-  /**
-   * Handler: single-select oil
-   */
-  const handleSelectOil = (oil: string) => {
-    setPreferredCookingOil(oil);
-    setOilSearch(oil);
-    setShowOilDropdown(false);
-  };
-  const handleRemoveOil = () => {
-    setPreferredCookingOil("");
-    setOilSearch("");
-  };
 
   // If not logged in (and not loading), show a message
   if (!user && !loading) {
@@ -238,28 +273,83 @@ export default function SettingsPage() {
     <div className="max-w-5xl mx-auto px-4 py-10">
       <h2 className="text-3xl font-bold text-center mb-12">Settings</h2>
 
+      {/* Save Status Indicator */}
+      {(isSaving || saveSuccess) && (
+        <div className={`fixed bottom-4 right-4 p-4 rounded-lg shadow-lg z-50 transition-all duration-300 ${
+          isSaving ? "bg-gray-800 text-white" : "bg-green-600 text-white"
+        }`}
+        style={{ 
+          opacity: isSaving || saveSuccess ? 1 : 0,
+          transform: `translateY(${isSaving || saveSuccess ? '0' : '100%'})`,
+          transition: 'opacity 0.3s ease-in-out, transform 0.3s ease-in-out'
+        }}>
+          {isSaving ? (
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <span>Saving changes...</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span>✓</span>
+              <span>Changes saved</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Error Message */}
+      {error && (
+        <div className="fixed bottom-4 right-4 p-4 bg-red-600 text-white rounded-lg shadow-lg z-50"
+          style={{ 
+            opacity: error ? 1 : 0,
+            transform: `translateY(${error ? '0' : '100%'})`,
+            transition: 'opacity 0.3s ease-in-out, transform 0.3s ease-in-out'
+          }}>
+          {error}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-8">
         {/* Username Section */}
         <div className="p-8 border border-gray-200 rounded-2xl shadow-sm bg-white flex flex-col transition-shadow hover:shadow-md">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-green-50 rounded-xl">
-              <span className="text-xl">👤</span>
+          <form onSubmit={handleUsernameSubmit}>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-green-50 rounded-xl">
+                <span className="text-xl">👤</span>
+              </div>
+              <div className="flex-grow">
+                <h3 className="text-2xl font-bold">Username</h3>
+                <p className="text-sm text-gray-500">
+                  Choose how you'll appear on the leaderboard.
+                </p>
+              </div>
+              <button
+                type="submit"
+                disabled={savingUsername}
+                className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2
+                  ${savingUsername
+                    ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                    : "bg-black text-white hover:bg-[#212121]"
+                  }`}
+              >
+                {savingUsername ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  "Save"
+                )}
+              </button>
             </div>
-            <div>
-              <h3 className="text-2xl font-bold">Username</h3>
-              <p className="text-sm text-gray-500">
-                Choose how you'll appear on the leaderboard.
-              </p>
-            </div>
-          </div>
-
-          <input
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Enter your username"
-            className="w-full p-3 border border-gray-300 rounded-xl focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all"
-          />
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Enter your username"
+              className="w-full p-3 border border-gray-300 rounded-xl focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all"
+            />
+          </form>
         </div>
 
         {/* Image Style Preferences */}
@@ -269,9 +359,9 @@ export default function SettingsPage() {
               <span className="text-xl">🎨</span>
             </div>
             <div>
-              <h3 className="text-2xl font-bold">Image Generation Style</h3>
+              <h3 className="text-2xl font-bold">Recipe Image Style</h3>
               <p className="text-sm text-gray-500">
-                Choose how Baba should draw images for you.
+                Choose how Baba should generate images of your recipes when you save them.
               </p>
             </div>
           </div>
@@ -280,7 +370,10 @@ export default function SettingsPage() {
             {Object.entries(imageStyleOptions).map(([key, style]) => (
               <div
                 key={key}
-                onClick={() => setPreferredImageStyle(key as ImageStyle)}
+                onClick={() => {
+                  setPreferredImageStyle(key as ImageStyle);
+                  debouncedSave({ preferredImageStyle: key as ImageStyle });
+                }}
                 className={`p-4 border rounded-xl cursor-pointer transition-all ${
                   preferredImageStyle === key
                     ? "border-purple-500 bg-purple-50"
@@ -348,14 +441,18 @@ export default function SettingsPage() {
             {dietaryPreferences.map((pref) => (
               <div
                 key={pref}
-                className="flex items-center gap-1.5 bg-gray-100 px-3 py-1.5 rounded-full text-sm group hover:bg-gray-200 transition-colors"
+                className="flex items-center gap-1.5 bg-blue-50 px-3 py-1.5 rounded-full text-sm"
               >
                 <span>{pref}</span>
                 <button
-                  onClick={() => handleRemoveDietary(pref)}
+                  onClick={() => {
+                    const newPreferences = dietaryPreferences.filter(item => item !== pref);
+                    setDietaryPreferences(newPreferences);
+                    debouncedSave({ dietaryPreferences: newPreferences });
+                  }}
                   className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  ✕
+                  ×
                 </button>
               </div>
             ))}
@@ -403,25 +500,24 @@ export default function SettingsPage() {
               </ul>
             )}
           </div>
-        </div>
-      </div>
 
-      {/* Save Button - Moved outside the grid */}
-      <div className="mt-8 max-w-md mx-auto">
-        <button
-          onClick={handleSave}
-          disabled={isSaving}
-          className="w-full bg-black text-white px-6 py-3 rounded-xl hover:bg-[#212121] disabled:bg-gray-400 transition-colors flex items-center justify-center gap-2"
-        >
-          {isSaving ? (
-            <>
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              <span>Saving...</span>
-            </>
-          ) : (
-            "Save Changes"
+          {/* Selected oil tag */}
+          {preferredCookingOil && (
+            <div className="flex items-center gap-1.5 bg-blue-50 px-3 py-1.5 rounded-full text-sm w-fit">
+              <span>{preferredCookingOil}</span>
+              <button
+                onClick={() => {
+                  setPreferredCookingOil("");
+                  setOilSearch("");
+                  debouncedSave({ preferredCookingOil: "" });
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                ×
+              </button>
+            </div>
           )}
-        </button>
+        </div>
       </div>
     </div>
   );
