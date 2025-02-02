@@ -1,0 +1,8 @@
+{
+  "functions": {
+    "app/api/generateImage/route.ts": {
+      "maxDuration": 60
+    }
+  },
+  "regions": ["fra1"]
+} 

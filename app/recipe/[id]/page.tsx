@@ -33,7 +33,7 @@ import {
   verifyImageContent, 
   checkImageSimilarity, 
   checkRecipeImageLimit, 
-  checkPreviousAnalyses 
+  checkPreviousAnalyses
 } from '../../lib/imageUtils';
 
 const shimmer = (w: number, h: number) => `
@@ -218,6 +218,10 @@ const RecipeDetails = () => {
     try {
       console.log("Generating image with user ID:", user.uid);
 
+      // Set up timeout for the fetch request
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 50000); // 50 second timeout
+
       // Generate image and get permanent Firebase Storage URL
       const response = await fetch("/api/generateImage", {
         method: "POST",
@@ -229,7 +233,14 @@ const RecipeDetails = () => {
           userId: user.uid,
           recipeId: id
         }),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
       const data = await response.json();
       if (data.imageUrl) {
@@ -246,12 +257,20 @@ const RecipeDetails = () => {
           id as string,
           'Recipe image generated!'
         );
+      } else {
+        throw new Error('No image URL received');
       }
     } catch (error) {
       console.error("Error generating image:", error);
+      // Show user-friendly error message
+      if (error.name === 'AbortError') {
+        showPointsToast(0, "Image generation took too long. Please try again.");
+      } else {
+        showPointsToast(0, "Failed to generate image. Please try again later.");
+      }
+    } finally {
+      setLoadingImage(false);
     }
-
-    setLoadingImage(false);
   };
 
   // Function to handle image deletion
