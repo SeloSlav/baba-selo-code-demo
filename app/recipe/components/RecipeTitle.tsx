@@ -19,7 +19,7 @@ export const RecipeTitle = ({
   return (
     <div className="relative group">
       <div className="flex justify-between items-start">
-        <h1 className="text-[3.125rem] font-bold mb-2">{recipe.recipeTitle}</h1>
+        <h1 className="text-[1.875rem] md:text-[3.125rem] mb-[0.75rem] leading-[1.07] tracking-[-0.5px] font-semibold text-[#333333]">{recipe.recipeTitle}</h1>
         {isOwner && (
           <button
             onClick={handleGenerateTitle}

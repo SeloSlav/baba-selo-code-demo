@@ -23,7 +23,7 @@ export const RecipeSummary = ({
           {recipe.recipeSummary ? (
             <div className="relative">
               <div className="bg-white">
-                <p className="text-gray-600 text-lg leading-relaxed">{recipe.recipeSummary}</p>
+                <p className="text-[#767677] text-[0.875rem] md:text-[1.25rem] leading-[1.4] md:tracking-[-0.5px]">{recipe.recipeSummary}</p> 
                 {isOwner && (
                   <button
                     onClick={generateSummary}

@@ -261,7 +261,7 @@ const SpoonStats = () => {
                 <li>Getting calorie and nutritional information (20 points)</li>
                 <li>Discovering perfect dish pairings (15 points)</li>
                 <li>Generating AI recipe images (10 points)</li>
-                <li>Uploading your own recipe photos (25-100 points for authentic food photos, 0 points if unrelated)</li>
+                <li>Uploading your own recipe photos (250-1000 points for authentic food photos, 0 points if unrelated)</li>
                 <li>Chatting with Baba about your recipe (5 points per meaningful interaction)</li>
                 <li>Having others save your shared recipes (10 points per save)</li>
               </ul>
@@ -301,24 +301,8 @@ const SpoonStats = () => {
         )}
       </div>
 
-      {/* Replace Chart section with Transaction History */}
-      <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-        <h2 className="text-xl font-semibold mb-4">Points History</h2>
-        <div className="divide-y divide-gray-100 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-          {userData?.transactions && userData.transactions.length > 0 ? (
-            userData.transactions
-              .sort((a, b) => b.timestamp.toDate().getTime() - a.timestamp.toDate().getTime())
-              .map((transaction, index) => renderTransaction(transaction, index))
-          ) : (
-            <div className="text-center text-gray-500 py-8">
-              No points history yet. Start interacting with recipes to earn points!
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* Leaderboard section */}
-      <div className="bg-white rounded-xl shadow-lg p-6">
+      <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
         <h2 className="text-xl font-semibold mb-6">Global Leaderboard</h2>
         {leaderboard.length > 0 ? (
           <div className="space-y-4">
@@ -386,6 +370,23 @@ const SpoonStats = () => {
           </div>
         )}
       </div>
+
+      {/* Transaction History */}
+      <div className="bg-white rounded-xl shadow-lg p-6">
+        <h2 className="text-xl font-semibold mb-4">Points History</h2>
+        <div className="divide-y divide-gray-100 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+          {userData?.transactions && userData.transactions.length > 0 ? (
+            userData.transactions
+              .sort((a, b) => b.timestamp.toDate().getTime() - a.timestamp.toDate().getTime())
+              .map((transaction, index) => renderTransaction(transaction, index))
+          ) : (
+            <div className="text-center text-gray-500 py-8">
+              No points history yet. Start interacting with recipes to earn points!
+            </div>
+          )}
+        </div>
+      </div>
+
     </div>
   );
 };
