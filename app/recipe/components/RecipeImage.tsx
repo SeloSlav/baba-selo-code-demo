@@ -5,6 +5,9 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash, faUpload } from "@fortawesome/free-solid-svg-icons";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { Recipe } from "../types";
+import { RegenerateImagePopup } from "./RegenerateImagePopup";
+import { ClearImagePopup } from "./ClearImagePopup";
+import { useState } from "react";
 
 interface RecipeImageProps {
   recipe: Recipe;
@@ -37,6 +40,9 @@ export const RecipeImage = ({
   shimmer,
   toBase64,
 }: RecipeImageProps) => {
+  const [showRegeneratePopup, setShowRegeneratePopup] = useState(false);
+  const [showClearPopup, setShowClearPopup] = useState(false);
+
   return (
     <div className="relative aspect-video w-full mb-6 bg-gray-100 rounded-lg overflow-hidden group">
       {recipe.imageURL && !imageError ? (
@@ -61,7 +67,7 @@ export const RecipeImage = ({
           {isOwner && (
             <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-4">
               <button
-                onClick={handleGenerateImage}
+                onClick={() => setShowRegeneratePopup(true)}
                 disabled={loadingImage}
                 className="bg-white text-gray-800 px-4 py-2 rounded-lg shadow-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
               >
@@ -75,7 +81,7 @@ export const RecipeImage = ({
                 )}
               </button>
               <button
-                onClick={handleDeleteImage}
+                onClick={() => setShowClearPopup(true)}
                 className="bg-red-600 text-white px-4 py-2 rounded-lg shadow-md hover:bg-red-700 transition-all duration-200"
               >
                 <FontAwesomeIcon icon={faTrash} className="mr-2" />
@@ -125,6 +131,21 @@ export const RecipeImage = ({
           )}
         </div>
       )}
+
+      {/* Confirmation Popups */}
+      <RegenerateImagePopup
+        isOpen={showRegeneratePopup}
+        onClose={() => setShowRegeneratePopup(false)}
+        onConfirm={handleGenerateImage}
+        recipeTitle={recipe.recipeTitle}
+      />
+
+      <ClearImagePopup
+        isOpen={showClearPopup}
+        onClose={() => setShowClearPopup(false)}
+        onConfirm={handleDeleteImage}
+        recipeTitle={recipe.recipeTitle}
+      />
     </div>
   );
 }; 

@@ -93,19 +93,19 @@ export const RecipeMacros = ({
             )}
           </div>
         ) : (
-          <div className="flex justify-center">
+          <div className="flex justify-left">
             <button
               onClick={handleMacroCalculation}
               disabled={loadingMacros}
-              className="bg-white text-gray-800 px-4 py-2 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-xl shadow-lg hover:from-indigo-700 hover:to-purple-700 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 group"
             >
               {loadingMacros ? (
                 <div className="flex items-center">
-                  <LoadingSpinner className="mr-2" />
+                  <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2" />
                   Calculating...
                 </div>
               ) : (
-                'Calculate Nutrition Info'
+                'Calculate Nutrition Info 🥄✨'
               )}
             </button>
           </div>
