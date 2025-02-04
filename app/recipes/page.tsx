@@ -87,73 +87,6 @@ const Recipes = () => {
     });
   };
 
-  const renderMenu = (recipe: Recipe) => {
-    const currentUser = auth.currentUser;
-    const isOwner = currentUser && recipe.userId === currentUser.uid;
-    const isPinning = loadingPinAction === recipe.id;
-
-    return (
-      <>
-        {menuOpen === recipe.id && (
-          <>
-            <div 
-              className="fixed inset-0 bg-transparent" 
-              onClick={() => setMenuOpen(null)} 
-            />
-            <div 
-              className="absolute right-0 top-full mt-1 mb-3 w-full bg-white z-[60]"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="py-1">
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handlePinToggle(recipe.id, !!recipe.pinned);
-                  }}
-                  disabled={isPinning}
-                  className="w-full px-4 py-2 text-sm flex items-center hover:bg-gray-100 transition-colors disabled:opacity-50"
-                >
-                  {isPinning ? (
-                    <>
-                      <div className="w-4 h-4 mr-3">
-                        <div className="w-full h-full border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                      </div>
-                      <span>{recipe.pinned ? 'Unpinning...' : 'Pinning...'}</span>
-                    </>
-                  ) : (
-                    <>
-                      <FontAwesomeIcon 
-                        icon={faThumbtack} 
-                        className={`w-4 h-4 mr-3 ${recipe.pinned ? 'text-yellow-500' : 'text-[#5d5d5d]'}`}
-                      />
-                      <span>{recipe.pinned ? 'Unpin recipe' : 'Pin recipe'}</span>
-                    </>
-                  )}
-                </button>
-
-                {isOwner && (
-                  <>
-                    <div className="border-t border-gray-100" />
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handleDelete(recipe.id, recipe.recipeTitle);
-                      }}
-                      className="w-full px-4 py-2 text-sm flex items-center text-red-600 hover:bg-gray-100 transition-colors"
-                    >
-                      <FontAwesomeIcon icon={faTrashCan} className="w-4 h-4 mr-3" />
-                      <span>Delete recipe</span>
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          </>
-        )}
-      </>
-    );
-  };
-
   const searchRecipes = (term: string) => {
     setSearchTerm(term);
     
@@ -309,51 +242,112 @@ const Recipes = () => {
                   <h2 className="text-xl font-semibold mb-4">📌 Pinned Recipes</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {pinnedRecipes.map((recipe) => (
-                      <div key={recipe.id} className="relative group">
-                        <Link 
-                          href={`/recipe/${recipe.id}`}
-                          className="block bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300"
-                        >
-                          <div className="relative w-full h-48">
-                            {recipe.imageURL ? (
-                              <Image
-                                src={recipe.imageURL}
-                                alt={recipe.recipeTitle}
-                                fill
-                                className="object-cover"
-                                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                                priority={!loadingMore}
-                                quality={75}
-                              />
-                            ) : (
-                              <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                                <span className="text-4xl">🍳</span>
-                              </div>
-                            )}
-                          </div>
-                          
-                          <div className="p-4">
-                            <div className="flex justify-between items-start mb-2">
-                              <h2 className="text-xl font-semibold line-clamp-1 flex-1">
+                      <div key={recipe.id} className="relative group bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+                        {/* Desktop-only full card link */}
+                        <div className="hidden md:block">
+                          <Link href={`/recipe/${recipe.id}`} className="absolute inset-0 z-10" />
+                        </div>
+
+                        {/* Image Section - Clickable on both mobile and desktop */}
+                        <Link href={`/recipe/${recipe.id}`} className="block relative w-full h-48">
+                          {recipe.imageURL ? (
+                            <Image
+                              src={recipe.imageURL}
+                              alt={recipe.recipeTitle}
+                              fill
+                              className="object-cover"
+                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                              priority={!loadingMore}
+                              quality={75}
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                              <span className="text-4xl">🍳</span>
+                            </div>
+                          )}
+                        </Link>
+                        
+                        <div className="p-4">
+                          <div className="flex justify-between items-start mb-2">
+                            {/* Title - Clickable on both mobile and desktop */}
+                            <Link 
+                              href={`/recipe/${recipe.id}`} 
+                              className="block flex-1"
+                            >
+                              <h2 className="text-xl font-semibold line-clamp-1">
                                 {recipe.recipeTitle || "Untitled Recipe"}
                               </h2>
-                              <button
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setMenuOpen(menuOpen === recipe.id ? null : recipe.id);
-                                }}
-                                className="relative p-1.5 rounded-full hover:bg-gray-100 transition-colors z-50"
+                            </Link>
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setMenuOpen(menuOpen === recipe.id ? null : recipe.id);
+                              }}
+                              className="relative p-1.5 rounded-full hover:bg-gray-100 transition-colors z-50 pointer-events-auto"
+                            >
+                              <FontAwesomeIcon 
+                                icon={faEllipsisVertical} 
+                                className="w-4 h-4 text-gray-400" 
+                              />
+                            </button>
+                          </div>
+
+                          {menuOpen === recipe.id && (
+                            <>
+                              <div 
+                                className="fixed inset-0 z-40" 
+                                onClick={() => setMenuOpen(null)}
+                              />
+                              <div 
+                                className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-lg z-50 pointer-events-auto"
+                                onClick={(e) => e.stopPropagation()}
                               >
-                                <FontAwesomeIcon 
-                                  icon={faEllipsisVertical} 
-                                  className="w-4 h-4 text-gray-400" 
-                                />
-                              </button>
-                            </div>
+                                <div className="py-1">
+                                  <button
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      handlePinToggle(recipe.id, !!recipe.pinned);
+                                    }}
+                                    disabled={loadingPinAction === recipe.id}
+                                    className="w-full px-4 py-2 text-sm flex items-center hover:bg-gray-100 transition-colors disabled:opacity-50"
+                                  >
+                                    {loadingPinAction === recipe.id ? (
+                                      <>
+                                        <div className="w-4 h-4 mr-3">
+                                          <div className="w-full h-full border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                                        </div>
+                                        <span>{recipe.pinned ? 'Unpinning...' : 'Pinning...'}</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <FontAwesomeIcon 
+                                          icon={faThumbtack} 
+                                          className={`w-4 h-4 mr-3 ${recipe.pinned ? 'text-yellow-500' : 'text-[#5d5d5d]'}`}
+                                        />
+                                        <span>{recipe.pinned ? 'Unpin recipe' : 'Pin recipe'}</span>
+                                      </>
+                                    )}
+                                  </button>
 
-                            {menuOpen === recipe.id && renderMenu(recipe)}
+                                  <div className="border-t border-gray-100" />
+                                  <button
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      handleDelete(recipe.id, recipe.recipeTitle);
+                                    }}
+                                    className="w-full px-4 py-2 text-sm flex items-center text-red-600 hover:bg-gray-100 transition-colors"
+                                  >
+                                    <FontAwesomeIcon icon={faTrashCan} className="w-4 h-4 mr-3" />
+                                    <span>Delete recipe</span>
+                                  </button>
+                                </div>
+                              </div>
+                            </>
+                          )}
 
+                          {/* Non-clickable content on mobile */}
+                          <div className="md:pointer-events-auto pointer-events-none">
                             {recipe.recipeSummary && (
                               <>
                                 <meta name="recipe-summary" content={recipe.recipeSummary} />
@@ -389,7 +383,7 @@ const Recipes = () => {
                               </div>
                             </div>
                           </div>
-                        </Link>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -401,51 +395,112 @@ const Recipes = () => {
                 <h2 className="text-xl font-semibold mb-4">🍳 All Recipes</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {unpinnedRecipes.map((recipe) => (
-                    <div key={recipe.id} className="relative group">
-                      <Link 
-                        href={`/recipe/${recipe.id}`}
-                        className="block bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300"
-                      >
-                        <div className="relative w-full h-48">
-                          {recipe.imageURL ? (
-                            <Image
-                              src={recipe.imageURL}
-                              alt={recipe.recipeTitle}
-                              fill
-                              className="object-cover"
-                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                              priority={!loadingMore}
-                              quality={75}
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                              <span className="text-4xl">🍳</span>
-                            </div>
-                          )}
-                        </div>
-                        
-                        <div className="p-4">
-                          <div className="flex justify-between items-start mb-2">
-                            <h2 className="text-xl font-semibold line-clamp-1 flex-1">
+                    <div key={recipe.id} className="relative group bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+                      {/* Desktop-only full card link */}
+                      <div className="hidden md:block">
+                        <Link href={`/recipe/${recipe.id}`} className="absolute inset-0 z-10" />
+                      </div>
+
+                      {/* Image Section - Clickable on both mobile and desktop */}
+                      <Link href={`/recipe/${recipe.id}`} className="block relative w-full h-48">
+                        {recipe.imageURL ? (
+                          <Image
+                            src={recipe.imageURL}
+                            alt={recipe.recipeTitle}
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                            priority={!loadingMore}
+                            quality={75}
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                            <span className="text-4xl">🍳</span>
+                          </div>
+                        )}
+                      </Link>
+                      
+                      <div className="p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          {/* Title - Clickable on both mobile and desktop */}
+                          <Link 
+                            href={`/recipe/${recipe.id}`} 
+                            className="block flex-1"
+                          >
+                            <h2 className="text-xl font-semibold line-clamp-1">
                               {recipe.recipeTitle || "Untitled Recipe"}
                             </h2>
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                setMenuOpen(menuOpen === recipe.id ? null : recipe.id);
-                              }}
-                              className="relative p-1.5 rounded-full hover:bg-gray-100 transition-colors z-50"
+                          </Link>
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setMenuOpen(menuOpen === recipe.id ? null : recipe.id);
+                            }}
+                            className="relative p-1.5 rounded-full hover:bg-gray-100 transition-colors z-50 pointer-events-auto"
+                          >
+                            <FontAwesomeIcon 
+                              icon={faEllipsisVertical} 
+                              className="w-4 h-4 text-gray-400" 
+                            />
+                          </button>
+                        </div>
+
+                        {menuOpen === recipe.id && (
+                          <>
+                            <div 
+                              className="fixed inset-0 z-40" 
+                              onClick={() => setMenuOpen(null)}
+                            />
+                            <div 
+                              className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-lg z-50 pointer-events-auto"
+                              onClick={(e) => e.stopPropagation()}
                             >
-                              <FontAwesomeIcon 
-                                icon={faEllipsisVertical} 
-                                className="w-4 h-4 text-gray-400" 
-                              />
-                            </button>
-                          </div>
+                              <div className="py-1">
+                                <button
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    handlePinToggle(recipe.id, !!recipe.pinned);
+                                  }}
+                                  disabled={loadingPinAction === recipe.id}
+                                  className="w-full px-4 py-2 text-sm flex items-center hover:bg-gray-100 transition-colors disabled:opacity-50"
+                                >
+                                  {loadingPinAction === recipe.id ? (
+                                    <>
+                                      <div className="w-4 h-4 mr-3">
+                                        <div className="w-full h-full border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                                      </div>
+                                      <span>{recipe.pinned ? 'Unpinning...' : 'Pinning...'}</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <FontAwesomeIcon 
+                                        icon={faThumbtack} 
+                                        className={`w-4 h-4 mr-3 ${recipe.pinned ? 'text-yellow-500' : 'text-[#5d5d5d]'}`}
+                                      />
+                                      <span>{recipe.pinned ? 'Unpin recipe' : 'Pin recipe'}</span>
+                                    </>
+                                  )}
+                                </button>
 
-                          {menuOpen === recipe.id && renderMenu(recipe)}
+                                <div className="border-t border-gray-100" />
+                                <button
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    handleDelete(recipe.id, recipe.recipeTitle);
+                                  }}
+                                  className="w-full px-4 py-2 text-sm flex items-center text-red-600 hover:bg-gray-100 transition-colors"
+                                >
+                                  <FontAwesomeIcon icon={faTrashCan} className="w-4 h-4 mr-3" />
+                                  <span>Delete recipe</span>
+                                </button>
+                              </div>
+                            </div>
+                          </>
+                        )}
 
+                        {/* Non-clickable content on mobile */}
+                        <div className="md:pointer-events-auto pointer-events-none">
                           {recipe.recipeSummary && (
                             <>
                               <meta name="recipe-summary" content={recipe.recipeSummary} />
@@ -481,7 +536,7 @@ const Recipes = () => {
                             </div>
                           </div>
                         </div>
-                      </Link>
+                      </div>
                     </div>
                   ))}
                 </div>

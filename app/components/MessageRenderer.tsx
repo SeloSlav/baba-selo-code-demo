@@ -9,11 +9,14 @@ import {
     renderDishPairingLinks
 } from './messageUtils';
 
+interface Message {
+    role: "user" | "assistant";
+    content: string | any;
+    imageUrl?: string;
+}
+
 interface MessageRendererProps {
-    message: {
-        role: "user" | "assistant";
-        content: string;
-    };
+    message: Message;
     index: number;
     messageRef: React.RefObject<HTMLDivElement> | null;
     recipeClassification?: RecipeClassification | null;
@@ -48,10 +51,19 @@ const isSelo = (text: string): boolean => {
 };
 
 // Subcomponents for different message types
-const UserMessage: React.FC<{ content: string }> = ({ content }) => (
+const UserMessage: React.FC<{ content: string; imageUrl?: string }> = ({ content, imageUrl }) => (
     <div className="flex justify-end">
-        <div className="bg-[#0284FE] text-white px-5 py-2.5 rounded-3xl max-w-xs whitespace-pre-line">
-            {content}
+        <div className="bg-[#0284FE] text-white px-5 py-2.5 rounded-3xl max-w-[80%] whitespace-pre-line">
+            <p>{content}</p>
+            {imageUrl && (
+                <div className="mt-2">
+                    <img 
+                        src={imageUrl} 
+                        alt="Uploaded" 
+                        className="rounded-lg max-h-48 w-auto object-contain"
+                    />
+                </div>
+            )}
         </div>
     </div>
 );
@@ -92,7 +104,7 @@ export const MessageRenderer: React.FC<MessageRendererProps> = ({
     handleSaveRecipe
 }) => {
     if (message.role === "user") {
-        return <UserMessage content={message.content} />;
+        return <UserMessage content={message.content} imageUrl={message.imageUrl} />;
     }
 
     if (message.role === "assistant") {

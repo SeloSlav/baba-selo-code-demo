@@ -20,6 +20,7 @@ import { SendButtonSpinner } from "./SendButtonSpinner";
 interface Message {
   role: "user" | "assistant";
   content: string;
+  imageUrl?: string;
 }
 
 interface ChatWindowProps {
@@ -219,6 +220,19 @@ export const ChatWindow = forwardRef(
       if (file) {
         setLoading(true);
         try {
+          // Create a URL for the image preview
+          const imagePreview = URL.createObjectURL(file);
+
+          // Add the user's message with image preview
+          setMessages(prev => [
+            ...prev,
+            { 
+              role: 'user', 
+              content: 'I uploaded an image for analysis.',
+              imageUrl: imagePreview // Add the image URL to the message
+            }
+          ]);
+
           // Create a FormData object to send the file
           const formData = new FormData();
           formData.append('image', file);
@@ -233,7 +247,6 @@ export const ChatWindow = forwardRef(
           if (response.ok) {
             setMessages(prev => [
               ...prev,
-              { role: 'user', content: 'I uploaded an image for analysis.' },
               { role: 'assistant', content: data.analysis }
             ]);
           } else {
@@ -244,7 +257,6 @@ export const ChatWindow = forwardRef(
             
             setMessages(prev => [
               ...prev,
-              { role: 'user', content: 'I uploaded an image for analysis.' },
               { role: 'assistant', content: errorMessage }
             ]);
           }
@@ -252,7 +264,6 @@ export const ChatWindow = forwardRef(
           console.error('Error analyzing image:', error);
           setMessages(prev => [
             ...prev,
-            { role: 'user', content: 'I uploaded an image for analysis.' },
             { role: 'assistant', content: 'Oh dear, something went wrong while analyzing the image. Could you try again?' }
           ]);
         } finally {
