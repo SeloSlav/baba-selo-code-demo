@@ -68,6 +68,7 @@ const Recipes = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const [loadingPinAction, setLoadingPinAction] = useState<string | null>(null);
   const auth = getAuth();
@@ -117,32 +118,76 @@ const Recipes = () => {
     });
   };
 
-  // Update search functionality
-  useEffect(() => {
-    if (!searchTerm.trim()) {
-      setFilteredRecipes(recipes);
-      return;
-    }
-
-    const searchTerms = searchTerm.toLowerCase().split(" ");
-    const filtered = recipes.filter((recipe) => {
-      const searchableFields = [
-        recipe.recipeTitle?.toLowerCase() || "",
-        recipe.cuisineType?.toLowerCase() || "",
-        recipe.cookingDifficulty?.toLowerCase() || "",
-        recipe.cookingTime?.toLowerCase() || "",
-        recipe.recipeSummary?.toLowerCase() || "",
-        ...(recipe.diet?.map(d => d.toLowerCase()) || []),
-        ...(recipe.ingredients?.map(i => i.toLowerCase()) || []),
-      ];
-
-      return searchTerms.every((term) =>
-        searchableFields.some((field) => field.includes(term))
+  // Add debounced search function
+  const searchRecipes = async (searchTerms: string[]) => {
+    if (!user) return;
+    setIsSearching(true);
+    
+    try {
+      const recipesRef = collection(db, "recipes");
+      let searchQuery = query(
+        recipesRef,
+        where("userId", "==", user.uid),
+        orderBy("createdAt", "desc")
       );
-    });
 
-    setFilteredRecipes(filtered);
-  }, [searchTerm, recipes]);
+      // Get all matching documents
+      const querySnapshot = await getDocs(searchQuery);
+      const allRecipes = querySnapshot.docs.map((doc) => {
+        const data = doc.data() as RecipeDocument;
+        return {
+          id: doc.id,
+          ...data,
+          pinned: data.pinned || false,
+          userId: data.userId || "",
+        };
+      }) as Recipe[];
+
+      // Client-side filtering for complex search
+      const filtered = allRecipes.filter((recipe) => {
+        // Ensure arrays are properly handled
+        const diets = Array.isArray(recipe.diet) ? recipe.diet : [];
+        const ingredients = Array.isArray(recipe.ingredients) ? recipe.ingredients : [];
+        
+        const searchableFields = [
+          recipe.recipeTitle?.toLowerCase() || "",
+          recipe.cuisineType?.toLowerCase() || "",
+          recipe.cookingDifficulty?.toLowerCase() || "",
+          recipe.cookingTime?.toLowerCase() || "",
+          recipe.recipeSummary?.toLowerCase() || "",
+          ...diets.map(d => d.toLowerCase()),
+          ...ingredients.map(i => i.toLowerCase()),
+        ].filter(Boolean); // Remove any undefined/null values
+
+        return searchTerms.every((term) =>
+          searchableFields.some((field) => field.includes(term))
+        );
+      });
+
+      setRecipes(filtered);
+      setFilteredRecipes(filtered);
+      setHasMore(false); // Disable pagination during search
+    } catch (error) {
+      console.error("Error searching recipes:", error);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Update search functionality with debounce
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (!searchTerm.trim()) {
+        fetchRecipes(); // Reset to paginated view
+        return;
+      }
+
+      const searchTerms = searchTerm.toLowerCase().split(" ");
+      searchRecipes(searchTerms);
+    }, 300); // 300ms delay
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm]);
 
   const fetchRecipes = async (loadMore = false) => {
     if (!user) return; // Don't fetch if no user is logged in
@@ -248,7 +293,8 @@ const Recipes = () => {
           <h1 className="text-3xl font-bold mb-4">My Recipes</h1>
           <SearchBar 
             searchTerm={searchTerm} 
-            setSearchTerm={setSearchTerm} 
+            setSearchTerm={setSearchTerm}
+            isLoading={isSearching}
           />
         </div>
       </div>

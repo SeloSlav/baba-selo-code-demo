@@ -150,7 +150,7 @@ export const RecipeList = () => {
                     isPinned ? 'rotate-[45deg] scale-110 text-yellow-500' : 'hover:scale-110 text-[#5d5d5d]'
                   }`}
                 />
-                <span>{isPinned ? "Unpin recipe" : "Pin recipe"}</span>
+                <span>{isPinned ? "Unpin Recipe" : "Pin Recipe"}</span>
               </>
             )}
           </li>

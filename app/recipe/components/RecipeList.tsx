@@ -107,7 +107,7 @@ export const RecipeCard = ({ recipe, onLike, currentUser, showUsername = false }
                   icon={faThumbtack}
                   className={`w-4 h-4 mr-3 ${recipe.pinned ? "text-blue-500" : "text-gray-400"}`}
                 />
-                <span>{recipe.pinned ? "Unpin recipe" : "Pin recipe"}</span>
+                <span>{recipe.pinned ? "Unpin Recipe" : "Pin Recipe"}</span>
               </>
             )}
           </li>
@@ -386,7 +386,7 @@ export const RecipeList = () => {
                   icon={faThumbtack}
                   className={`w-4 h-4 mr-3 ${isPinned ? "text-blue-500" : "text-gray-400"}`}
                 />
-                <span>{isPinned ? "Unpin recipe" : "Pin recipe"}</span>
+                <span>{isPinned ? "Unpin Recipe" : "Pin Recipe"}</span>
               </>
             )}
           </li>

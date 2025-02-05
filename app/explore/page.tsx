@@ -78,6 +78,7 @@ export default function ExplorePage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [lastVisible, setLastVisible] = useState<any>(null);
   const [hasMore, setHasMore] = useState(true);
+  const [isSearching, setIsSearching] = useState(false);
   const { user } = useAuth();
   const { showPointsToast } = usePoints();
   const [currentUsername, setCurrentUsername] = useState<string>('');
@@ -219,27 +220,91 @@ export default function ExplorePage() {
     }
   };
 
-  const searchRecipes = (term: string) => {
-    const searchTerms = term.toLowerCase().split(" ");
-    return recipes.filter((recipe) => {
-      const searchableFields = [
-        recipe.recipeTitle?.toLowerCase() || "",
-        recipe.username?.toLowerCase() || "",
-        recipe.cuisineType?.toLowerCase() || "",
-        recipe.cookingDifficulty?.toLowerCase() || "",
-        recipe.cookingTime?.toLowerCase() || "",
-        recipe.recipeSummary?.toLowerCase() || "",
-        ...(recipe.diet?.map(d => d.toLowerCase()) || []),
-        ...(recipe.ingredients?.map(i => i.toLowerCase()) || []),
-      ];
-
-      return searchTerms.every((term) =>
-        searchableFields.some((field) => field.includes(term))
+  // Update search functionality with server-side search
+  const searchRecipes = async (searchTerms: string[]) => {
+    if (!user) return;
+    setIsSearching(true);
+    
+    try {
+      const recipesRef = collection(db, "recipes");
+      let searchQuery = query(
+        recipesRef,
+        orderBy("createdAt", "desc")
       );
-    });
+
+      // Get all matching documents
+      const querySnapshot = await getDocs(searchQuery);
+      
+      // Get all user documents to map usernames
+      const usersQuery = query(collection(db, "users"));
+      const userDocs = await getDocs(usersQuery);
+      const userMap = new Map();
+      userDocs.docs.forEach(doc => {
+        userMap.set(doc.id, doc.data().username);
+      });
+
+      const allRecipes = querySnapshot.docs
+        .map(doc => {
+          const data = doc.data() as RecipeDocument;
+          return {
+            id: doc.id,
+            ...data,
+            username: userMap.get(data.userId),
+            likes: data.likes || []
+          };
+        }) as Recipe[];
+
+      // Filter for completed recipes only
+      const completedRecipes = allRecipes.filter(isRecipeComplete);
+
+      // Client-side filtering for complex search
+      const filtered = completedRecipes.filter((recipe) => {
+        // Ensure arrays are properly handled
+        const diets = Array.isArray(recipe.diet) ? recipe.diet : [];
+        const ingredients = Array.isArray(recipe.ingredients) ? recipe.ingredients : [];
+        
+        const searchableFields = [
+          recipe.recipeTitle?.toLowerCase() || "",
+          recipe.username?.toLowerCase() || "",
+          recipe.cuisineType?.toLowerCase() || "",
+          recipe.cookingDifficulty?.toLowerCase() || "",
+          recipe.cookingTime?.toLowerCase() || "",
+          recipe.recipeSummary?.toLowerCase() || "",
+          ...diets.map(d => d.toLowerCase()),
+          ...ingredients.map(i => i.toLowerCase()),
+        ].filter(Boolean); // Remove any undefined/null values
+
+        return searchTerms.every((term) =>
+          searchableFields.some((field) => field.includes(term))
+        );
+      });
+
+      setRecipes(filtered);
+      setHasMore(false); // Disable pagination during search
+    } catch (error) {
+      console.error("Error searching recipes:", error);
+    } finally {
+      setIsSearching(false);
+    }
   };
 
-  const filteredRecipes = searchTerm ? searchRecipes(searchTerm) : recipes;
+  // Add debounced search effect
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (!searchTerm.trim()) {
+        fetchRecipes(); // Reset to paginated view
+        return;
+      }
+
+      const searchTerms = searchTerm.toLowerCase().split(" ");
+      searchRecipes(searchTerms);
+    }, 300); // 300ms delay
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm]);
+
+  // Remove the old searchRecipes function and filteredRecipes constant
+  const displayedRecipes = searchTerm ? recipes : recipes;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -247,11 +312,15 @@ export default function ExplorePage() {
       <div className="sticky top-0 bg-white z-10 py-4 -mx-4 px-4 shadow-sm">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-3xl font-bold mb-4">Explore Recipes</h1>
-          <SearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+          <SearchBar 
+            searchTerm={searchTerm} 
+            setSearchTerm={setSearchTerm}
+            isLoading={isSearching}
+          />
         </div>
       </div>
 
-      {/* Content with top padding to account for sticky header */}
+      {/* Content */}
       <div className="mt-8">
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -263,10 +332,10 @@ export default function ExplorePage() {
               </div>
             ))}
           </div>
-        ) : filteredRecipes.length > 0 ? (
+        ) : displayedRecipes.length > 0 ? (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredRecipes.map((recipe) => (
+              {displayedRecipes.map((recipe) => (
                 <RecipeCard 
                   key={recipe.id} 
                   recipe={recipe}

@@ -32,11 +32,19 @@ export const ChatSidebar = ({
     isSidebarOpen,
     toggleSidebar,
     chatWindowRef,
+    recipe,
+    loadingPinAction,
+    handlePinUnpin,
+    handleDelete
 }: {
     focusInput: () => void;
     isSidebarOpen: boolean;
     toggleSidebar: () => void;
     chatWindowRef: React.RefObject<any>;
+    recipe?: any;
+    loadingPinAction?: boolean;
+    handlePinUnpin?: (isPinned: boolean) => void;
+    handleDelete?: (id: string, title: string) => void;
 }) => {
     const [isHydrated, setIsHydrated] = useState(false);
     const [imageError, setImageError] = useState(false);
@@ -50,7 +58,7 @@ export const ChatSidebar = ({
         return (
             <div className="absolute right-0 z-40 bg-white rounded-xl shadow-lg w-48 border border-gray-200 p-2">
                 <ul className="space-y-1">
-                    <li
+                    <li 
                         className="flex items-center px-3 py-2 rounded-md hover:bg-gray-100 cursor-pointer disabled:opacity-50"
                         onClick={() => !loadingPinAction && handlePinUnpin(!!recipe.pinned)}
                     >
@@ -69,7 +77,7 @@ export const ChatSidebar = ({
                                         recipe.pinned ? 'rotate-[45deg] scale-110 text-yellow-500' : 'hover:scale-110 text-gray-400'
                                     }`}
                                 />
-                                <span>{recipe.pinned ? "Unpin recipe" : "Pin recipe"}</span>
+                                <span>{recipe.pinned ? "Unpin Recipe" : "Pin Recipe"}</span>
                             </>
                         )}
                     </li>
