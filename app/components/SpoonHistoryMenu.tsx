@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpoon, faCheck, faCheckDouble } from "@fortawesome/free-solid-svg-icons";
+import { faSpoon, faCheck, faCheckDouble, faStarOfLife } from "@fortawesome/free-solid-svg-icons";
 import { format } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
 import Link from 'next/link';
@@ -137,7 +137,7 @@ export const SpoonHistoryMenu: React.FC<SpoonHistoryMenuProps> = ({
   return (
     <div
       ref={menuRef}
-      className="absolute top-full right-0 mt-1 z-40 bg-white rounded-3xl shadow-lg w-80 border border-gray-300 p-3"
+      className="absolute top-full right-0 mt-1 z-40 bg-white rounded-3xl shadow-lg w-80 border border-gray-300 p-3 custom-scrollbar"
       style={{ maxHeight: 'calc(100vh - 5rem)', overflowY: 'auto' }}
     >
       <div className="mb-3 px-3">
@@ -181,12 +181,13 @@ export const SpoonHistoryMenu: React.FC<SpoonHistoryMenuProps> = ({
         )}
       </div>
 
-      <div className="mt-3 pt-3 border-t border-gray-200">
+      <div className="pt-4 border-t border-gray-200 space-y-2">
         <Link 
           href="/spoons" 
-          className="block text-center text-sm text-blue-600 hover:text-blue-800 font-medium"
+          className="flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-100"
         >
-          View Full History
+          <span>View Full History</span>
+          <span className="text-gray-400">→</span>
         </Link>
       </div>
     </div>
