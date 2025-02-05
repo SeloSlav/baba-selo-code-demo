@@ -92,6 +92,20 @@ export const POINT_ACTIONS: Record<string, PointAction> = {
     cooldown: 0, // no cooldown for community actions
     requiresUnique: true,
     displayName: 'Recipe Saved by Another User'
+  },
+  MARKETPLACE_PURCHASE: {
+    type: 'MARKETPLACE_PURCHASE',
+    points: 0, // Points will be determined by the item cost
+    cooldown: 0, // No cooldown for purchases
+    getPoints: (context?: Record<string, any>) => {
+      return context?.cost || 0;
+    },
+    displayName: 'Marketplace Purchase',
+    context: {
+      cost: 'number',
+      itemName: 'string',
+      rarity: 'string'
+    }
   }
 };
 

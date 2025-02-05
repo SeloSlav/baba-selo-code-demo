@@ -1,7 +1,7 @@
 // app/components/ProfileMenu.tsx
 import React, { useRef, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBookOpenReader, faGear, faHome, faSignOut, faStarOfLife, faSpoon, faCompass } from "@fortawesome/free-solid-svg-icons";
+import { faBookOpenReader, faGear, faHome, faSignOut, faStarOfLife, faSpoon, faCompass, faStore } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 
 interface ProfileMenuProps {
@@ -66,6 +66,17 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
                         </div>
                         <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full">
                             Earn! ✨
+                        </span>
+                    </Link>
+                </li>
+                <li className="flex items-center px-4 py-2 rounded-md hover:bg-gray-100 cursor-pointer">
+                    <Link href="/marketplace" className="flex items-center w-full justify-between">
+                        <div className="flex items-center">
+                            <FontAwesomeIcon icon={faStore} className="text-[#5d5d5d] mr-3" />
+                            <span>Market</span>
+                        </div>
+                        <span className="text-xs bg-purple-100 text-purple-600 px-2 py-1 rounded-full">
+                            New! 🎁
                         </span>
                     </Link>
                 </li>

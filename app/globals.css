@@ -15,22 +15,27 @@ body {
 
 /* Custom scrollbar styling */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 10px; /* Narrower scrollbar width */
+  width: 8px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: #f1f1f1; /* Light gray background for the track */
-  border-radius: 10px; /* Rounded corners for track */
+  background: #f1f1f1;
+  border-radius: 4px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #d1d1d1; /* Medium gray for scrollbar thumb */
-  border-radius: 10px; /* Rounded corners for thumb */
-  margin-right: 4px; /* Create additional space from the right edge */
+  background: #888;
+  border-radius: 4px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #a1a1a1; /* Darker gray on hover */
+  background: #666;
+}
+
+/* Firefox */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #888 #f1f1f1;
 }
 
 /* Typing indicator */

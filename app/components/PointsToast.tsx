@@ -20,8 +20,8 @@ export const PointsToast: React.FC<PointsToastProps> = ({
   useEffect(() => {
     if (isVisible) {
       setIsShowing(true);
-      // Show warning messages (0 points) longer than success messages
-      const duration = points > 0 ? 2000 : 4000; // 2 seconds for success, 4 seconds for warnings
+      // Show purchase and warning messages longer than success messages
+      const duration = points <= 0 ? 4000 : 2000; // 4 seconds for purchases/warnings, 2 seconds for earning points
 
       // Start exit animation before completely removing
       const hideTimer = setTimeout(() => {
@@ -40,23 +40,51 @@ export const PointsToast: React.FC<PointsToastProps> = ({
     }
   }, [isVisible, points, onHide]);
 
+  // Helper function to determine toast style
+  const getToastStyle = () => {
+    if (points < 0) {
+      // Purchase notification
+      return {
+        container: 'bg-purple-600 text-white',
+        icon: 'bg-purple-500',
+        textColor: 'text-white'
+      };
+    } else if (points > 0) {
+      // Points earned
+      return {
+        container: 'bg-black text-white',
+        icon: 'bg-yellow-500',
+        textColor: 'text-white'
+      };
+    } else {
+      // Warning or info message
+      return {
+        container: 'bg-gray-800 text-white',
+        icon: 'bg-gray-600',
+        textColor: 'text-white'
+      };
+    }
+  };
+
+  const style = getToastStyle();
+
   return (
     <div
       className={`transform transition-all duration-500 ease-in-out ${
         isShowing ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
       }`}
     >
-      <div className={`px-6 py-3 rounded-xl shadow-lg flex items-center gap-3 ${
-        points > 0 ? 'bg-black text-white' : 'bg-gray-800 text-white'
-      }`}>
-        <div className={`p-2 rounded-lg ${points > 0 ? 'bg-yellow-500' : 'bg-gray-600'}`}>
+      <div className={`px-6 py-3 rounded-xl shadow-lg flex items-center gap-3 ${style.container}`}>
+        <div className={`p-2 rounded-lg ${style.icon}`}>
           <FontAwesomeIcon icon={faSpoon} className="text-white" />
         </div>
         <div>
           <div className="font-bold text-lg">
-            {points > 0 ? `+${points} Spoons!` : 'No Spoons Awarded'}
+            {points > 0 ? `+${points} Spoons!` : 
+             points < 0 ? 'Purchase Complete!' : 
+             'Notice'}
           </div>
-          <div className="text-sm text-gray-300">{message}</div>
+          <div className={`text-sm ${style.textColor} opacity-90`}>{message}</div>
         </div>
       </div>
     </div>
