@@ -63,6 +63,7 @@ interface RecipeDocument {
 const Recipes = () => {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [filteredRecipes, setFilteredRecipes] = useState<Recipe[]>([]);
+  const [totalRecipes, setTotalRecipes] = useState(0);
   const [lastVisible, setLastVisible] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -71,9 +72,11 @@ const Recipes = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const [loadingPinAction, setLoadingPinAction] = useState<string | null>(null);
+  const [loadingDeleteAction, setLoadingDeleteAction] = useState<string | null>(null);
   const auth = getAuth();
   const { showDeletePopup } = useDeleteRecipe();
   const user = auth.currentUser;
+  const loadMoreRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const RECIPES_PER_PAGE = 12;
@@ -107,6 +110,7 @@ const Recipes = () => {
   const handleDelete = async (recipeId: string, recipeTitle: string) => {
     showDeletePopup(recipeId, recipeTitle, async () => {
       try {
+        setLoadingDeleteAction(recipeId);
         await deleteDoc(doc(db, "recipes", recipeId));
         const updatedRecipes = recipes.filter(recipe => recipe.id !== recipeId);
         setRecipes(updatedRecipes);
@@ -114,6 +118,8 @@ const Recipes = () => {
         setMenuOpen(null);
       } catch (error) {
         console.error("Error deleting recipe:", error);
+      } finally {
+        setLoadingDeleteAction(null);
       }
     });
   };
@@ -190,7 +196,7 @@ const Recipes = () => {
   }, [searchTerm]);
 
   const fetchRecipes = async (loadMore = false) => {
-    if (!user) return; // Don't fetch if no user is logged in
+    if (!user) return;
     
     if (loadMore) {
       setLoadingMore(true);
@@ -199,6 +205,15 @@ const Recipes = () => {
     }
 
     try {
+      // First get total count
+      const totalQuery = query(
+        collection(db, "recipes"),
+        where("userId", "==", user.uid)
+      );
+      const totalSnapshot = await getDocs(totalQuery);
+      setTotalRecipes(totalSnapshot.size);
+
+      // Then get paginated results
       const recipesRef = collection(db, "recipes");
       let recipesQuery;
       
@@ -258,10 +273,34 @@ const Recipes = () => {
     fetchRecipes(); // Initial fetch
   }, []);
 
+  // Add intersection observer for infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0];
+        if (first.isIntersecting && hasMore && !loadingMore && !searchTerm) {
+          fetchRecipes(true);
+        }
+      },
+      { threshold: 0.1, rootMargin: '100px' }
+    );
+
+    const currentRef = loadMoreRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef);
+      }
+    };
+  }, [hasMore, loadingMore, searchTerm, fetchRecipes]);
+
   // Add click outside handler
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      if (!menuRef.current?.contains(event.target as Node)) {
         setMenuOpen(null);
       }
     };
@@ -295,6 +334,8 @@ const Recipes = () => {
             searchTerm={searchTerm} 
             setSearchTerm={setSearchTerm}
             isLoading={isSearching}
+            resultCount={filteredRecipes.length}
+            totalCount={totalRecipes}
           />
         </div>
       </div>
@@ -326,37 +367,52 @@ const Recipes = () => {
                         key={recipe.id} 
                         recipe={recipe}
                         showMenu={true}
-                        onMenuClick={(id) => setMenuOpen(id)}
+                        onMenuClick={(id) => setMenuOpen(current => current === id ? null : id)}
+                        isMenuOpen={menuOpen === recipe.id}
                       />
                       {menuOpen === recipe.id && (
-                        <div ref={menuRef} className="absolute right-2 top-2 bg-white rounded-lg shadow-lg py-2 z-50">
-                          <button
-                            onClick={() => handlePinToggle(recipe.id, recipe.pinned || false)}
-                            disabled={loadingPinAction === recipe.id}
-                            className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
-                          >
-                            <FontAwesomeIcon 
-                              icon={faThumbtack} 
-                              className={`transform transition-all duration-300 ${
-                                recipe.pinned ? 'rotate-[45deg] scale-110' : 'hover:scale-110'
-                              }`}
-                            />
-                            {loadingPinAction === recipe.id ? (
-                              <span className="flex items-center">
-                                <div className="w-4 h-4 border-2 border-gray-500 border-t-transparent rounded-full animate-spin mr-2"></div>
-                                {recipe.pinned ? 'Unpinning...' : 'Pinning...'}
-                              </span>
-                            ) : (
-                              <span>{recipe.pinned ? 'Unpin Recipe' : 'Pin Recipe'}</span>
-                            )}
-                          </button>
-                          <button
-                            onClick={() => handleDelete(recipe.id, recipe.recipeTitle)}
-                            className="w-full px-4 py-2 text-left text-red-600 hover:bg-gray-100 flex items-center gap-2"
-                          >
-                            <FontAwesomeIcon icon={faTrashCan} />
-                            <span>Delete Recipe</span>
-                          </button>
+                        <div ref={menuRef} className="absolute right-2 top-2 bg-white rounded-3xl shadow-lg w-60 border border-gray-300 p-3 z-40">
+                          <ul className="space-y-1">
+                            <li>
+                              <button
+                                onClick={() => handlePinToggle(recipe.id, recipe.pinned || false)}
+                                disabled={loadingPinAction === recipe.id}
+                                className="w-full px-4 py-2 text-left hover:bg-gray-100 rounded-md flex items-center gap-2"
+                              >
+                                <FontAwesomeIcon 
+                                  icon={faThumbtack} 
+                                  className={`transform transition-all duration-300 ${
+                                    recipe.pinned ? 'rotate-[45deg] scale-110 text-yellow-500' : 'hover:scale-110'
+                                  }`}
+                                />
+                                {loadingPinAction === recipe.id ? (
+                                  <span className="flex items-center">
+                                    <div className="w-4 h-4 border-2 border-gray-500 border-t-transparent rounded-full animate-spin mr-2"></div>
+                                    {recipe.pinned ? 'Unpinning...' : 'Pinning...'}
+                                  </span>
+                                ) : (
+                                  <span>{recipe.pinned ? 'Unpin Recipe' : 'Pin Recipe'}</span>
+                                )}
+                              </button>
+                            </li>
+                            <li>
+                              <button
+                                onClick={() => handleDelete(recipe.id, recipe.recipeTitle)}
+                                disabled={loadingDeleteAction === recipe.id}
+                                className="w-full px-4 py-2 text-left text-red-600 hover:bg-gray-100 rounded-md flex items-center gap-2"
+                              >
+                                <FontAwesomeIcon icon={faTrashCan} />
+                                {loadingDeleteAction === recipe.id ? (
+                                  <span className="flex items-center">
+                                    <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin mr-2"></div>
+                                    Deleting...
+                                  </span>
+                                ) : (
+                                  <span>Delete Recipe</span>
+                                )}
+                              </button>
+                            </li>
+                          </ul>
                         </div>
                       )}
                     </div>
@@ -376,37 +432,52 @@ const Recipes = () => {
                         key={recipe.id} 
                         recipe={recipe}
                         showMenu={true}
-                        onMenuClick={(id) => setMenuOpen(id)}
+                        onMenuClick={(id) => setMenuOpen(current => current === id ? null : id)}
+                        isMenuOpen={menuOpen === recipe.id}
                       />
                       {menuOpen === recipe.id && (
-                        <div ref={menuRef} className="absolute right-2 top-2 bg-white rounded-lg shadow-lg py-2 z-50">
-                          <button
-                            onClick={() => handlePinToggle(recipe.id, recipe.pinned || false)}
-                            disabled={loadingPinAction === recipe.id}
-                            className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
-                          >
-                            <FontAwesomeIcon 
-                              icon={faThumbtack} 
-                              className={`transform transition-all duration-300 ${
-                                recipe.pinned ? 'rotate-[45deg] scale-110' : 'hover:scale-110'
-                              }`}
-                            />
-                            {loadingPinAction === recipe.id ? (
-                              <span className="flex items-center">
-                                <div className="w-4 h-4 border-2 border-gray-500 border-t-transparent rounded-full animate-spin mr-2"></div>
-                                {recipe.pinned ? 'Unpinning...' : 'Pinning...'}
-                              </span>
-                            ) : (
-                              <span>{recipe.pinned ? 'Unpin Recipe' : 'Pin Recipe'}</span>
-                            )}
-                          </button>
-                          <button
-                            onClick={() => handleDelete(recipe.id, recipe.recipeTitle)}
-                            className="w-full px-4 py-2 text-left text-red-600 hover:bg-gray-100 flex items-center gap-2"
-                          >
-                            <FontAwesomeIcon icon={faTrashCan} />
-                            <span>Delete Recipe</span>
-                          </button>
+                        <div ref={menuRef} className="absolute right-2 top-2 bg-white rounded-3xl shadow-lg w-60 border border-gray-300 p-3 z-40">
+                          <ul className="space-y-1">
+                            <li>
+                              <button
+                                onClick={() => handlePinToggle(recipe.id, recipe.pinned || false)}
+                                disabled={loadingPinAction === recipe.id}
+                                className="w-full px-4 py-2 text-left hover:bg-gray-100 rounded-md flex items-center gap-2"
+                              >
+                                <FontAwesomeIcon 
+                                  icon={faThumbtack} 
+                                  className={`transform transition-all duration-300 ${
+                                    recipe.pinned ? 'rotate-[45deg] scale-110 text-yellow-500' : 'hover:scale-110'
+                                  }`}
+                                />
+                                {loadingPinAction === recipe.id ? (
+                                  <span className="flex items-center">
+                                    <div className="w-4 h-4 border-2 border-gray-500 border-t-transparent rounded-full animate-spin mr-2"></div>
+                                    {recipe.pinned ? 'Unpinning...' : 'Pinning...'}
+                                  </span>
+                                ) : (
+                                  <span>{recipe.pinned ? 'Unpin Recipe' : 'Pin Recipe'}</span>
+                                )}
+                              </button>
+                            </li>
+                            <li>
+                              <button
+                                onClick={() => handleDelete(recipe.id, recipe.recipeTitle)}
+                                disabled={loadingDeleteAction === recipe.id}
+                                className="w-full px-4 py-2 text-left text-red-600 hover:bg-gray-100 rounded-md flex items-center gap-2"
+                              >
+                                <FontAwesomeIcon icon={faTrashCan} />
+                                {loadingDeleteAction === recipe.id ? (
+                                  <span className="flex items-center">
+                                    <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin mr-2"></div>
+                                    Deleting...
+                                  </span>
+                                ) : (
+                                  <span>Delete Recipe</span>
+                                )}
+                              </button>
+                            </li>
+                          </ul>
                         </div>
                       )}
                     </div>
@@ -415,23 +486,18 @@ const Recipes = () => {
               </div>
             </div>
 
-            {/* Load More Button */}
+            {/* Infinite scroll trigger */}
             {!searchTerm && hasMore && (
-              <div className="flex justify-center mt-8">
-                <button
-                  onClick={() => fetchRecipes(true)}
-                  disabled={loadingMore}
-                  className="bg-black text-white px-6 py-3 rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loadingMore ? (
-                    <div className="flex items-center">
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                      Loading...
-                    </div>
-                  ) : (
-                    'Load More Recipes'
-                  )}
-                </button>
+              <div 
+                ref={loadMoreRef} 
+                className="h-20 flex items-center justify-center mt-8"
+                style={{ minHeight: '100px' }}
+              >
+                {loadingMore ? (
+                  <div className="w-6 h-6 border-2 border-gray-500 border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  <div className="w-full h-full" />
+                )}
               </div>
             )}
           </>

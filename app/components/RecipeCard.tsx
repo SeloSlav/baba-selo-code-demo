@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Recipe } from '../recipe/types';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEllipsisVertical, faHeart } from '@fortawesome/free-solid-svg-icons';
+import { faEllipsisVertical, faHeart, faXmark } from '@fortawesome/free-solid-svg-icons';
 
 const shimmer = (w: number, h: number) => `
 <svg width="${w}" height="${h}" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -33,6 +33,7 @@ interface RecipeCardProps {
   showUsername?: boolean;
   showMenu?: boolean;
   onMenuClick?: (recipeId: string) => void;
+  isMenuOpen?: boolean;
 }
 
 export const RecipeCard = ({ 
@@ -41,7 +42,8 @@ export const RecipeCard = ({
   currentUser, 
   showUsername = false,
   showMenu = false,
-  onMenuClick
+  onMenuClick,
+  isMenuOpen = false
 }: RecipeCardProps) => {
   const [imageError, setImageError] = useState(false);
   const [isImageLoading, setIsImageLoading] = useState(true);
@@ -103,8 +105,9 @@ export const RecipeCard = ({
                 <span className="ml-1 text-sm">{recipe.likes?.length || 0}</span>
               </button>
             )}
-            {showMenu && onMenuClick && (
+            {showMenu && onMenuClick && !isMenuOpen && (
               <button
+                data-menu-button
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -113,8 +116,8 @@ export const RecipeCard = ({
                 className="relative p-1.5 rounded-full hover:bg-gray-100 transition-colors z-50 pointer-events-auto"
               >
                 <FontAwesomeIcon 
-                  icon={faEllipsisVertical} 
-                  className="w-4 h-4 text-gray-400" 
+                  icon={faEllipsisVertical}
+                  className="w-4 h-4 text-gray-400"
                 />
               </button>
             )}
@@ -143,7 +146,7 @@ export const RecipeCard = ({
           {recipe.cookingDifficulty && (
             <div className="flex items-center bg-gray-100 border border-gray-300 shadow-sm rounded-full px-3 py-1.5 text-sm">
               <span className="font-semibold mr-2">🧩</span>
-              <span>{recipe.cookingDifficulty}</span>
+              <span>{recipe.cookingDifficulty.charAt(0).toUpperCase() + recipe.cookingDifficulty.slice(1).toLowerCase()}</span>
             </div>
           )}
         </div>

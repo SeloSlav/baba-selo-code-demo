@@ -67,6 +67,8 @@ const RecipeDetails = () => {
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [loadingMacros, setLoadingMacros] = useState(false);
   const [loadingPairings, setLoadingPairings] = useState(false);
+  const [loadingPinAction, setLoadingPinAction] = useState(false);
+  const [loadingDeleteAction, setLoadingDeleteAction] = useState(false);
   const [macroInfo, setMacroInfo] = useState(null);
   const [dishPairings, setDishPairings] = useState("");
   const { id } = useParams();
@@ -207,10 +209,13 @@ const RecipeDetails = () => {
 
     showDeletePopup(id, recipe.recipeTitle, async () => {
       try {
+        setLoadingDeleteAction(true);
         await deleteDoc(doc(db, "recipes", id));
         router.push("/recipes");
       } catch (error) {
         console.error("Error deleting recipe:", error);
+      } finally {
+        setLoadingDeleteAction(false);
       }
     });
   };
@@ -644,6 +649,7 @@ const RecipeDetails = () => {
   const handlePinToggle = async () => {
     if (!id || !isOwner) return;
     try {
+      setLoadingPinAction(true);
       const recipeDocRef = doc(db, "recipes", id as string);
       const newPinnedState = !recipe?.pinned;
 
@@ -661,6 +667,8 @@ const RecipeDetails = () => {
       } : null);
     } catch (error) {
       console.error("Error toggling pin status:", error);
+    } finally {
+      setLoadingPinAction(false);
     }
   };
 
@@ -799,6 +807,8 @@ const RecipeDetails = () => {
             handleDelete={handleDelete}
             handleLike={handleLike}
             currentUser={user}
+            loadingPinAction={loadingPinAction}
+            loadingDeleteAction={loadingDeleteAction}
           />
 
           <RecipeImage

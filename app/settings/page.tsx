@@ -10,7 +10,7 @@ const imageStyleOptions = {
   "rustic-traditional": {
     name: "Rustic Traditional",
     description: "Warm, nostalgic scenes of traditional  kitchen settings with embroidered tablecloths",
-    prompt: "Create this in a rustic, traditional style set in a cozy kitchen environment. The scene should feature richly detailed traditional tablecloths with classic embroidery patterns in red and white. The style should be warm and inviting, with soft natural lighting. Use a rich color palette with deep reds, warm woods, and cream whites typical of traditional homes. The overall effect should be nostalgic and heartwarming, like stepping into a grandmother's cherished country kitchen."
+    prompt: "Create this in a rustic, traditional style with a focus on the food's homemade appeal. The dish should be presented on richly detailed traditional tablecloths with classic red and white embroidery patterns. Capture the food with soft, warm natural lighting that highlights its hearty, homestyle qualities. Use deep reds and cream whites in the food styling, with rustic garnishes and traditional serving pieces. The food should look lovingly prepared, with the kind of imperfect, handmade touches that make traditional cooking so appealing. The overall effect should make the food appear nostalgic and heartwarming, like a cherished family recipe brought to life."
   },
   "modern-cookbook": {
     name: "Modern Cookbook",

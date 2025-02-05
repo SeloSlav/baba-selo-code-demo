@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { db } from '../firebase/firebase';
-import { collection, query, orderBy, getDocs, doc, updateDoc, arrayUnion, arrayRemove, Timestamp, increment, getDoc, startAfter, limit } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, doc, updateDoc, arrayUnion, arrayRemove, Timestamp, increment, getDoc, startAfter, limit, where } from 'firebase/firestore';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSearch, faHeart } from '@fortawesome/free-solid-svg-icons';
 import { useAuth } from '../context/AuthContext';
@@ -73,6 +73,7 @@ interface RecipeDocument {
 
 export default function ExplorePage() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [totalRecipes, setTotalRecipes] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -82,6 +83,7 @@ export default function ExplorePage() {
   const { user } = useAuth();
   const { showPointsToast } = usePoints();
   const [currentUsername, setCurrentUsername] = useState<string>('');
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   const RECIPES_PER_PAGE = 12;
 
@@ -98,45 +100,68 @@ export default function ExplorePage() {
         setLoading(true);
       }
 
-      let recipesQuery;
+      // Create a compound query to only fetch completed recipes
+      let recipesQuery = query(
+        collection(db, "recipes"),
+        where("recipeSummary", "!=", ""),
+        orderBy("createdAt", "desc"),
+        limit(RECIPES_PER_PAGE)
+      );
+
       if (loadMore && lastVisible) {
         recipesQuery = query(
           collection(db, "recipes"),
+          where("recipeSummary", "!=", ""),
           orderBy("createdAt", "desc"),
           startAfter(lastVisible),
           limit(RECIPES_PER_PAGE)
         );
-      } else {
-        recipesQuery = query(
-          collection(db, "recipes"),
-          orderBy("createdAt", "desc"),
-          limit(RECIPES_PER_PAGE)
-        );
       }
 
-      const recipeDocs = await getDocs(recipesQuery);
+      // Get total count more efficiently
+      const totalCountQuery = query(
+        collection(db, "recipes"),
+        where("recipeSummary", "!=", "")
+      );
       
-      // Get all user documents to map usernames
-      const usersQuery = query(collection(db, "users"));
-      const userDocs = await getDocs(usersQuery);
-      const userMap = new Map();
-      userDocs.docs.forEach(doc => {
-        userMap.set(doc.id, doc.data().username);
-      });
+      // Run both queries in parallel
+      const [recipeDocs, totalSnapshot] = await Promise.all([
+        getDocs(recipesQuery),
+        getDocs(totalCountQuery)
+      ]);
+      
+      setTotalRecipes(totalSnapshot.size);
 
+      // Filter out recipes without images on the client side
       const fetchedRecipes = recipeDocs.docs
         .map(doc => {
           const data = doc.data() as RecipeDocument;
           return {
             id: doc.id,
             ...data,
-            username: userMap.get(data.userId),
+            username: 'Anonymous Chef', // We'll update this later
             likes: data.likes || []
           };
-        }) as Recipe[];
+        })
+        .filter(recipe => recipe.imageURL); // Filter recipes without images
 
-      // Filter for completed recipes only
-      const completedRecipes = fetchedRecipes.filter(isRecipeComplete);
+      // Get usernames only for recipes that passed the filter
+      const userIds = new Set(fetchedRecipes.map(recipe => recipe.userId));
+      const usersQuery = query(
+        collection(db, "users"),
+        where("__name__", "in", Array.from(userIds))
+      );
+      const userDocs = await getDocs(usersQuery);
+      const userMap = new Map();
+      userDocs.docs.forEach(doc => {
+        userMap.set(doc.id, doc.data().username);
+      });
+
+      // Update usernames
+      const recipesWithUsernames = fetchedRecipes.map(recipe => ({
+        ...recipe,
+        username: userMap.get(recipe.userId) || 'Anonymous Chef'
+      }));
 
       // Update lastVisible for pagination
       const lastDoc = recipeDocs.docs[recipeDocs.docs.length - 1];
@@ -144,9 +169,9 @@ export default function ExplorePage() {
       setHasMore(recipeDocs.docs.length === RECIPES_PER_PAGE);
 
       if (loadMore) {
-        setRecipes(prev => [...prev, ...completedRecipes]);
+        setRecipes(prev => [...prev, ...recipesWithUsernames]);
       } else {
-        setRecipes(completedRecipes);
+        setRecipes(recipesWithUsernames);
       }
     } catch (error) {
       console.error("Error fetching recipes:", error);
@@ -220,67 +245,70 @@ export default function ExplorePage() {
     }
   };
 
-  // Update search functionality with server-side search
+  // Update search function to use the same optimized querying
   const searchRecipes = async (searchTerms: string[]) => {
     if (!user) return;
     setIsSearching(true);
     
     try {
-      const recipesRef = collection(db, "recipes");
-      let searchQuery = query(
-        recipesRef,
+      const recipesQuery = query(
+        collection(db, "recipes"),
+        where("recipeSummary", "!=", ""),
         orderBy("createdAt", "desc")
       );
 
-      // Get all matching documents
-      const querySnapshot = await getDocs(searchQuery);
-      
-      // Get all user documents to map usernames
-      const usersQuery = query(collection(db, "users"));
-      const userDocs = await getDocs(usersQuery);
-      const userMap = new Map();
-      userDocs.docs.forEach(doc => {
-        userMap.set(doc.id, doc.data().username);
-      });
+      const [querySnapshot, userDocs] = await Promise.all([
+        getDocs(recipesQuery),
+        getDocs(query(collection(db, "users")))
+      ]);
 
+      // Filter out recipes without images first
       const allRecipes = querySnapshot.docs
         .map(doc => {
           const data = doc.data() as RecipeDocument;
           return {
             id: doc.id,
             ...data,
-            username: userMap.get(data.userId),
+            username: 'Anonymous Chef',
             likes: data.likes || []
           };
-        }) as Recipe[];
+        })
+        .filter(recipe => recipe.imageURL);
 
-      // Filter for completed recipes only
-      const completedRecipes = allRecipes.filter(isRecipeComplete);
-
-      // Client-side filtering for complex search
-      const filtered = completedRecipes.filter((recipe) => {
-        // Ensure arrays are properly handled
-        const diets = Array.isArray(recipe.diet) ? recipe.diet : [];
-        const ingredients = Array.isArray(recipe.ingredients) ? recipe.ingredients : [];
-        
-        const searchableFields = [
-          recipe.recipeTitle?.toLowerCase() || "",
-          recipe.username?.toLowerCase() || "",
-          recipe.cuisineType?.toLowerCase() || "",
-          recipe.cookingDifficulty?.toLowerCase() || "",
-          recipe.cookingTime?.toLowerCase() || "",
-          recipe.recipeSummary?.toLowerCase() || "",
-          ...diets.map(d => d.toLowerCase()),
-          ...ingredients.map(i => i.toLowerCase()),
-        ].filter(Boolean); // Remove any undefined/null values
-
-        return searchTerms.every((term) =>
-          searchableFields.some((field) => field.includes(term))
-        );
+      // Get usernames
+      const userMap = new Map();
+      userDocs.docs.forEach(doc => {
+        userMap.set(doc.id, doc.data().username);
       });
 
+      // Update usernames and perform search filtering
+      const filtered = allRecipes
+        .map(recipe => ({
+          ...recipe,
+          username: userMap.get(recipe.userId) || 'Anonymous Chef'
+        }))
+        .filter((recipe) => {
+          const diets = Array.isArray(recipe.diet) ? recipe.diet : [];
+          const ingredients = Array.isArray(recipe.ingredients) ? recipe.ingredients : [];
+          
+          const searchableFields = [
+            recipe.recipeTitle?.toLowerCase() || "",
+            recipe.username?.toLowerCase() || "",
+            recipe.cuisineType?.toLowerCase() || "",
+            recipe.cookingDifficulty?.toLowerCase() || "",
+            recipe.cookingTime?.toLowerCase() || "",
+            recipe.recipeSummary?.toLowerCase() || "",
+            ...diets.map(d => d.toLowerCase()),
+            ...ingredients.map(i => i.toLowerCase()),
+          ].filter(Boolean);
+
+          return searchTerms.every((term) =>
+            searchableFields.some((field) => field.includes(term))
+          );
+        });
+
       setRecipes(filtered);
-      setHasMore(false); // Disable pagination during search
+      setHasMore(false);
     } catch (error) {
       console.error("Error searching recipes:", error);
     } finally {
@@ -306,6 +334,30 @@ export default function ExplorePage() {
   // Remove the old searchRecipes function and filteredRecipes constant
   const displayedRecipes = searchTerm ? recipes : recipes;
 
+  // Add intersection observer for infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0];
+        if (first.isIntersecting && hasMore && !loadingMore && !searchTerm) {
+          fetchRecipes(true);
+        }
+      },
+      { threshold: 0.1, rootMargin: '100px' }
+    );
+
+    const currentRef = loadMoreRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef);
+      }
+    };
+  }, [hasMore, loadingMore, searchTerm, fetchRecipes]);
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Sticky header */}
@@ -316,6 +368,9 @@ export default function ExplorePage() {
             searchTerm={searchTerm} 
             setSearchTerm={setSearchTerm}
             isLoading={isSearching}
+            resultCount={displayedRecipes.length}
+            totalCount={totalRecipes}
+            isExplorePage={true}
           />
         </div>
       </div>
@@ -346,23 +401,18 @@ export default function ExplorePage() {
               ))}
             </div>
 
-            {/* Load More Button */}
+            {/* Infinite scroll trigger */}
             {!searchTerm && hasMore && (
-              <div className="flex justify-center mt-8">
-                <button
-                  onClick={() => fetchRecipes(true)}
-                  disabled={loadingMore}
-                  className="bg-black text-white px-6 py-3 rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loadingMore ? (
-                    <div className="flex items-center">
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                      Loading...
-                    </div>
-                  ) : (
-                    'Load More Recipes'
-                  )}
-                </button>
+              <div 
+                ref={loadMoreRef} 
+                className="h-20 flex items-center justify-center mt-8"
+                style={{ minHeight: '100px' }}
+              >
+                {loadingMore ? (
+                  <div className="w-6 h-6 border-2 border-gray-500 border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  <div className="w-full h-full" />
+                )}
               </div>
             )}
           </>

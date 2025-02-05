@@ -36,7 +36,7 @@ export const PointsToast: React.FC<PointsToastProps> = ({
           <FontAwesomeIcon icon={faSpoon} className="text-white" />
         </div>
         <div>
-          <div className="font-bold text-lg">+{points} Points!</div>
+          <div className="font-bold text-lg">+{points} Spoons!</div>
           <div className="text-sm text-gray-300">{message}</div>
         </div>
       </div>

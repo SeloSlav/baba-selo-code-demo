@@ -13,6 +13,8 @@ interface RecipeHeaderProps {
   handleDelete: () => void;
   handleLike?: () => void;
   currentUser?: any;
+  loadingPinAction?: boolean;
+  loadingDeleteAction?: boolean;
 }
 
 export const RecipeHeader = ({
@@ -24,6 +26,8 @@ export const RecipeHeader = ({
   handleDelete,
   handleLike,
   currentUser,
+  loadingPinAction,
+  loadingDeleteAction,
 }: RecipeHeaderProps) => {
   const hasLiked = recipe.likes?.includes(currentUser?.uid || '');
 
@@ -96,26 +100,50 @@ export const RecipeHeader = ({
             <div className="w-px h-6 bg-gray-200" /> {/* Divider */}
             <button
               onClick={handlePinToggle}
+              disabled={loadingPinAction}
               className={`flex items-center transition-colors duration-200 ${
                 recipe.pinned ? 'text-yellow-500 hover:text-yellow-600' : 'text-gray-700 hover:text-gray-900'
               }`}
             >
-              <FontAwesomeIcon 
-                icon={faThumbtack} 
-                className={`w-5 h-5 transform transition-all duration-300 ${
-                  recipe.pinned ? 'rotate-[45deg] scale-110' : 'hover:scale-110'
-                }`}
-              />
-              <span className="ml-2 text-sm">{recipe.pinned ? 'Pinned' : 'Pin Recipe'}</span>
+              {loadingPinAction ? (
+                <>
+                  <div className="w-5 h-5">
+                    <div className="w-full h-full border-2 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                  <span className="ml-2 text-sm">{recipe.pinned ? 'Unpinning...' : 'Pinning...'}</span>
+                </>
+              ) : (
+                <>
+                  <FontAwesomeIcon 
+                    icon={faThumbtack} 
+                    className={`w-5 h-5 transform transition-all duration-300 ${
+                      recipe.pinned ? 'rotate-[45deg] scale-110' : 'hover:scale-110'
+                    }`}
+                  />
+                  <span className="ml-2 text-sm">{recipe.pinned ? 'Pinned' : 'Pin Recipe'}</span>
+                </>
+              )}
             </button>
 
             <div className="w-px h-6 bg-gray-200" /> {/* Divider */}
             <button
               onClick={handleDelete}
+              disabled={loadingDeleteAction}
               className="flex items-center text-gray-700 hover:text-red-600 transition-colors duration-200"
             >
-              <FontAwesomeIcon icon={faTrashCan} className="w-5 h-5" />
-              <span className="ml-2 text-sm">Delete Recipe</span>
+              {loadingDeleteAction ? (
+                <>
+                  <div className="w-5 h-5">
+                    <div className="w-full h-full border-2 border-red-500 border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                  <span className="ml-2 text-sm">Deleting...</span>
+                </>
+              ) : (
+                <>
+                  <FontAwesomeIcon icon={faTrashCan} className="w-5 h-5" />
+                  <span className="ml-2 text-sm">Delete Recipe</span>
+                </>
+              )}
             </button>
           </>
         )}

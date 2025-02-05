@@ -4,6 +4,7 @@ import Image from "next/image";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash, faUpload } from "@fortawesome/free-solid-svg-icons";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
+import { ActionButton } from "../../components/ActionButton";
 import { Recipe } from "../types";
 import { RegenerateImagePopup } from "./RegenerateImagePopup";
 import { ClearImagePopup } from "./ClearImagePopup";
@@ -44,7 +45,7 @@ export const RecipeImage = ({
   const [showClearPopup, setShowClearPopup] = useState(false);
 
   return (
-    <div className="relative aspect-video w-full mb-6 bg-gray-100 rounded-lg overflow-hidden group">
+    <div className="relative aspect-[16/12] sm:aspect-video w-full mb-6 bg-gray-100 rounded-lg overflow-hidden group">
       {recipe.imageURL && !imageError ? (
         <>
           <Image
@@ -66,20 +67,15 @@ export const RecipeImage = ({
           )}
           {isOwner && (
             <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-4">
-              <button
+              <ActionButton
                 onClick={() => setShowRegeneratePopup(true)}
                 disabled={loadingImage}
-                className="bg-white text-gray-800 px-4 py-2 rounded-lg shadow-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                isLoading={loadingImage}
+                loadingText="Regenerating..."
+                variant="secondary"
               >
-                {loadingImage ? (
-                  <div className="flex items-center">
-                    <LoadingSpinner className="mr-2" />
-                    Regenerating...
-                  </div>
-                ) : (
-                  'Regenerate Image'
-                )}
-              </button>
+                Regenerate Image
+              </ActionButton>
               <button
                 onClick={() => setShowClearPopup(true)}
                 className="bg-red-600 text-white px-4 py-2 rounded-lg shadow-md hover:bg-red-700 transition-all duration-200"
@@ -91,34 +87,38 @@ export const RecipeImage = ({
           )}
         </>
       ) : (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-          <span className="text-6xl">🍳</span>
+        <div className="absolute inset-0 flex items-center sm:items-center justify-center bg-gray-100">
+          <div className="relative -top-8 sm:top-0">
+            <span className="text-6xl">🍳</span>
+          </div>
           {isOwner && (
-            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-4">
-              <button
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex flex-col sm:flex-row gap-4 w-[90%] sm:w-auto px-4 sm:px-0">
+              <ActionButton
                 onClick={handleGenerateImage}
                 disabled={loadingImage}
-                className="bg-white text-gray-800 px-4 py-2 rounded-lg shadow-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                isLoading={loadingImage}
+                loadingText="Generating..."
+                variant="primary"
+                className="w-full sm:w-auto"
               >
-                {loadingImage ? (
-                  <div className="flex items-center">
-                    <LoadingSpinner className="mr-2" />
-                    Generating...
-                  </div>
-                ) : (
-                  'Generate Image'
-                )}
-              </button>
-              <label className="bg-white text-gray-800 px-4 py-2 rounded-lg shadow-md hover:bg-gray-100 cursor-pointer transition-all duration-200 flex items-center">
-                <FontAwesomeIcon icon={faUpload} className="mr-2" />
-                {uploadingImage ? (
-                  <div className="flex items-center">
-                    <LoadingSpinner className="mr-2" />
-                    Uploading...
-                  </div>
-                ) : (
-                  'Upload Image'
-                )}
+                Generate Image 🥄✨
+              </ActionButton>
+              <label className="relative w-full sm:w-auto">
+                <ActionButton
+                  onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                    e.preventDefault();
+                    const input = e.currentTarget.parentElement?.querySelector<HTMLInputElement>('input[type="file"]');
+                    if (input) input.click();
+                  }}
+                  disabled={uploadingImage}
+                  isLoading={uploadingImage}
+                  loadingText="Uploading..."
+                  variant="secondary"
+                  className="w-full sm:w-auto"
+                >
+                  <FontAwesomeIcon icon={faUpload} className="mr-2" />
+                  Upload Image
+                </ActionButton>
                 <input
                   type="file"
                   accept="image/*"
