@@ -7,11 +7,13 @@ import {
   onAuthStateChanged,
   signOut,
 } from "firebase/auth";
-import { auth } from "../firebase/firebase";
+import { auth, db } from "../firebase/firebase";
 import { useRouter, usePathname } from "next/navigation"; // Import Next.js router & usePathname
 import { ProfileMenu } from "../components/ProfileMenu"; 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"; 
-import { faUserCircle } from "@fortawesome/free-solid-svg-icons"; 
+import { faUserCircle, faSpoon } from "@fortawesome/free-solid-svg-icons"; 
+import { SpoonHistoryMenu } from "../components/SpoonHistoryMenu";
+import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 
 interface AuthContextType {
   user: any;
@@ -20,13 +22,21 @@ interface AuthContextType {
   loading: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  signInWithGoogle: async () => {},
+  logOut: async () => {},
+  loading: true,
+});
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false); 
+  const [isSpoonMenuOpen, setIsSpoonMenuOpen] = useState(false);
+  const [spoonData, setSpoonData] = useState<any>(null);
   const profileMenuRef = useRef<HTMLDivElement | null>(null); 
+  const spoonMenuRef = useRef<HTMLDivElement | null>(null);
   const router = useRouter(); 
   const pathname = usePathname();
 
@@ -45,6 +55,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     return () => unsubscribe();
   }, [router, pathname]);
+
+  // Subscribe to spoon data updates
+  useEffect(() => {
+    if (!user) {
+      setSpoonData(null);
+      return;
+    }
+
+    const unsubscribe = onSnapshot(doc(db, "spoonPoints", user.uid), (doc) => {
+      if (doc.exists()) {
+        const data = doc.data();
+        // Add read status to transactions if not present
+        const transactions = data.transactions?.map((t: any) => ({
+          ...t,
+          read: t.read ?? false
+        })) || [];
+        setSpoonData({ ...data, transactions });
+      } else {
+        setSpoonData({ totalPoints: 0, transactions: [] });
+      }
+    });
+
+    return () => unsubscribe();
+  }, [user]);
 
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
@@ -68,40 +102,129 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const toggleProfileMenu = () => {
     setIsProfileMenuOpen((prev) => !prev);
+    setIsSpoonMenuOpen(false);
+  };
+
+  const toggleSpoonMenu = () => {
+    setIsSpoonMenuOpen((prev) => !prev);
+    setIsProfileMenuOpen(false);
   };
 
   const closeProfileMenu = () => {
     setIsProfileMenuOpen(false);
   };
 
+  const closeSpoonMenu = () => {
+    setIsSpoonMenuOpen(false);
+  };
+
+  const handleTransactionRead = async (transactionId: string) => {
+    if (!user || !spoonData) return;
+
+    // Find the transaction and mark it as read
+    const updatedTransactions = spoonData.transactions.map((t: any) => {
+      // Create the same ID format as in the SpoonHistoryMenu
+      const tId = `${t.timestamp.toDate().getTime()}-${t.actionType}-${t.targetId || ''}`;
+      if (tId === transactionId) {
+        return { ...t, read: true };
+      }
+      return t;
+    });
+
+    // Update local state
+    setSpoonData({ ...spoonData, transactions: updatedTransactions });
+
+    // Update Firestore
+    try {
+      const userPointsRef = doc(db, "spoonPoints", user.uid);
+      await updateDoc(userPointsRef, {
+        transactions: updatedTransactions
+      });
+    } catch (error) {
+      console.error("Error updating transaction read status:", error);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    if (!user || !spoonData) return;
+
+    // Mark all transactions as read
+    const updatedTransactions = spoonData.transactions.map((t: any) => ({
+      ...t,
+      read: true
+    }));
+
+    // Update local state
+    setSpoonData({ ...spoonData, transactions: updatedTransactions });
+
+    // Update Firestore
+    try {
+      const userPointsRef = doc(db, "spoonPoints", user.uid);
+      await updateDoc(userPointsRef, {
+        transactions: updatedTransactions
+      });
+    } catch (error) {
+      console.error("Error marking all transactions as read:", error);
+    }
+  };
+
+  // Calculate unread notifications count
+  const unreadCount = spoonData?.transactions?.filter((t: any) => !t.read).length || 0;
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
-        profileMenuRef.current &&
-        !profileMenuRef.current.contains(event.target as Node)
+        (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) &&
+        (spoonMenuRef.current && !spoonMenuRef.current.contains(event.target as Node))
       ) {
         closeProfileMenu();
+        closeSpoonMenu();
       }
     };
 
-    if (isProfileMenuOpen) {
+    if (isProfileMenuOpen || isSpoonMenuOpen) {
       document.addEventListener("click", handleClickOutside);
     }
     return () => {
       document.removeEventListener("click", handleClickOutside);
     };
-  }, [isProfileMenuOpen]);
+  }, [isProfileMenuOpen, isSpoonMenuOpen]);
 
   return (
     <AuthContext.Provider value={{ user, signInWithGoogle, logOut, loading }}>
       {user && (
-        <div className="fixed top-4 right-8 z-30">
+        <div className="fixed top-4 right-8 z-30 flex items-center gap-2">
+          {/* Spoon Menu Button */}
+          <button
+            onClick={toggleSpoonMenu}
+            className="relative p-2 rounded-md hover:bg-gray-200 bg-white group"
+          >
+            <FontAwesomeIcon icon={faSpoon} className="text-[#5d5d5d] text-xl" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                {unreadCount}
+              </span>
+            )}
+          </button>
+
+          {/* Profile Menu Button */}
           <button
             onClick={toggleProfileMenu}
             className="relative p-2 rounded-md hover:bg-gray-200 bg-white"
           >
             <FontAwesomeIcon icon={faUserCircle} className="text-[#5d5d5d] text-xl" />
           </button>
+
+          {/* Menus */}
+          <SpoonHistoryMenu
+            isOpen={isSpoonMenuOpen}
+            onClose={closeSpoonMenu}
+            transactions={spoonData?.transactions || []}
+            totalPoints={spoonData?.totalPoints || 0}
+            onTransactionRead={handleTransactionRead}
+            onMarkAllRead={handleMarkAllRead}
+            unreadCount={unreadCount}
+          />
 
           <ProfileMenu
             isOpen={isProfileMenuOpen}

@@ -1,7 +1,7 @@
 // app/components/ChatSidebar.tsx
 import React, { useState, useEffect, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faHamburger, faPersonRifle, faPencilRuler, faClose, faThumbtack, faTrashAlt } from "@fortawesome/free-solid-svg-icons";
+import { faHamburger, faPersonRifle, faPencilRuler, faClose, faThumbtack, faTrashAlt, faStarOfLife } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "../context/AuthContext";
 import { RecipeList } from "./RecipeList";
 import Link from "next/link";
@@ -153,7 +153,6 @@ export const ChatSidebar = ({
                                 <div className="relative z-10">
                                     <div className="flex flex-col gap-2 mb-2">
                                         <span className="text-lg font-semibold">Upgrade to Pro</span>
-                                       
                                     </div>
                                     <p className="text-sm text-gray-200 mb-2">Voice chat, meal plans & more</p>
                                     <div className="flex items-center justify-between text-xs text-gray-300">
@@ -167,6 +166,25 @@ export const ChatSidebar = ({
                         </Link>
 
                         <RecipeList />
+
+                        {/* View All Recipes Link */}
+                        <div className="pt-4 border-t border-gray-200 space-y-2">
+                            <Link 
+                                href="/recipes" 
+                                className="flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-100"
+                            >
+                                <span>View All Recipes</span>
+                                <span className="text-gray-400">→</span>
+                            </Link>
+
+                            <Link 
+                                href="/upgrade" 
+                                className="flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-100"
+                            >
+                                <FontAwesomeIcon icon={faStarOfLife} className="text-[#5d5d5d]" />
+                                <span>Upgrade Plan</span>
+                            </Link>
+                        </div>
                     </div>
                 </div>
             </aside>

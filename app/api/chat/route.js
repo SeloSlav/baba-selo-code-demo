@@ -133,7 +133,7 @@ The user also prefers to use ${preferredCookingOil} as a cooking oil.
         "Authorization": `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "gpt-4",
+        model: "gpt-4o",
         max_tokens: 1500,
         temperature: 1.0,
         messages: [

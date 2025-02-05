@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { format } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
 import { POINT_ACTIONS } from '../lib/spoonPoints';
+import { PointsHistory } from './components/PointsHistory';
 
 // Register ChartJS components
 ChartJS.register(
@@ -120,56 +121,6 @@ const SpoonStats = () => {
 
     fetchData();
   }, [user]);
-
-  // Function to get emoji for action type
-  const getActionEmoji = (actionType: string): string => {
-    switch (actionType) {
-      case 'SAVE_RECIPE':
-        return '💾';
-      case 'GENERATE_RECIPE':
-        return '✨';
-      case 'GENERATE_SUMMARY':
-        return '📝';
-      case 'GENERATE_NUTRITION':
-        return '📊';
-      case 'GENERATE_PAIRINGS':
-        return '🍷';
-      case 'GENERATE_IMAGE':
-        return '🎨';
-      case 'UPLOAD_IMAGE':
-        return '📸';
-      case 'CHAT_INTERACTION':
-        return '💬';
-      case 'RECIPE_SAVED_BY_OTHER':
-        return '❤️';
-      default:
-        return '🎯';
-    }
-  };
-
-  // Function to render a transaction row
-  const renderTransaction = (transaction: PointTransaction, index: number) => {
-    const date = transaction.timestamp.toDate();
-    const uniqueKey = `${date.getTime()}-${transaction.actionType}-${transaction.targetId || ''}-${index}`;
-    
-    return (
-      <div key={uniqueKey} className="flex items-center justify-between p-3 border-b border-gray-100 hover:bg-gray-50">
-        <div className="flex items-center flex-1">
-          <div className="text-xl mr-3" role="img" aria-label={transaction.actionType}>
-            {getActionEmoji(transaction.actionType)}
-          </div>
-          <div>
-            <div className="font-medium">{transaction.details || POINT_ACTIONS[transaction.actionType]?.displayName}</div>
-            <div className="text-xs text-gray-500">{format(date, 'MMM d, yyyy h:mm a')}</div>
-          </div>
-        </div>
-        <div className="flex items-center text-yellow-600 ml-4">
-          <FontAwesomeIcon icon={faSpoon} className="mr-2" />
-          <span className="font-bold">+{transaction.points}</span>
-        </div>
-      </div>
-    );
-  };
 
   if (isLoading) {
     return (
@@ -371,21 +322,8 @@ const SpoonStats = () => {
         )}
       </div>
 
-      {/* Transaction History */}
-      <div className="bg-white rounded-xl shadow-lg p-6">
-        <h2 className="text-xl font-semibold mb-4">Points History</h2>
-        <div className="divide-y divide-gray-100 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-          {userData?.transactions && userData.transactions.length > 0 ? (
-            userData.transactions
-              .sort((a, b) => b.timestamp.toDate().getTime() - a.timestamp.toDate().getTime())
-              .map((transaction, index) => renderTransaction(transaction, index))
-          ) : (
-            <div className="text-center text-gray-500 py-8">
-              No points history yet. Start interacting with recipes to earn points!
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Points History */}
+      {userData && <PointsHistory transactions={userData.transactions} />}
 
     </div>
   );
