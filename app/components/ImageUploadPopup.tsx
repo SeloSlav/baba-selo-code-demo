@@ -95,9 +95,9 @@ export const ImageUploadPopup: React.FC<ImageUploadPopupProps> = ({
               <FontAwesomeIcon icon={faCamera} className="text-xl text-blue-600" />
             </div>
             <div>
-              <h2 className="text-xl font-bold">Share Your Dish</h2>
+              <h2 className="text-xl font-bold">Share an Image</h2>
               <div className="flex items-center gap-1">
-                <p className="text-sm text-gray-600">Let Baba see what you're cooking</p>
+                <p className="text-sm text-gray-600">Let Baba analyze what you share</p>
                 <div className="group relative">
                   <FontAwesomeIcon 
                     icon={faCircleInfo} 
@@ -105,23 +105,23 @@ export const ImageUploadPopup: React.FC<ImageUploadPopupProps> = ({
                   />
                   <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-56 md:w-64 p-3 bg-black text-white text-xs md:text-sm rounded-lg shadow-lg z-50">
                     <div className="relative">
-                      <p className="font-medium mb-1.5">Upload any image:</p>
+                      <p className="font-medium mb-1.5">Share any image:</p>
                       <ul className="space-y-1">
                         <li className="flex items-center">
                           <span className="mr-1.5">•</span>
-                          <span>Your fridge contents</span>
+                          <span>Food and ingredients</span>
                         </li>
                         <li className="flex items-center">
                           <span className="mr-1.5">•</span>
-                          <span>Ingredients you have</span>
+                          <span>Dishes you've made</span>
                         </li>
                         <li className="flex items-center">
                           <span className="mr-1.5">•</span>
-                          <span>A dish you made</span>
+                          <span>Family photos</span>
                         </li>
                         <li className="flex items-center">
                           <span className="mr-1.5">•</span>
-                          <span>Your grandson</span>
+                          <span>Anything you'd like Baba to see</span>
                         </li>
                       </ul>
                       <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 translate-y-full w-2 h-2 bg-black rotate-45"></div>

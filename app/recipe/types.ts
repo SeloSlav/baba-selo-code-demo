@@ -30,4 +30,6 @@ export interface Recipe {
   dishPairings?: string;
   pinned?: boolean;
   lastPinnedAt?: string;
+  username?: string;
+  likes?: string[];
 } 

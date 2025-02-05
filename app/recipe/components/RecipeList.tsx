@@ -11,6 +11,7 @@ import { faTrashAlt } from '@fortawesome/free-regular-svg-icons';
 import { useDeleteRecipe } from '../../context/DeleteRecipeContext';
 import Image from 'next/image';
 import { Recipe } from '../types';
+import { faHeart } from '@fortawesome/free-solid-svg-icons';
 
 const shimmer = (w: number, h: number) => `
 <svg width="${w}" height="${h}" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -30,6 +31,271 @@ const toBase64 = (str: string) =>
   typeof window === 'undefined'
     ? Buffer.from(str).toString('base64')
     : window.btoa(str);
+
+export const RecipeCard = ({ recipe, onLike, currentUser, showUsername = false }: { 
+  recipe: Recipe; 
+  onLike?: (recipe: Recipe) => void;
+  currentUser?: any;
+  showUsername?: boolean;
+}) => {
+  const [imageError, setImageError] = useState(false);
+  const [isImageLoading, setIsImageLoading] = useState(true);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [loadingPinAction, setLoadingPinAction] = useState(false);
+  const { showDeletePopup } = useDeleteRecipe();
+
+  useEffect(() => {
+    if (recipe.imageURL) {
+      try {
+        new URL(recipe.imageURL);
+      } catch (e) {
+        setImageError(true);
+      }
+    }
+  }, [recipe]);
+
+  const handleImageError = () => {
+    setImageError(true);
+  };
+
+  const handlePinUnpin = async (isPinned: boolean) => {
+    try {
+      setLoadingPinAction(true);
+      const recipeRef = doc(db, "recipes", recipe.id);
+      await updateDoc(recipeRef, {
+        pinned: !isPinned,
+        lastPinnedAt: !isPinned ? new Date().toISOString() : null
+      });
+      setMenuOpen(false);
+    } catch (error) {
+      console.error("Error toggling pin: ", error);
+    } finally {
+      setLoadingPinAction(false);
+    }
+  };
+
+  const handleDelete = async (title: string) => {
+    showDeletePopup(recipe.id, title, async () => {
+      try {
+        const recipeRef = doc(db, "recipes", recipe.id);
+        await deleteDoc(recipeRef);
+        setMenuOpen(false);
+      } catch (error) {
+        console.error("Error deleting recipe: ", error);
+      }
+    });
+  };
+
+  const renderMenu = () => {
+    return (
+      <div className="absolute right-0 z-40 bg-white rounded-xl shadow-lg w-48 border border-gray-200 p-2">
+        <ul className="space-y-1">
+          <li
+            className="flex items-center px-3 py-2 rounded-md hover:bg-gray-100 cursor-pointer disabled:opacity-50"
+            onClick={() => !loadingPinAction && handlePinUnpin(!!recipe.pinned)}
+          >
+            {loadingPinAction ? (
+              <>
+                <div className="w-4 h-4 mr-3">
+                  <div className="w-full h-full border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+                <span>{recipe.pinned ? 'Unpinning...' : 'Pinning...'}</span>
+              </>
+            ) : (
+              <>
+                <FontAwesomeIcon
+                  icon={faThumbtack}
+                  className={`w-4 h-4 mr-3 ${recipe.pinned ? "text-blue-500" : "text-gray-400"}`}
+                />
+                <span>{recipe.pinned ? "Unpin recipe" : "Pin recipe"}</span>
+              </>
+            )}
+          </li>
+          <li
+            className="flex items-center px-3 py-2 rounded-md hover:bg-gray-100 cursor-pointer text-red-500"
+            onClick={() => handleDelete(recipe.recipeTitle)}
+          >
+            <FontAwesomeIcon icon={faTrashAlt} className="w-4 h-4 mr-3" />
+            <span>Delete recipe</span>
+          </li>
+        </ul>
+      </div>
+    );
+  };
+
+  // Mobile Layout
+  const MobileCard = () => (
+    <div className="md:hidden relative h-48 rounded-xl overflow-hidden bg-gray-100">
+      {/* Background Image or Gradient */}
+      {recipe.imageURL && !imageError ? (
+        <div className="absolute inset-0">
+          <Image
+            src={recipe.imageURL}
+            alt={recipe.recipeTitle}
+            fill
+            className={`object-cover transition-opacity duration-300 ${
+              isImageLoading ? 'opacity-0' : 'opacity-100'
+            }`}
+            onLoad={() => setIsImageLoading(false)}
+            onError={handleImageError}
+            placeholder="blur"
+            blurDataURL={`data:image/svg+xml;base64,${toBase64(shimmer(1920, 1080))}`}
+            sizes="100vw"
+            priority
+          />
+        </div>
+      ) : (
+        <div className="absolute inset-0 bg-gradient-to-br from-yellow-100 to-yellow-200" />
+      )}
+
+      {/* Clickable Elements */}
+      <div className="absolute inset-0">
+        {/* Image Click Area - Top portion */}
+        <Link href={`/recipe/${recipe.id}`} className="absolute top-0 left-0 right-0 h-3/4" />
+        
+        {/* Title and Menu Area - Bottom portion */}
+        <div className="absolute bottom-0 left-0 right-0 h-1/4 bg-gradient-to-t from-black/60 to-transparent p-4">
+          <div className="flex justify-between items-center">
+            <Link href={`/recipe/${recipe.id}`} className="block flex-1">
+              <div>
+                <span className="text-lg font-bold text-white line-clamp-2 text-shadow">
+                  {recipe.recipeTitle}
+                </span>
+                {showUsername && recipe.username && (
+                  <span className="text-sm text-gray-200">
+                    by {recipe.username}
+                  </span>
+                )}
+              </div>
+            </Link>
+            <div className="flex items-center gap-2">
+              {onLike && (
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onLike(recipe);
+                  }}
+                  className={`p-2 rounded-full transition-colors ${
+                    recipe.likes?.includes(currentUser?.uid || '')
+                      ? 'text-red-500 hover:bg-red-50'
+                      : 'text-white hover:bg-white/10'
+                  }`}
+                >
+                  <FontAwesomeIcon icon={faHeart} />
+                  <span className="ml-1 text-sm">{recipe.likes?.length || 0}</span>
+                </button>
+              )}
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setMenuOpen(!menuOpen);
+                }}
+                className="text-white p-2"
+              >
+                <FontAwesomeIcon icon={faEllipsisH} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Menu Popup */}
+      {menuOpen && renderMenu()}
+    </div>
+  );
+
+  // Desktop Layout
+  const DesktopCard = () => (
+    <Link 
+      href={`/recipe/${recipe.id}`}
+      className="hidden md:block relative h-48 rounded-xl overflow-hidden group bg-gray-100"
+    >
+      {recipe.imageURL && !imageError ? (
+        <Image
+          src={recipe.imageURL}
+          alt={recipe.recipeTitle}
+          fill
+          className={`object-cover transition-opacity duration-300 ${
+            isImageLoading ? 'opacity-0' : 'opacity-100'
+          }`}
+          onLoad={() => setIsImageLoading(false)}
+          onError={handleImageError}
+          placeholder="blur"
+          blurDataURL={`data:image/svg+xml;base64,${toBase64(shimmer(1920, 1080))}`}
+          sizes="(max-width: 1200px) 50vw, 33vw"
+          priority
+        />
+      ) : (
+        <div className="absolute inset-0 bg-gradient-to-br from-yellow-100 to-yellow-200 group-hover:from-yellow-200 group-hover:to-yellow-300" />
+      )}
+
+      {/* Overlay */}
+      <div className={`absolute inset-0 transition-opacity duration-300 ${
+        recipe.imageURL ? "bg-black opacity-0 group-hover:opacity-50" : ""
+      }`} />
+
+      {/* Content */}
+      <div className="absolute inset-0 p-4 flex items-end">
+        <div className="flex justify-between items-center w-full">
+          <div className={`${
+            recipe.imageURL ? "text-white text-shadow" : "text-gray-800"
+          }`}>
+            <div className="text-lg font-bold line-clamp-2">
+              {recipe.recipeTitle}
+            </div>
+            {showUsername && recipe.username && (
+              <div className="text-sm opacity-90">
+                by {recipe.username}
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {onLike && (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onLike(recipe);
+                }}
+                className={`p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100 ${
+                  recipe.likes?.includes(currentUser?.uid || '')
+                    ? 'text-red-500 hover:bg-red-50'
+                    : 'text-white hover:bg-white/10'
+                }`}
+              >
+                <FontAwesomeIcon icon={faHeart} />
+                <span className="ml-1 text-sm">{recipe.likes?.length || 0}</span>
+              </button>
+            )}
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setMenuOpen(!menuOpen);
+              }}
+              className={`ml-4 opacity-0 group-hover:opacity-100 transition-opacity ${
+                recipe.imageURL ? "text-white" : "text-gray-800"
+              }`}
+            >
+              <FontAwesomeIcon icon={faEllipsisH} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {menuOpen && renderMenu()}
+    </Link>
+  );
+
+  return (
+    <>
+      <MobileCard />
+      <DesktopCard />
+    </>
+  );
+};
 
 export const RecipeList = () => {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
@@ -133,145 +399,6 @@ export const RecipeList = () => {
           </li>
         </ul>
       </div>
-    );
-  };
-
-  const RecipeCard = ({ recipe }: { recipe: Recipe }) => {
-    const [imageError, setImageError] = useState(false);
-    const [isImageLoading, setIsImageLoading] = useState(true);
-
-    useEffect(() => {
-      if (recipe.imageURL) {
-        try {
-          new URL(recipe.imageURL);
-        } catch (e) {
-          setImageError(true);
-        }
-      }
-    }, [recipe]);
-
-    const handleImageError = () => {
-      setImageError(true);
-    };
-
-    // Mobile Layout
-    const MobileCard = () => (
-      <div className="md:hidden relative h-48 rounded-xl overflow-hidden bg-gray-100">
-        {/* Background Image or Gradient */}
-        {recipe.imageURL && !imageError ? (
-          <div className="absolute inset-0">
-            <Image
-              src={recipe.imageURL}
-              alt={recipe.recipeTitle}
-              fill
-              className={`object-cover transition-opacity duration-300 ${
-                isImageLoading ? 'opacity-0' : 'opacity-100'
-              }`}
-              onLoad={() => setIsImageLoading(false)}
-              onError={handleImageError}
-              placeholder="blur"
-              blurDataURL={`data:image/svg+xml;base64,${toBase64(shimmer(1920, 1080))}`}
-              sizes="100vw"
-              priority
-            />
-          </div>
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-yellow-100 to-yellow-200" />
-        )}
-
-        {/* Clickable Elements */}
-        <div className="absolute inset-0">
-          {/* Image Click Area - Top portion */}
-          <Link href={`/recipe/${recipe.id}`} className="absolute top-0 left-0 right-0 h-3/4" />
-          
-          {/* Title and Menu Area - Bottom portion */}
-          <div className="absolute bottom-0 left-0 right-0 h-1/4 bg-gradient-to-t from-black/60 to-transparent p-4">
-            <div className="flex justify-between items-center">
-              <Link href={`/recipe/${recipe.id}`} className="block">
-                <span className="text-lg font-bold text-white line-clamp-2 text-shadow">
-                  {recipe.recipeTitle}
-                </span>
-              </Link>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleMenuToggle(recipe.id);
-                }}
-                className="text-white p-2"
-              >
-                <FontAwesomeIcon icon={faEllipsisH} />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Menu Popup */}
-        {menuOpen === recipe.id && renderMenu(recipe.id, recipe.pinned, recipe.recipeTitle)}
-      </div>
-    );
-
-    // Desktop Layout
-    const DesktopCard = () => (
-      <Link 
-        href={`/recipe/${recipe.id}`}
-        className="hidden md:block relative h-48 rounded-xl overflow-hidden group bg-gray-100"
-      >
-        {recipe.imageURL && !imageError ? (
-          <Image
-            src={recipe.imageURL}
-            alt={recipe.recipeTitle}
-            fill
-            className={`object-cover transition-opacity duration-300 ${
-              isImageLoading ? 'opacity-0' : 'opacity-100'
-            }`}
-            onLoad={() => setIsImageLoading(false)}
-            onError={handleImageError}
-            placeholder="blur"
-            blurDataURL={`data:image/svg+xml;base64,${toBase64(shimmer(1920, 1080))}`}
-            sizes="(max-width: 1200px) 50vw, 33vw"
-            priority
-          />
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-yellow-100 to-yellow-200 group-hover:from-yellow-200 group-hover:to-yellow-300" />
-        )}
-
-        {/* Overlay */}
-        <div className={`absolute inset-0 transition-opacity duration-300 ${
-          recipe.imageURL ? "bg-black opacity-0 group-hover:opacity-50" : ""
-        }`} />
-
-        {/* Content */}
-        <div className="absolute inset-0 p-4 flex items-end">
-          <div className="flex justify-between items-center w-full">
-            <span className={`line-clamp-2 text-lg font-bold ${
-              recipe.imageURL ? "text-white text-shadow" : "text-gray-800"
-            }`}>
-              {recipe.recipeTitle}
-            </span>
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleMenuToggle(recipe.id);
-              }}
-              className={`ml-4 opacity-0 group-hover:opacity-100 transition-opacity ${
-                recipe.imageURL ? "text-white" : "text-gray-800"
-              }`}
-            >
-              <FontAwesomeIcon icon={faEllipsisH} />
-            </button>
-          </div>
-        </div>
-
-        {menuOpen === recipe.id && renderMenu(recipe.id, recipe.pinned, recipe.recipeTitle)}
-      </Link>
-    );
-
-    return (
-      <>
-        <MobileCard />
-        <DesktopCard />
-      </>
     );
   };
 

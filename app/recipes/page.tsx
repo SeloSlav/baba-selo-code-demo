@@ -20,6 +20,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSearch, faXmark, faEllipsisVertical, faThumbtack, faTrashCan } from "@fortawesome/free-solid-svg-icons";
 import { getAuth } from "firebase/auth";
 import { useDeleteRecipe } from "../context/DeleteRecipeContext";
+import { SearchBar } from '../components/SearchBar';
+import { RecipeCard } from '../components/RecipeCard';
 
 interface Recipe {
   id: string;
@@ -87,34 +89,32 @@ const Recipes = () => {
     });
   };
 
-  const searchRecipes = (term: string) => {
-    setSearchTerm(term);
-    
-    if (!term.trim()) {
+  // Update search functionality
+  useEffect(() => {
+    if (!searchTerm.trim()) {
       setFilteredRecipes(recipes);
       return;
     }
 
-    const searchTerms = term.toLowerCase().split(" ").filter(t => t);
-    
-    const filtered = recipes.filter(recipe => {
+    const searchTerms = searchTerm.toLowerCase().split(" ");
+    const filtered = recipes.filter((recipe) => {
       const searchableFields = [
-        recipe.recipeTitle,
-        recipe.cookingDifficulty,
-        recipe.cuisineType,
-        recipe.cookingTime,
-        recipe.recipeSummary,
-        ...(recipe.diet || [])
-      ].map(field => (field || "").toLowerCase());
+        recipe.recipeTitle?.toLowerCase() || "",
+        recipe.cuisineType?.toLowerCase() || "",
+        recipe.cookingDifficulty?.toLowerCase() || "",
+        recipe.cookingTime?.toLowerCase() || "",
+        recipe.recipeSummary?.toLowerCase() || "",
+        ...(recipe.diet?.map(d => d.toLowerCase()) || []),
+        ...(recipe.ingredients?.map(i => i.toLowerCase()) || []),
+      ];
 
-      // Check if all search terms match at least one field
-      return searchTerms.every(term =>
-        searchableFields.some(field => field.includes(term))
+      return searchTerms.every((term) =>
+        searchableFields.some((field) => field.includes(term))
       );
     });
 
     setFilteredRecipes(filtered);
-  };
+  }, [searchTerm, recipes]);
 
   const fetchRecipes = async (loadMore = false) => {
     if (!user) return; // Don't fetch if no user is logged in
@@ -188,383 +188,70 @@ const Recipes = () => {
 
   // 2) Once recipes are loaded (or we're loading more recipes), show the list.
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Fixed Header Section */}
-      <div className="sticky top-0 bg-gray-100 pt-8 pb-4 px-4 z-10">
-        <div className="max-w-6xl mx-auto">
-          <h1 className="text-3xl font-bold text-center mb-8">My recipes</h1>
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-4">My Recipes</h1>
+        <SearchBar 
+          searchTerm={searchTerm} 
+          setSearchTerm={setSearchTerm} 
+        />
+      </div>
 
-          {/* Search Bar */}
-          <div className="relative max-w-2xl mx-auto">
-            <div className="relative">
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => searchRecipes(e.target.value)}
-                placeholder="Search recipes by title, cuisine, difficulty, diet, description..."
-                className="w-full px-4 py-3 pl-12 pr-10 rounded-full border border-gray-300 focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
-              />
-              <FontAwesomeIcon
-                icon={faSearch}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-              />
-              {searchTerm && (
-                <button
-                  onClick={() => searchRecipes("")}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  <FontAwesomeIcon icon={faXmark} />
-                </button>
-              )}
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((n) => (
+            <div key={n} className="animate-pulse">
+              <div className="bg-gray-200 h-48 rounded-xl mb-4"></div>
+              <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
             </div>
-            {searchTerm && (
-              <div className="absolute left-4 right-4 mt-2 text-sm text-gray-500">
-                Found {filteredRecipes.length} {filteredRecipes.length === 1 ? 'recipe' : 'recipes'}
-              </div>
-            )}
+          ))}
+        </div>
+      ) : filteredRecipes.length > 0 ? (
+        <div>
+          {/* Pinned Recipes */}
+          <div className="mb-8">
+            <h2 className="text-gray-600 text-sm font-semibold pb-2 border-b">
+              📌 Pinned Recipes
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+              {pinnedRecipes.map((recipe) => (
+                <RecipeCard 
+                  key={recipe.id} 
+                  recipe={recipe}
+                  showMenu={true}
+                  onMenuClick={(id) => setMenuOpen(id)}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* All Recipes */}
+          <div>
+            <h2 className="text-gray-600 text-sm font-semibold pb-2 border-b">
+              🍳 All Recipes
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+              {unpinnedRecipes.map((recipe) => (
+                <RecipeCard 
+                  key={recipe.id} 
+                  recipe={recipe}
+                  showMenu={true}
+                  onMenuClick={(id) => setMenuOpen(id)}
+                />
+              ))}
+            </div>
           </div>
         </div>
-      </div>
-
-      {/* Scrollable Content Section */}
-      <div className="px-4 overflow-y-auto">
-        <div className="max-w-6xl mx-auto pt-4">
-          {filteredRecipes.length === 0 && searchTerm ? (
-            <div className="text-center py-12">
-              <p className="text-lg text-gray-600 mb-4">No recipes found matching "{searchTerm}"</p>
-              <p className="text-gray-500">Try adjusting your search terms or clear the search</p>
-            </div>
-          ) : (
-            <>
-              {/* Pinned Recipes Section */}
-              {pinnedRecipes.length > 0 && (
-                <div className="mb-8">
-                  <h2 className="text-xl font-semibold mb-4">📌 Pinned Recipes</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {pinnedRecipes.map((recipe) => (
-                      <div key={recipe.id} className="relative group bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
-                        {/* Desktop-only full card link */}
-                        <div className="hidden md:block">
-                          <Link href={`/recipe/${recipe.id}`} className="absolute inset-0 z-10" />
-                        </div>
-
-                        {/* Image Section - Clickable on both mobile and desktop */}
-                        <Link href={`/recipe/${recipe.id}`} className="block relative w-full h-48">
-                          {recipe.imageURL ? (
-                            <Image
-                              src={recipe.imageURL}
-                              alt={recipe.recipeTitle}
-                              fill
-                              className="object-cover"
-                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                              priority={!loadingMore}
-                              quality={75}
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                              <span className="text-4xl">🍳</span>
-                            </div>
-                          )}
-                        </Link>
-                        
-                        <div className="p-4">
-                          <div className="flex justify-between items-start mb-2">
-                            {/* Title - Clickable on both mobile and desktop */}
-                            <Link 
-                              href={`/recipe/${recipe.id}`} 
-                              className="block flex-1"
-                            >
-                              <h2 className="text-xl font-semibold line-clamp-1">
-                                {recipe.recipeTitle || "Untitled Recipe"}
-                              </h2>
-                            </Link>
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                setMenuOpen(menuOpen === recipe.id ? null : recipe.id);
-                              }}
-                              className="relative p-1.5 rounded-full hover:bg-gray-100 transition-colors z-50 pointer-events-auto"
-                            >
-                              <FontAwesomeIcon 
-                                icon={faEllipsisVertical} 
-                                className="w-4 h-4 text-gray-400" 
-                              />
-                            </button>
-                          </div>
-
-                          {menuOpen === recipe.id && (
-                            <>
-                              <div 
-                                className="fixed inset-0 z-40" 
-                                onClick={() => setMenuOpen(null)}
-                              />
-                              <div 
-                                className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-lg z-50 pointer-events-auto"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <div className="py-1">
-                                  <button
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      handlePinToggle(recipe.id, !!recipe.pinned);
-                                    }}
-                                    disabled={loadingPinAction === recipe.id}
-                                    className="w-full px-4 py-2 text-sm flex items-center hover:bg-gray-100 transition-colors disabled:opacity-50"
-                                  >
-                                    {loadingPinAction === recipe.id ? (
-                                      <>
-                                        <div className="w-4 h-4 mr-3">
-                                          <div className="w-full h-full border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                                        </div>
-                                        <span>{recipe.pinned ? 'Unpinning...' : 'Pinning...'}</span>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <FontAwesomeIcon 
-                                          icon={faThumbtack} 
-                                          className={`w-4 h-4 mr-3 ${recipe.pinned ? 'text-yellow-500' : 'text-[#5d5d5d]'}`}
-                                        />
-                                        <span>{recipe.pinned ? 'Unpin recipe' : 'Pin recipe'}</span>
-                                      </>
-                                    )}
-                                  </button>
-
-                                  <div className="border-t border-gray-100" />
-                                  <button
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      handleDelete(recipe.id, recipe.recipeTitle);
-                                    }}
-                                    className="w-full px-4 py-2 text-sm flex items-center text-red-600 hover:bg-gray-100 transition-colors"
-                                  >
-                                    <FontAwesomeIcon icon={faTrashCan} className="w-4 h-4 mr-3" />
-                                    <span>Delete recipe</span>
-                                  </button>
-                                </div>
-                              </div>
-                            </>
-                          )}
-
-                          {/* Non-clickable content on mobile */}
-                          <div className="md:pointer-events-auto pointer-events-none">
-                            {recipe.recipeSummary && (
-                              <>
-                                <meta name="recipe-summary" content={recipe.recipeSummary} />
-                                <p className="text-gray-600 mb-3 line-clamp-2">
-                                  {recipe.recipeSummary}
-                                </p>
-                              </>
-                            )}
-                            
-                            <div className="space-y-2 text-sm">
-                              <div className="flex items-center text-gray-600">
-                                <span className="mr-2">🍲</span>
-                                <span className="line-clamp-1">
-                                  {recipe.diet && recipe.diet.length > 0
-                                    ? recipe.diet.map(d => d.charAt(0).toUpperCase() + d.slice(1)).join(", ")
-                                    : "Not specified"}
-                                </span>
-                              </div>
-                              
-                              <div className="flex items-center text-gray-600">
-                                <span className="mr-2">🍽️</span>
-                                <span>{recipe.cuisineType ? recipe.cuisineType.charAt(0).toUpperCase() + recipe.cuisineType.slice(1) : "Unknown"}</span>
-                              </div>
-                              
-                              <div className="flex items-center text-gray-600">
-                                <span className="mr-2">⏲️</span>
-                                <span>{recipe.cookingTime || "Not specified"}</span>
-                              </div>
-                              
-                              <div className="flex items-center text-gray-600">
-                                <span className="mr-2">🧩</span>
-                                <span>{recipe.cookingDifficulty ? recipe.cookingDifficulty.charAt(0).toUpperCase() + recipe.cookingDifficulty.slice(1) : "Unknown"}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* All Recipes Section */}
-              <div>
-                <h2 className="text-xl font-semibold mb-4">🍳 All Recipes</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {unpinnedRecipes.map((recipe) => (
-                    <div key={recipe.id} className="relative group bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
-                      {/* Desktop-only full card link */}
-                      <div className="hidden md:block">
-                        <Link href={`/recipe/${recipe.id}`} className="absolute inset-0 z-10" />
-                      </div>
-
-                      {/* Image Section - Clickable on both mobile and desktop */}
-                      <Link href={`/recipe/${recipe.id}`} className="block relative w-full h-48">
-                        {recipe.imageURL ? (
-                          <Image
-                            src={recipe.imageURL}
-                            alt={recipe.recipeTitle}
-                            fill
-                            className="object-cover"
-                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                            priority={!loadingMore}
-                            quality={75}
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                            <span className="text-4xl">🍳</span>
-                          </div>
-                        )}
-                      </Link>
-                      
-                      <div className="p-4">
-                        <div className="flex justify-between items-start mb-2">
-                          {/* Title - Clickable on both mobile and desktop */}
-                          <Link 
-                            href={`/recipe/${recipe.id}`} 
-                            className="block flex-1"
-                          >
-                            <h2 className="text-xl font-semibold line-clamp-1">
-                              {recipe.recipeTitle || "Untitled Recipe"}
-                            </h2>
-                          </Link>
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setMenuOpen(menuOpen === recipe.id ? null : recipe.id);
-                            }}
-                            className="relative p-1.5 rounded-full hover:bg-gray-100 transition-colors z-50 pointer-events-auto"
-                          >
-                            <FontAwesomeIcon 
-                              icon={faEllipsisVertical} 
-                              className="w-4 h-4 text-gray-400" 
-                            />
-                          </button>
-                        </div>
-
-                        {menuOpen === recipe.id && (
-                          <>
-                            <div 
-                              className="fixed inset-0 z-40" 
-                              onClick={() => setMenuOpen(null)}
-                            />
-                            <div 
-                              className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-lg z-50 pointer-events-auto"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <div className="py-1">
-                                <button
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    handlePinToggle(recipe.id, !!recipe.pinned);
-                                  }}
-                                  disabled={loadingPinAction === recipe.id}
-                                  className="w-full px-4 py-2 text-sm flex items-center hover:bg-gray-100 transition-colors disabled:opacity-50"
-                                >
-                                  {loadingPinAction === recipe.id ? (
-                                    <>
-                                      <div className="w-4 h-4 mr-3">
-                                        <div className="w-full h-full border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                                      </div>
-                                      <span>{recipe.pinned ? 'Unpinning...' : 'Pinning...'}</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <FontAwesomeIcon 
-                                        icon={faThumbtack} 
-                                        className={`w-4 h-4 mr-3 ${recipe.pinned ? 'text-yellow-500' : 'text-[#5d5d5d]'}`}
-                                      />
-                                      <span>{recipe.pinned ? 'Unpin recipe' : 'Pin recipe'}</span>
-                                    </>
-                                  )}
-                                </button>
-
-                                <div className="border-t border-gray-100" />
-                                <button
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    handleDelete(recipe.id, recipe.recipeTitle);
-                                  }}
-                                  className="w-full px-4 py-2 text-sm flex items-center text-red-600 hover:bg-gray-100 transition-colors"
-                                >
-                                  <FontAwesomeIcon icon={faTrashCan} className="w-4 h-4 mr-3" />
-                                  <span>Delete recipe</span>
-                                </button>
-                              </div>
-                            </div>
-                          </>
-                        )}
-
-                        {/* Non-clickable content on mobile */}
-                        <div className="md:pointer-events-auto pointer-events-none">
-                          {recipe.recipeSummary && (
-                            <>
-                              <meta name="recipe-summary" content={recipe.recipeSummary} />
-                              <p className="text-gray-600 mb-3 line-clamp-2">
-                                {recipe.recipeSummary}
-                              </p>
-                            </>
-                          )}
-                          
-                          <div className="space-y-2 text-sm">
-                            <div className="flex items-center text-gray-600">
-                              <span className="mr-2">🍲</span>
-                              <span className="line-clamp-1">
-                                {recipe.diet && recipe.diet.length > 0
-                                  ? recipe.diet.map(d => d.charAt(0).toUpperCase() + d.slice(1)).join(", ")
-                                  : "Not specified"}
-                              </span>
-                            </div>
-                            
-                            <div className="flex items-center text-gray-600">
-                              <span className="mr-2">🍽️</span>
-                              <span>{recipe.cuisineType ? recipe.cuisineType.charAt(0).toUpperCase() + recipe.cuisineType.slice(1) : "Unknown"}</span>
-                            </div>
-                            
-                            <div className="flex items-center text-gray-600">
-                              <span className="mr-2">⏲️</span>
-                              <span>{recipe.cookingTime || "Not specified"}</span>
-                            </div>
-                            
-                            <div className="flex items-center text-gray-600">
-                              <span className="mr-2">🧩</span>
-                              <span>{recipe.cookingDifficulty ? recipe.cookingDifficulty.charAt(0).toUpperCase() + recipe.cookingDifficulty.slice(1) : "Unknown"}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Load More Button */}
-              {!searchTerm && recipes.length > 0 && (
-                <div className="flex justify-center mt-8 pb-8">
-                  <button
-                    onClick={() => fetchRecipes(true)}
-                    disabled={loadingMore}
-                    className="bg-black text-white px-6 py-3 rounded-full hover:bg-[#212121] transition-colors disabled:bg-gray-400 flex items-center space-x-2"
-                  >
-                    {loadingMore ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        <span>Loading...</span>
-                      </>
-                    ) : (
-                      "Load More Recipes"
-                    )}
-                  </button>
-                </div>
-              )}
-            </>
-          )}
+      ) : (
+        <div className="text-center py-12">
+          <div className="text-4xl mb-4">🤔</div>
+          <h3 className="text-xl font-semibold mb-2">No recipes found</h3>
+          <p className="text-gray-600">
+            Try adjusting your search or check back later for new recipes
+          </p>
         </div>
-      </div>
+      )}
     </div>
   );
 };

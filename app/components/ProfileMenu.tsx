@@ -1,7 +1,7 @@
 // app/components/ProfileMenu.tsx
 import React, { useRef, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBookOpenReader, faGear, faHome, faSignOut, faStarOfLife, faSpoon } from "@fortawesome/free-solid-svg-icons";
+import { faBookOpenReader, faGear, faHome, faSignOut, faStarOfLife, faSpoon, faCompass } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 
 interface ProfileMenuProps {
@@ -44,6 +44,12 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
                     <Link href="/" className="flex items-center w-full">
                         <FontAwesomeIcon icon={faHome} className="text-[#5d5d5d] mr-3" />
                         <span>Home</span>
+                    </Link>
+                </li>
+                <li className="flex items-center px-4 py-2 rounded-md hover:bg-gray-100 cursor-pointer">
+                    <Link href="/explore" className="flex items-center w-full">
+                        <FontAwesomeIcon icon={faCompass} className="text-[#5d5d5d] mr-3" />
+                        <span>Explore</span>
                     </Link>
                 </li>
                 <li className="flex items-center px-4 py-2 rounded-md hover:bg-gray-100 cursor-pointer">

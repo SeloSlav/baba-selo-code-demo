@@ -9,8 +9,8 @@ import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
 const imageStyleOptions = {
   "rustic-traditional": {
     name: "Rustic Traditional",
-    description: "Warm, nostalgic pen and ink drawings with watercolor on aged parchment",
-    prompt: "Create this in a rustic, traditional art style reminiscent of old European pen and ink drawings with watercolor washes on aged parchment paper. The style should be warm and charming, with a handcrafted feel like something a grandmother would lovingly sketch. Use a muted, earthy color palette with touches of warm browns, soft yellows, and gentle greens. Add subtle textures that suggest the grain of parchment paper and delicate ink lines. The overall effect should be nostalgic and heartwarming, like finding an old recipe book illustration."
+    description: "Warm, nostalgic scenes of traditional  kitchen settings with embroidered tablecloths",
+    prompt: "Create this in a rustic, traditional style set in a cozy kitchen environment. The scene should feature richly detailed traditional tablecloths with classic  embroidery patterns in red and white. The style should be warm and inviting, with soft natural lighting filtering through lace curtains. Use a rich color palette with deep reds, warm woods, and cream whites typical of traditional homes. Add subtle textures that suggest handwoven fabrics and well-loved wooden surfaces. The overall effect should be nostalgic and heartwarming, like stepping into a grandmother's cherished country kitchen."
   },
   "modern-cookbook": {
     name: "Modern Cookbook",
@@ -323,10 +323,19 @@ export default function SettingsPage() {
                   Choose how you'll appear on the leaderboard.
                 </p>
               </div>
+            </div>
+            <div className="flex gap-3">
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter your username"
+                className="flex-1 p-3 border border-gray-300 rounded-xl focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all"
+              />
               <button
                 type="submit"
                 disabled={savingUsername}
-                className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2
+                className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap
                   ${savingUsername
                     ? "bg-gray-200 text-gray-400 cursor-not-allowed"
                     : "bg-black text-white hover:bg-[#212121]"
@@ -342,13 +351,6 @@ export default function SettingsPage() {
                 )}
               </button>
             </div>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter your username"
-              className="w-full p-3 border border-gray-300 rounded-xl focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all"
-            />
           </form>
         </div>
 
@@ -361,7 +363,7 @@ export default function SettingsPage() {
             <div>
               <h3 className="text-2xl font-bold">Recipe Image Style</h3>
               <p className="text-sm text-gray-500">
-                Choose how Baba should generate images of your recipes when you save them.
+                Choose how Baba should generate images of your recipes.
               </p>
             </div>
           </div>
