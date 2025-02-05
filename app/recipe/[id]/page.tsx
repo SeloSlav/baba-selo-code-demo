@@ -55,7 +55,7 @@ const toBase64 = (str: string) =>
     ? Buffer.from(str).toString('base64')
     : window.btoa(str);
 
-const POINTS_FOR_LIKE = 5; // Points awarded when someone likes your recipe
+const POINTS_FOR_LIKE = 50; // Points awarded when someone likes your recipe
 
 const RecipeDetails = () => {
   const [recipe, setRecipe] = useState<Recipe | null>(null); // State to store the recipe details
@@ -226,60 +226,81 @@ const RecipeDetails = () => {
 
     setLoadingImage(true);
     try {
-      console.log("Generating image with user ID:", user.uid);
-
-      // Set up timeout for the fetch request
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 50000); // 50 second timeout
-
-      // Generate image and get permanent Firebase Storage URL
-      const response = await fetch("/api/generateImage", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          prompt: `A rustic dish representation for ${recipe.recipeTitle}`,
-          userId: user.uid,
-          recipeId: id
-        }),
-        signal: controller.signal
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      if (data.imageUrl) {
-        // Update Firestore with the permanent URL
-        const recipeDocRef = doc(db, "recipes", id as string);
-        await updateDoc(recipeDocRef, { imageURL: data.imageUrl });
-
-        // Update local state
-        setRecipe((prevRecipe) => prevRecipe && { ...prevRecipe, imageURL: data.imageUrl });
-
-        // Award points for generating image
-        await handlePointsAward(
-          'GENERATE_IMAGE',
-          id as string,
-          'Recipe image generated!'
+        // Check if points can be awarded, but don't block the generation
+        const actionCheck = await SpoonPointSystem.isActionAvailable(
+            user.uid,
+            'GENERATE_IMAGE',
+            id as string
         );
-      } else {
-        throw new Error('No image URL received');
-      }
+
+        // If points can't be awarded, show a toast but continue with generation
+        if (!actionCheck.available) {
+            showPointsToast(0, actionCheck.reason === 'Action already performed on this target'
+                ? "You won't earn points this time since you've already generated an image for this recipe!"
+                : actionCheck.reason === 'Daily limit reached'
+                ? "You've reached your daily limit! You can still generate images, but no points will be awarded."
+                : "You can generate the image, but no points will be awarded at this time.");
+        }
+
+        // Set up timeout for the fetch request
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 50000); // 50 second timeout
+
+        // Generate image and get permanent Firebase Storage URL
+        const response = await fetch("/api/generateImage", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                prompt: `A rustic dish representation for ${recipe.recipeTitle}`,
+                userId: user.uid,
+                recipeId: id
+            }),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            showPointsToast(0, data.message || "Failed to generate image");
+            return;
+        }
+
+        if (data.imageUrl) {
+            // Update Firestore with the permanent URL
+            const recipeDocRef = doc(db, "recipes", id as string);
+            await updateDoc(recipeDocRef, { imageURL: data.imageUrl });
+
+            // Update local state
+            setRecipe((prevRecipe) => prevRecipe && { ...prevRecipe, imageURL: data.imageUrl });
+
+            // Only try to award points if the action was available
+            if (actionCheck.available) {
+                const pointsResult = await SpoonPointSystem.awardPoints(
+                    user.uid,
+                    'GENERATE_IMAGE',
+                    id as string
+                );
+
+                if (pointsResult.success) {
+                    showPointsToast(pointsResult.points!, 'Recipe image generated!');
+                }
+            }
+        } else {
+            showPointsToast(0, "Failed to generate image. Please try again.");
+        }
     } catch (error) {
-      console.error("Error generating image:", error);
-      // Show user-friendly error message
-      if (error.name === 'AbortError') {
-        showPointsToast(0, "Image generation took too long. Please try again.");
-      } else {
-        showPointsToast(0, "Failed to generate image. Please try again later.");
-      }
+        console.error("Error generating image:", error);
+        if (error.name === 'AbortError') {
+            showPointsToast(0, "Image generation took too long. Please try again.");
+        } else {
+            showPointsToast(0, "Failed to generate image. Please try again later.");
+        }
     } finally {
-      setLoadingImage(false);
+        setLoadingImage(false);
     }
   };
 

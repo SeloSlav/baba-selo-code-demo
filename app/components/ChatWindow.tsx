@@ -16,6 +16,7 @@ import { ImageUploadPopup } from "./ImageUploadPopup";
 import { DrawImagePopup } from "./DrawImagePopup";
 import { LoadingSpinner } from "./LoadingSpinner";
 import { SendButtonSpinner } from "./SendButtonSpinner";
+import { usePoints } from '../context/PointsContext';
 
 interface Message {
   role: "user" | "assistant";
@@ -50,6 +51,8 @@ export const ChatWindow = forwardRef(
 
     // Add new state for draw image popup
     const [isDrawImageOpen, setIsDrawImageOpen] = useState(false);
+
+    const { showPointsToast } = usePoints();
 
     useImperativeHandle(ref, () => ({
       focusInput: () => {
@@ -136,9 +139,9 @@ export const ChatWindow = forwardRef(
       // Add user's message to the conversation
       const updatedMessages: Message[] = [
         ...messages,
-        { role: "user", content: trimmedMessage }, // Explicitly typed as Message
+        { role: "user", content: trimmedMessage },
       ];
-      setMessages(updatedMessages); // Update the state with the new message
+      setMessages(updatedMessages);
       setMessage("");
 
       if (inputRef.current) {
@@ -148,33 +151,54 @@ export const ChatWindow = forwardRef(
       setLoading(true);
 
       try {
+        const auth = getAuth();
+        const userId = auth.currentUser?.uid;
+        console.log("Current user ID:", userId); // Log the user ID
+
+        const requestBody = {
+          messages: updatedMessages,
+          preferredCookingOil,
+          dietaryPreferences,
+          userId
+        };
+        console.log("Sending request with body:", requestBody); // Log the request body
+
         const response = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            messages: updatedMessages,
-            preferredCookingOil,
-            dietaryPreferences,
-          }), // Include preferences in the API call
+          body: JSON.stringify(requestBody),
         });
 
         const data = await response.json();
+        console.log("Chat API response:", data);
+        
         if (data.assistantMessage) {
           setMessages((prev) => [
             ...prev,
-            { role: "assistant", content: data.assistantMessage }, // Explicitly typed as Message
+            { role: "assistant", content: data.assistantMessage },
           ]);
+
+          // Show points toast if points information is available
+          if (data.pointsAwarded) {
+            console.log("Showing points toast:", data.pointsAwarded);
+            showPointsToast(
+              data.pointsAwarded.points,
+              data.pointsAwarded.message
+            );
+          } else {
+            console.log("No points information in response");
+          }
         } else {
           setMessages((prev) => [
             ...prev,
-            { role: "assistant", content: "Ah, my head! It\'s like I\'ve been up all night making sarma for a village wedding. Try refreshing the page, darling—I\'ll do better next time!." }, // Explicitly typed as Message
+            { role: "assistant", content: "Ah, my head! It\'s like I\'ve been up all night making sarma for a village wedding. Try refreshing the page, darling—I\'ll do better next time!." },
           ]);
         }
       } catch (error) {
         console.error("Error sending message:", error);
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: "Error: Unable to get response." }, // Explicitly typed as Message
+          { role: "assistant", content: "Error: Unable to get response." },
         ]);
       } finally {
         setLoading(false);

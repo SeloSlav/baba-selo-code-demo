@@ -297,19 +297,6 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
             try {
                 const recipeHash = createRecipeHash(msg.content);
 
-                // Award points for generating recipe
-                if (userId) {
-                    const pointsResult = await SpoonPointSystem.awardPoints(
-                        userId,
-                        'GENERATE_RECIPE',
-                        recipeHash
-                    );
-
-                    if (pointsResult.success) {
-                        showPointsToast(pointsResult.points!, 'New recipe generated!');
-                    }
-                }
-
                 // Classify recipe
                 const response = await fetch("/api/classifyRecipe", {
                     method: "POST",
@@ -358,8 +345,8 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
     }, [messages, formattedPairings]);
 
     const suggestions = [
-        "Make me a random Balkan recipe",
-        "What's your secret to perfect sarma?",
+        "Create a traditional recipe",
+        "What's your secret to perfect homemade meals?",
         "Help me use up these leftovers",
         "Tell me a funny cooking disaster story",
         "Give me a recipe for my date",
@@ -374,9 +361,9 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                 <div className="flex flex-wrap gap-2 mt-4">
                     {suggestions.map((suggestion, i) => {
                         let emoji = "";
-                        if (suggestion.toLowerCase().includes("random balkan")) emoji = "🌍";
-                        else if (suggestion.toLowerCase().includes("sarma")) emoji = "🥬";
-                        else if (suggestion.toLowerCase().includes("leftovers")) emoji = "🍽️";
+                        if (suggestion.toLowerCase().includes("traditional")) emoji = "🌍";
+                        else if (suggestion.toLowerCase().includes("homemade")) emoji = "👩‍🍳";
+                        else if (suggestion.toLowerCase().includes("leftovers")) emoji = "🥘";
                         else if (suggestion.toLowerCase().includes("disaster")) emoji = "😅";
                         else if (suggestion.toLowerCase().includes("date")) emoji = "❤️";
                         else if (suggestion.toLowerCase().includes("olive")) emoji = "🌿";

@@ -1,7 +1,13 @@
 "use client";
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { PointsToast } from '../components/PointsToast';
+
+interface ToastItem {
+  id: string;
+  points: number;
+  message: string;
+}
 
 interface PointsContextType {
   showPointsToast: (points: number, message: string) => void;
@@ -18,26 +24,36 @@ export const usePoints = () => {
 };
 
 export const PointsProvider = ({ children }: { children: React.ReactNode }) => {
-  const [toastVisible, setToastVisible] = useState(false);
-  const [toastData, setToastData] = useState<{ points: number; message: string }>({
-    points: 0,
-    message: ''
-  });
+  // Queue to store all toast notifications
+  const [toastQueue, setToastQueue] = useState<ToastItem[]>([]);
 
-  const showPointsToast = (points: number, message: string) => {
-    setToastData({ points, message });
-    setToastVisible(true);
-  };
+  const removeToast = useCallback((id: string) => {
+    setToastQueue(prev => prev.filter(toast => toast.id !== id));
+  }, []);
+
+  const showPointsToast = useCallback((points: number, message: string) => {
+    const newToast: ToastItem = {
+      id: Math.random().toString(36).substr(2, 9), // Generate unique ID
+      points,
+      message
+    };
+    setToastQueue(prev => [...prev, newToast]);
+  }, []);
 
   return (
     <PointsContext.Provider value={{ showPointsToast }}>
       {children}
-      <PointsToast
-        points={toastData.points}
-        message={toastData.message}
-        isVisible={toastVisible}
-        onHide={() => setToastVisible(false)}
-      />
+      <div className="fixed top-4 right-4 z-50 space-y-2">
+        {toastQueue.map((toast) => (
+          <PointsToast
+            key={toast.id}
+            points={toast.points}
+            message={toast.message}
+            isVisible={true}
+            onHide={() => removeToast(toast.id)}
+          />
+        ))}
+      </div>
     </PointsContext.Provider>
   );
 }; 

@@ -62,8 +62,8 @@ export const SearchBar = ({
                   <ul className="space-y-1">
                     <li>• Add recipe summaries</li>
                     <li>• Upload recipe photos</li>
-                    <li>• Get likes from others to earn spoons</li>
                     <li>• Complete all sections to maximize visibility</li>
+                    <li>• Get likes from others to earn spoons</li>
                   </ul>
                   <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 translate-y-full w-2 h-2 bg-black rotate-45"></div>
                 </div>

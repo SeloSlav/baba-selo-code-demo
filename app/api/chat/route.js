@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
+import { SpoonPointSystem } from '../../lib/spoonPoints';
 
 export async function POST(req) {
-  const { messages, dietaryPreferences, preferredCookingOil } = await req.json(); // Expect the full conversation history
+  const { messages, dietaryPreferences, preferredCookingOil, userId } = await req.json(); // Add userId to destructuring
 
   if (!messages || !Array.isArray(messages)) {
     return NextResponse.json({ error: "Invalid or missing messages array" }, { status: 400 });
@@ -132,7 +133,7 @@ The user also prefers to use ${preferredCookingOil} as a cooking oil.
         "Authorization": `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini", // If "gpt-4o-mini" is not a valid model, use "gpt-4" or "gpt-3.5-turbo"
+        model: "gpt-4",
         max_tokens: 1500,
         temperature: 1.0,
         messages: [
@@ -153,7 +154,94 @@ The user also prefers to use ${preferredCookingOil} as a cooking oil.
     }
 
     const assistantMessage = data.choices?.[0]?.message?.content || "I'm sorry, I couldn't respond.";
-    return NextResponse.json({ assistantMessage });
+
+    // Force log the full response to make sure logging is working
+    console.debug("DEBUG - Full response:", assistantMessage);
+
+    // Parse the response to detect recipe
+    const lines = assistantMessage.split('\n');
+    const firstLine = lines[0]?.trim() || '';
+    
+    // Log the first line for debugging
+    console.debug("DEBUG - First line:", firstLine);
+    
+    // Check recipe components with more lenient conditions
+    const hasRecipeName = firstLine.length > 0 && 
+                         !firstLine.toLowerCase().includes('ingredients') && 
+                         !firstLine.toLowerCase().includes('directions');
+    
+    const hasIngredients = assistantMessage.toLowerCase().includes("ingredients");
+    const hasDirections = assistantMessage.toLowerCase().includes("directions");
+    
+    // Log all detection conditions
+    console.debug("DEBUG - Recipe detection:", {
+        firstLine,
+        hasRecipeName,
+        hasIngredients,
+        hasDirections,
+        userId
+    });
+
+    const isRecipe = hasRecipeName && hasIngredients && hasDirections;
+    console.debug("DEBUG - Is recipe:", isRecipe);
+
+    let pointsAwarded = null;
+    if (isRecipe && userId) {
+        console.debug("DEBUG - Attempting to award points");
+        const recipeHash = `${userId}-${Date.now()}-${firstLine}`;
+        try {
+            const pointsResult = await SpoonPointSystem.awardPoints(
+                userId,
+                'GENERATE_RECIPE',
+                recipeHash
+            );
+            console.debug("DEBUG - Points result:", pointsResult);
+            
+            if (pointsResult.success) {
+                pointsAwarded = {
+                    points: pointsResult.points,
+                    message: 'Recipe generated successfully!'
+                };
+            } else {
+                // Handle all limit cases with user-friendly messages
+                const errorMessage = (() => {
+                    switch (pointsResult.error) {
+                        case 'Daily limit reached':
+                            return "You've reached your daily recipe limit! Come back tomorrow for more spoons!";
+                        case 'Action on cooldown':
+                            return "Whoa there! Let's wait a few minutes before generating another recipe.";
+                        case 'Action already performed on this target':
+                            return "You've already earned points for this exact recipe!";
+                        default:
+                            return pointsResult.error || 'Could not award points';
+                    }
+                })();
+
+                pointsAwarded = {
+                    points: 0,
+                    message: errorMessage
+                };
+            }
+            console.debug("DEBUG - Points awarded:", pointsAwarded);
+        } catch (error) {
+            console.error("Error awarding points:", error);
+            pointsAwarded = {
+                points: 0,
+                message: 'Something went wrong while awarding points'
+            };
+        }
+    } else {
+        console.debug("DEBUG - Not awarding points because:", {
+            isRecipe,
+            hasUserId: !!userId,
+            userId
+        });
+    }
+
+    return NextResponse.json({ 
+        assistantMessage,
+        pointsAwarded
+    });
   } catch (error) {
     console.error("Error calling OpenAI API:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

@@ -141,7 +141,7 @@ const SpoonStats = () => {
       case 'CHAT_INTERACTION':
         return '💬';
       case 'RECIPE_SAVED_BY_OTHER':
-        return '🤝';
+        return '❤️';
       default:
         return '🎯';
     }

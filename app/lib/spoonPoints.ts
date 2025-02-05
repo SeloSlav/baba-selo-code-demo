@@ -27,44 +27,45 @@ interface PointTransaction {
 export const POINT_ACTIONS: Record<string, PointAction> = {
   SAVE_RECIPE: {
     type: 'SAVE_RECIPE',
-    points: 5,
+    points: 10,
     cooldown: 1, // 1 minute cooldown
     requiresUnique: true, // prevent saving the same recipe multiple times
     displayName: 'Recipe Saved'
   },
   GENERATE_RECIPE: {
     type: 'GENERATE_RECIPE',
-    points: 5,
+    points: 15,
     cooldown: 5, // 5 minutes cooldown
-    maxPerDay: 10,
+    maxPerDay: 30,
     displayName: 'Recipe Generated'
   },
   GENERATE_SUMMARY: {
     type: 'GENERATE_SUMMARY',
-    points: 15,
+    points: 25,
     cooldown: 30,
     requiresUnique: true, // prevent regenerating same recipe summary
     displayName: 'Summary Generated'
   },
   GENERATE_NUTRITION: {
     type: 'GENERATE_NUTRITION',
-    points: 20,
-    cooldown: 60,
+    points: 30,
+    cooldown: 30,
     requiresUnique: true,
     displayName: 'Nutrition Info Generated'
   },
   GENERATE_PAIRINGS: {
     type: 'GENERATE_PAIRINGS',
-    points: 15,
+    points: 20,
     cooldown: 30,
     requiresUnique: true,
     displayName: 'Pairings Generated'
   },
   GENERATE_IMAGE: {
     type: 'GENERATE_IMAGE',
-    points: 10,
-    cooldown: 15,
-    maxPerDay: 20,
+    points: 20,
+    cooldown: 0,
+    maxPerDay: 30,
+    requiresUnique: true,
     displayName: 'AI Image Generated'
   },
   UPLOAD_IMAGE: {
@@ -80,14 +81,14 @@ export const POINT_ACTIONS: Record<string, PointAction> = {
   },
   CHAT_INTERACTION: {
     type: 'CHAT_INTERACTION',
-    points: 5,
+    points: 10,
     cooldown: 1,
     maxPerDay: 50,
     displayName: 'Chat Interaction'
   },
   RECIPE_SAVED_BY_OTHER: {
     type: 'RECIPE_SAVED_BY_OTHER',
-    points: 10,
+    points: 50,
     cooldown: 0, // no cooldown for community actions
     requiresUnique: true,
     displayName: 'Recipe Saved by Another User'
@@ -166,17 +167,43 @@ export class SpoonPointSystem {
     context?: Record<string, any>
   ): Promise<{ success: boolean; points?: number; error?: string }> {
     try {
+      console.debug("DEBUG - SpoonPoints - Awarding points:", {
+        userId: userId || 'none',
+        actionType: actionType || 'none',
+        targetId: targetId || 'none'
+      });
+      
       const action = POINT_ACTIONS[actionType];
       if (!action) {
-        return { success: false, error: 'Invalid action type' };
+        const error = `Invalid action type: ${actionType}`;
+        console.debug("DEBUG - SpoonPoints - Error:", error);
+        return { success: false, error };
       }
 
       const validation = await this.validateAction(userId, action, targetId, context);
+      console.debug("DEBUG - SpoonPoints - Validation result:", {
+        valid: validation.valid,
+        reason: validation.reason || 'none',
+        actionType,
+        cooldown: action.cooldown,
+        maxPerDay: action.maxPerDay || 'none'
+      });
+      
       if (!validation.valid) {
+        console.debug("DEBUG - SpoonPoints - Validation failed:", {
+          reason: validation.reason,
+          actionType,
+          userId: userId || 'none'
+        });
         return { success: false, error: validation.reason };
       }
 
       const points = action.getPoints ? action.getPoints(context) : action.points;
+      console.debug("DEBUG - SpoonPoints - Points to award:", {
+        points,
+        actionType,
+        userId: userId || 'none'
+      });
 
       // Create transaction record with more details
       const transaction: PointTransaction = {
@@ -194,20 +221,41 @@ export class SpoonPointSystem {
       const userPointsDoc = await getDoc(userPointsRef);
 
       if (!userPointsDoc.exists()) {
+        console.debug("DEBUG - SpoonPoints - Creating new user points document:", {
+          userId,
+          initialPoints: points
+        });
         await setDoc(userPointsRef, {
           totalPoints: points,
           transactions: [transaction]
         });
       } else {
+        console.debug("DEBUG - SpoonPoints - Updating existing user points document:", {
+          userId,
+          pointsToAdd: points,
+          currentTotal: userPointsDoc.data().totalPoints || 0
+        });
         await updateDoc(userPointsRef, {
           totalPoints: increment(points),
           transactions: arrayUnion(transaction)
         });
       }
 
+      console.debug("DEBUG - SpoonPoints - Successfully awarded points:", {
+        points,
+        actionType,
+        userId: userId || 'none',
+        targetId: targetId || 'none'
+      });
       return { success: true, points };
     } catch (error) {
-      console.error('Error awarding points:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      // Keep this one as error since it's an actual error
+      console.error("SpoonPoints - Error awarding points:", {
+        error: errorMessage,
+        actionType,
+        userId: userId || 'none'
+      });
       return { success: false, error: 'Internal error' };
     }
   }

@@ -4,6 +4,7 @@ import { db } from '../../firebase/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { getStorage } from 'firebase-admin/storage';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { SpoonPointSystem } from '../../lib/spoonPoints';
 
 // Image style options with their prompts - must match settings page
 const imageStyleOptions = {
@@ -39,7 +40,21 @@ export async function POST(req: Request) {
         console.log("Received request with userId:", userId);
 
         if (!prompt || !recipeId) {
-            return NextResponse.json({ error: "Missing prompt or recipeId" }, { status: 400 });
+            return NextResponse.json({ 
+                error: "Missing prompt or recipeId",
+                message: "Something went wrong. Please try again."
+            }, { status: 400 });
+        }
+
+        // Check if user can generate an image (cooldown/limits) but don't block generation
+        let canAwardPoints = false;
+        if (userId) {
+            const actionCheck = await SpoonPointSystem.isActionAvailable(
+                userId,
+                'GENERATE_IMAGE',
+                recipeId
+            );
+            canAwardPoints = actionCheck.available;
         }
 
         // Get user's preferred style from Firebase
@@ -83,7 +98,10 @@ export async function POST(req: Request) {
         });
 
         if (!response.data?.[0]?.url) {
-            throw new Error("No image URL in response");
+            return NextResponse.json({
+                error: "No image URL in response",
+                message: "Failed to generate image. Please try again."
+            }, { status: 500 });
         }
 
         // Download the image
@@ -108,13 +126,14 @@ export async function POST(req: Request) {
 
         return NextResponse.json({
             imageUrl: url,
-            revisedPrompt: response.data[0].revised_prompt
+            revisedPrompt: response.data[0].revised_prompt,
+            canAwardPoints
         });
     } catch (error) {
         console.error('Error generating image:', error);
-        return NextResponse.json(
-            { error: "Failed to generate image" },
-            { status: 500 }
-        );
+        return NextResponse.json({
+            error: "Failed to generate image",
+            message: "Something went wrong while generating the image. Please try again later."
+        }, { status: 500 });
     }
 } 

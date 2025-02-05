@@ -14,7 +14,7 @@ import { SearchBar } from '../components/SearchBar';
 import { RecipeCard } from '../components/RecipeCard';
 import { SpoonPointSystem } from '../lib/spoonPoints';
 
-const POINTS_FOR_LIKE = 5; // Points awarded when someone likes your recipe
+const POINTS_FOR_LIKE = 50; // Points awarded when someone likes your recipe
 
 const shimmer = (w: number, h: number) => `
 <svg width="${w}" height="${h}" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
