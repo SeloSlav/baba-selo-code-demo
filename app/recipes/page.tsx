@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   collection,
   getDocs,
@@ -73,6 +73,7 @@ const Recipes = () => {
   const auth = getAuth();
   const { showDeletePopup } = useDeleteRecipe();
   const user = auth.currentUser;
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const RECIPES_PER_PAGE = 12;
 
@@ -212,6 +213,18 @@ const Recipes = () => {
     fetchRecipes(); // Initial fetch
   }, []);
 
+  // Add click outside handler
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   // 1) Show the loading indicator if we are loading AND have no recipes yet.
   if (loading && recipes.length === 0) {
     return (
@@ -262,12 +275,45 @@ const Recipes = () => {
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
                   {pinnedRecipes.map((recipe) => (
-                    <RecipeCard 
-                      key={recipe.id} 
-                      recipe={recipe}
-                      showMenu={true}
-                      onMenuClick={(id) => setMenuOpen(id)}
-                    />
+                    <div key={recipe.id} className="relative">
+                      <RecipeCard 
+                        key={recipe.id} 
+                        recipe={recipe}
+                        showMenu={true}
+                        onMenuClick={(id) => setMenuOpen(id)}
+                      />
+                      {menuOpen === recipe.id && (
+                        <div ref={menuRef} className="absolute right-2 top-2 bg-white rounded-lg shadow-lg py-2 z-50">
+                          <button
+                            onClick={() => handlePinToggle(recipe.id, recipe.pinned || false)}
+                            disabled={loadingPinAction === recipe.id}
+                            className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
+                          >
+                            <FontAwesomeIcon 
+                              icon={faThumbtack} 
+                              className={`transform transition-all duration-300 ${
+                                recipe.pinned ? 'rotate-[45deg] scale-110' : 'hover:scale-110'
+                              }`}
+                            />
+                            {loadingPinAction === recipe.id ? (
+                              <span className="flex items-center">
+                                <div className="w-4 h-4 border-2 border-gray-500 border-t-transparent rounded-full animate-spin mr-2"></div>
+                                {recipe.pinned ? 'Unpinning...' : 'Pinning...'}
+                              </span>
+                            ) : (
+                              <span>{recipe.pinned ? 'Unpin Recipe' : 'Pin Recipe'}</span>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => handleDelete(recipe.id, recipe.recipeTitle)}
+                            className="w-full px-4 py-2 text-left text-red-600 hover:bg-gray-100 flex items-center gap-2"
+                          >
+                            <FontAwesomeIcon icon={faTrashCan} />
+                            <span>Delete Recipe</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>
@@ -279,12 +325,45 @@ const Recipes = () => {
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
                   {unpinnedRecipes.map((recipe) => (
-                    <RecipeCard 
-                      key={recipe.id} 
-                      recipe={recipe}
-                      showMenu={true}
-                      onMenuClick={(id) => setMenuOpen(id)}
-                    />
+                    <div key={recipe.id} className="relative">
+                      <RecipeCard 
+                        key={recipe.id} 
+                        recipe={recipe}
+                        showMenu={true}
+                        onMenuClick={(id) => setMenuOpen(id)}
+                      />
+                      {menuOpen === recipe.id && (
+                        <div ref={menuRef} className="absolute right-2 top-2 bg-white rounded-lg shadow-lg py-2 z-50">
+                          <button
+                            onClick={() => handlePinToggle(recipe.id, recipe.pinned || false)}
+                            disabled={loadingPinAction === recipe.id}
+                            className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
+                          >
+                            <FontAwesomeIcon 
+                              icon={faThumbtack} 
+                              className={`transform transition-all duration-300 ${
+                                recipe.pinned ? 'rotate-[45deg] scale-110' : 'hover:scale-110'
+                              }`}
+                            />
+                            {loadingPinAction === recipe.id ? (
+                              <span className="flex items-center">
+                                <div className="w-4 h-4 border-2 border-gray-500 border-t-transparent rounded-full animate-spin mr-2"></div>
+                                {recipe.pinned ? 'Unpinning...' : 'Pinning...'}
+                              </span>
+                            ) : (
+                              <span>{recipe.pinned ? 'Unpin Recipe' : 'Pin Recipe'}</span>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => handleDelete(recipe.id, recipe.recipeTitle)}
+                            className="w-full px-4 py-2 text-left text-red-600 hover:bg-gray-100 flex items-center gap-2"
+                          >
+                            <FontAwesomeIcon icon={faTrashCan} />
+                            <span>Delete Recipe</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>
