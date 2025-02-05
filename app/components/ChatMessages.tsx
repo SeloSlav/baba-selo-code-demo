@@ -272,7 +272,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                 
                 if (pointsResult.success) {
                     showPointsToast(pointsResult.points!, 'Recipe saved successfully!');
-                    message += ` You earned ${pointsResult.points} spoon points! 🥄✨ Click your recipe to add mouthwatering photos, discover perfect pairings, and unlock more rewards!`;
+                    message += ` You earned ${pointsResult.points} spoons! 🥄✨ Click your recipe to add mouthwatering photos, discover perfect pairings, and unlock more rewards!`;
                 } else if (pointsResult.error) {
                     // Optionally show why points weren't awarded
                     console.log('Points not awarded:', pointsResult.error);

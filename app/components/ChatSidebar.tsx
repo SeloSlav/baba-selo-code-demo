@@ -1,7 +1,7 @@
 // app/components/ChatSidebar.tsx
 import React, { useState, useEffect, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faHamburger, faPersonRifle, faPencilRuler, faClose } from "@fortawesome/free-solid-svg-icons";
+import { faHamburger, faPersonRifle, faPencilRuler, faClose, faThumbtack, faTrashAlt } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "../context/AuthContext";
 import { RecipeList } from "./RecipeList";
 import Link from "next/link";
@@ -45,6 +45,45 @@ export const ChatSidebar = ({
     useEffect(() => {
         setIsHydrated(true);
     }, []);
+
+    const renderMenu = () => {
+        return (
+            <div className="absolute right-0 z-40 bg-white rounded-xl shadow-lg w-48 border border-gray-200 p-2">
+                <ul className="space-y-1">
+                    <li
+                        className="flex items-center px-3 py-2 rounded-md hover:bg-gray-100 cursor-pointer disabled:opacity-50"
+                        onClick={() => !loadingPinAction && handlePinUnpin(!!recipe.pinned)}
+                    >
+                        {loadingPinAction ? (
+                            <>
+                                <div className="w-4 h-4 mr-3">
+                                    <div className="w-full h-full border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                                </div>
+                                <span>{recipe.pinned ? 'Unpinning...' : 'Pinning...'}</span>
+                            </>
+                        ) : (
+                            <>
+                                <FontAwesomeIcon
+                                    icon={faThumbtack}
+                                    className={`w-4 h-4 mr-3 transform transition-all duration-300 ${
+                                        recipe.pinned ? 'rotate-[45deg] scale-110 text-yellow-500' : 'hover:scale-110 text-gray-400'
+                                    }`}
+                                />
+                                <span>{recipe.pinned ? "Unpin recipe" : "Pin recipe"}</span>
+                            </>
+                        )}
+                    </li>
+                    <li
+                        className="flex items-center px-3 py-2 rounded-md hover:bg-gray-100 cursor-pointer text-red-500"
+                        onClick={() => handleDelete(recipe.id, recipe.recipeTitle)}
+                    >
+                        <FontAwesomeIcon icon={faTrashAlt} className="w-4 h-4 mr-3" />
+                        <span>Delete recipe</span>
+                    </li>
+                </ul>
+            </div>
+        );
+    };
 
     return (
         <div>

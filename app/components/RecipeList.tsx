@@ -146,7 +146,9 @@ export const RecipeList = () => {
               <>
                 <FontAwesomeIcon
                   icon={faThumbtack}
-                  className={`w-4 h-4 mr-3 ${isPinned ? "text-yellow-500" : "text-[#5d5d5d]"}`}
+                  className={`w-4 h-4 mr-3 transform transition-all duration-300 ${
+                    isPinned ? 'rotate-[45deg] scale-110 text-yellow-500' : 'hover:scale-110 text-[#5d5d5d]'
+                  }`}
                 />
                 <span>{isPinned ? "Unpin recipe" : "Pin recipe"}</span>
               </>

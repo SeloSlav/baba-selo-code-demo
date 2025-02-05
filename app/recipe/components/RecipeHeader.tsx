@@ -97,7 +97,7 @@ export const RecipeHeader = ({
             <button
               onClick={handlePinToggle}
               className={`flex items-center transition-colors duration-200 ${
-                recipe.pinned ? 'text-blue-500 hover:text-blue-600' : 'text-gray-700 hover:text-gray-900'
+                recipe.pinned ? 'text-yellow-500 hover:text-yellow-600' : 'text-gray-700 hover:text-gray-900'
               }`}
             >
               <FontAwesomeIcon 

@@ -204,7 +204,7 @@ const SpoonStats = () => {
                 <FontAwesomeIcon icon={faSpoon} className="text-2xl text-yellow-600" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold">Your Spoon Stats</h1>
+                <h1 className="text-xl md:text-3xl font-bold">Your Spoon Stats</h1>
                 <p className="text-gray-600">Track your cooking achievements</p>
               </div>
             </div>
