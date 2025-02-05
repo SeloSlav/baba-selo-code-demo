@@ -61,9 +61,16 @@ export const PointsHistory: React.FC<PointsHistoryProps> = ({ transactions }) =>
             <div className="text-xs text-gray-500">{format(date, 'MMM d, yyyy h:mm a')}</div>
           </div>
         </div>
-        <div className="flex items-center text-yellow-600 ml-4">
+        <div className={`flex items-center ml-4 ${
+          transaction.actionType === 'MARKETPLACE_PURCHASE' ? 'text-red-500' : 'text-yellow-600'
+        }`}>
           <FontAwesomeIcon icon={faSpoon} className="mr-2" />
-          <span className="font-bold">+{transaction.points}</span>
+          <span className="font-bold">
+            {transaction.actionType === 'MARKETPLACE_PURCHASE' 
+              ? `-${String(transaction.points).replace(/[^0-9]/g, '')}`
+              : `+${String(transaction.points).replace(/[^0-9]/g, '')}`
+            }
+          </span>
         </div>
       </div>
     );

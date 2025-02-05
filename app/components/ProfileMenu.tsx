@@ -1,8 +1,12 @@
 // app/components/ProfileMenu.tsx
 import React, { useRef, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBookOpenReader, faGear, faHome, faSignOut, faStarOfLife, faSpoon, faCompass, faStore } from "@fortawesome/free-solid-svg-icons";
+import { faBookOpenReader, faGear, faHome, faSignOut, faStarOfLife, faSpoon, faCompass, faStore, faShieldHalved } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
+import { useAuth } from '../context/AuthContext';
+
+// List of admin UIDs
+const ADMIN_UIDS = ['B9E3AdsEAYSrcfl4yPcT1XqyIfC2'];
 
 interface ProfileMenuProps {
     isOpen: boolean;
@@ -11,15 +15,13 @@ interface ProfileMenuProps {
 }
 
 export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLogout }) => {
-    const profileMenuRef = useRef<HTMLDivElement | null>(null);
+    const menuRef = useRef<HTMLDivElement | null>(null);
+    const { user } = useAuth();
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (
-                profileMenuRef.current &&
-                !profileMenuRef.current.contains(event.target as Node)
-            ) {
-                onClose(); // Close the menu when clicking outside
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                onClose();
             }
         };
 
@@ -35,7 +37,7 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
 
     return (
         <div
-            ref={profileMenuRef}
+            ref={menuRef}
             className="absolute top-full right-0 mt-1 z-40 bg-white rounded-3xl shadow-lg w-60 border border-gray-300 p-3"
             style={{ maxHeight: 'calc(100vh - 5rem)', overflowY: 'auto' }}
         >
@@ -86,6 +88,14 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
                         <span>Settings</span>
                     </Link>
                 </li>
+                {user && ADMIN_UIDS.includes(user.uid) && (
+                    <li className="flex items-center px-4 py-2 rounded-md hover:bg-gray-100 cursor-pointer">
+                        <Link href="/admin" className="flex items-center w-full">
+                            <FontAwesomeIcon icon={faShieldHalved} className="text-[#5d5d5d] mr-3" />
+                            <span>Admin</span>
+                        </Link>
+                    </li>
+                )}
                 <hr />
                 <li className="flex items-center px-4 py-2 rounded-md hover:bg-gray-100 cursor-pointer">
                     <Link href="/upgrade" className="flex items-center w-full">

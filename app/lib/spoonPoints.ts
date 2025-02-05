@@ -98,7 +98,10 @@ export const POINT_ACTIONS: Record<string, PointAction> = {
     points: 0, // Points will be determined by the item cost
     cooldown: 0, // No cooldown for purchases
     getPoints: (context?: Record<string, any>) => {
-      return context?.cost || 0;
+      if (!context?.cost) return 0;
+      // Remove any existing signs and ensure it's negative
+      const cost = Math.abs(Number(String(context.cost).replace(/[+-]/g, '')));
+      return -cost;
     },
     displayName: 'Marketplace Purchase',
     context: {
@@ -275,6 +278,10 @@ export class SpoonPointSystem {
   }
 
   private static generateTransactionDetails(action: PointAction, context?: Record<string, any>): string {
+    if (action.type === 'MARKETPLACE_PURCHASE' && context?.details) {
+      return context.details;
+    }
+    
     let details = action.displayName;
     
     if (action.type === 'UPLOAD_IMAGE' && context?.score) {
@@ -330,4 +337,4 @@ const checkAvailability = async () => {
   setButtonEnabled(available);
   if (!available) setTooltip(reason);
 };
-*/ 
+*/    

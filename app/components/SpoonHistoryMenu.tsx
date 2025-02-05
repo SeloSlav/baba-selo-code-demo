@@ -96,16 +96,26 @@ export const SpoonHistoryMenu: React.FC<SpoonHistoryMenuProps> = ({
             {getActionEmoji(transaction.actionType)}
           </div>
           <div className="min-w-0">
-            <div className="font-medium truncate">
+            <div 
+              className="font-medium truncate"
+              title={transaction.details || POINT_ACTIONS[transaction.actionType]?.displayName}
+            >
               {transaction.details || POINT_ACTIONS[transaction.actionType]?.displayName}
             </div>
             <div className="text-xs text-gray-500">{format(date, 'MMM d, h:mm a')}</div>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center text-yellow-600 ml-2 flex-shrink-0">
+          <div className={`flex items-center ml-2 flex-shrink-0 ${
+            transaction.actionType === 'MARKETPLACE_PURCHASE' ? 'text-red-500' : 'text-yellow-600'
+          }`}>
             <FontAwesomeIcon icon={faSpoon} className="mr-1" />
-            <span className="font-bold">+{transaction.points}</span>
+            <span className="font-bold">
+              {transaction.actionType === 'MARKETPLACE_PURCHASE' 
+                ? `-${String(transaction.points).replace(/[^0-9]/g, '')}`
+                : `+${String(transaction.points).replace(/[^0-9]/g, '')}`
+              }
+            </span>
           </div>
           {!transaction.read && (
             <button

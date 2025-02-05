@@ -1,0 +1,144 @@
+import { NextResponse } from 'next/server';
+import OpenAI from 'openai';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '../../firebase/firebase';
+
+const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+});
+
+export async function POST(req: Request) {
+    try {
+        const { category, rarity } = await req.json();
+
+        // Get example items of the same category and rarity
+        const goodiesRef = collection(db, 'goodies');
+        const q = query(
+            goodiesRef,
+            where('category', '==', category),
+            where('rarity', '==', rarity)
+        );
+        const similarItems = await getDocs(q);
+
+        // Get all items to check for existing names
+        const allItems = await getDocs(collection(db, 'goodies'));
+        const existingNames = allItems.docs.map(doc => doc.data().name).join(', ');
+
+        // Get some examples of the same rarity but different category as backup
+        const qRarity = query(
+            goodiesRef,
+            where('rarity', '==', rarity)
+        );
+        const rarityItems = await getDocs(qRarity);
+
+        // Format examples for the prompt
+        const examples = similarItems.docs.map(doc => {
+            const data = doc.data();
+            return `Style reference ${data.category} item (${data.rarity}):
+Name: ${data.name}
+Description: ${data.description}
+Cost: ${data.cost} spoons
+`;
+        }).join('\n');
+
+        // Add some examples of same rarity if we don't have enough category examples
+        const rarityExamples = similarItems.docs.length < 2 ? 
+            rarityItems.docs
+                .filter(doc => doc.data().category !== category)
+                .slice(0, 2)
+                .map(doc => {
+                    const data = doc.data();
+                    return `Style reference ${data.category} item (${data.rarity}):
+Name: ${data.name}
+Description: ${data.description}
+Cost: ${data.cost} spoons
+`;
+                }).join('\n') : '';
+
+        const prompt = `Generate a UNIQUE marketplace item for a cat-themed game with the following specifications:
+Category: ${category}
+Rarity: ${rarity}
+
+IMPORTANT: Create something COMPLETELY NEW and UNIQUE. Do not reuse or slightly modify any existing items.
+The following names are already taken and cannot be used (even with slight modifications):
+${existingNames}
+
+Here are some items for STYLE REFERENCE ONLY. Match their tone and writing style, but create something entirely different:
+
+${examples}
+${rarityExamples}
+
+Guidelines for your UNIQUE creation:
+
+1. Name must be:
+   - COMPLETELY UNIQUE (not similar to any existing names listed above)
+   - Follow the style pattern but be distinctly different
+   - Be whimsical and cat-themed
+   - Match the rarity level (common items are simple, legendary items have grand/divine/celestial names)
+   - Descriptive of the item's purpose
+   - For ${category} items, consider unique ingredients/materials not used in other items
+
+2. Description must:
+   - Follow the same tone and length as the examples
+   - Be COMPLETELY UNIQUE (don't reuse themes or concepts from existing items)
+   - For ${category} items, use different ingredients/materials/effects than existing items
+   - Include magical or mystical elements for rare+ items
+   - Match the rarity's prestige level
+   - Tell its own unique story
+
+3. Cost should:
+   - Match the rarity tier:
+     * Common: 200-300 spoons
+     * Uncommon: 400-600 spoons
+     * Rare: 1000-1500 spoons
+     * Epic: 2500-3000 spoons
+     * Legendary: 5000-7500 spoons
+
+4. Image URL should follow the pattern: /marketplace/item-name.jpg (convert item name to kebab-case)
+
+Please provide the item details in the following JSON format:
+{
+    "name": "Item Name",
+    "description": "Item description...",
+    "cost": number,
+    "imageUrl": "image url path"
+}`;
+
+        const response = await openai.chat.completions.create({
+            model: "gpt-4",
+            messages: [
+                {
+                    role: "system",
+                    content: "You are a creative game item designer who specializes in creating unique, whimsical, cat-themed items. You never copy or slightly modify existing items - instead, you create entirely new concepts while matching the established style and tone. You only respond with valid JSON."
+                },
+                {
+                    role: "user",
+                    content: prompt
+                }
+            ],
+            temperature: 0.9, // Slightly higher temperature for more creativity while maintaining style
+        });
+
+        const content = response.choices[0].message.content;
+        if (!content) {
+            throw new Error('No content in response');
+        }
+
+        // Parse the JSON response
+        const itemData = JSON.parse(content);
+
+        // Convert item name to kebab case for image URL if not already done
+        if (!itemData.imageUrl.includes('-')) {
+            const kebabName = itemData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+            itemData.imageUrl = `/marketplace/${kebabName}.jpg`;
+        }
+
+        return NextResponse.json(itemData);
+    } catch (error) {
+        console.error('Error generating goodie:', error);
+        return NextResponse.json(
+            { error: 'Failed to generate goodie' },
+            { status: 500 }
+        );
+    }
+} 
