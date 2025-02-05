@@ -39,15 +39,18 @@ interface Recipe {
 const Recipes = () => {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [filteredRecipes, setFilteredRecipes] = useState<Recipe[]>([]);
-  const [lastVisible, setLastVisible] = useState<any>(null); // Tracks the last document for pagination
+  const [lastVisible, setLastVisible] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const [loadingPinAction, setLoadingPinAction] = useState<string | null>(null);
   const auth = getAuth();
   const { showDeletePopup } = useDeleteRecipe();
   const user = auth.currentUser;
+
+  const RECIPES_PER_PAGE = 12;
 
   // Split recipes into pinned and unpinned
   const pinnedRecipes = filteredRecipes.filter(recipe => recipe.pinned);
@@ -127,20 +130,24 @@ const Recipes = () => {
 
     try {
       const recipesRef = collection(db, "recipes");
-      const recipesQuery = loadMore
-        ? query(
-            recipesRef,
-            where("userId", "==", user.uid),
-            orderBy("createdAt", "desc"),
-            startAfter(lastVisible),
-            limit(20)
-          )
-        : query(
-            recipesRef,
-            where("userId", "==", user.uid),
-            orderBy("createdAt", "desc"),
-            limit(20)
-          );
+      let recipesQuery;
+      
+      if (loadMore && lastVisible) {
+        recipesQuery = query(
+          recipesRef,
+          where("userId", "==", user.uid),
+          orderBy("createdAt", "desc"),
+          startAfter(lastVisible),
+          limit(RECIPES_PER_PAGE)
+        );
+      } else {
+        recipesQuery = query(
+          recipesRef,
+          where("userId", "==", user.uid),
+          orderBy("createdAt", "desc"),
+          limit(RECIPES_PER_PAGE)
+        );
+      }
 
       const querySnapshot = await getDocs(recipesQuery);
       const fetchedRecipes: Recipe[] = querySnapshot.docs.map((doc) => ({
@@ -150,13 +157,19 @@ const Recipes = () => {
         userId: doc.data().userId || "",
       }));
 
-      const newRecipes = loadMore 
-        ? [...recipes, ...fetchedRecipes]
-        : fetchedRecipes;
-      
-      setRecipes(newRecipes);
-      setFilteredRecipes(newRecipes);
-      setLastVisible(querySnapshot.docs[querySnapshot.docs.length - 1]); // Update the last document
+      // Update lastVisible for pagination
+      const lastDoc = querySnapshot.docs[querySnapshot.docs.length - 1];
+      setLastVisible(lastDoc);
+      setHasMore(querySnapshot.docs.length === RECIPES_PER_PAGE);
+
+      if (loadMore) {
+        const newRecipes = [...recipes, ...fetchedRecipes];
+        setRecipes(newRecipes);
+        setFilteredRecipes(newRecipes);
+      } else {
+        setRecipes(fetchedRecipes);
+        setFilteredRecipes(fetchedRecipes);
+      }
     } catch (error) {
       console.error("Error fetching recipes:", error);
     }
@@ -189,69 +202,97 @@ const Recipes = () => {
   // 2) Once recipes are loaded (or we're loading more recipes), show the list.
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-4">My Recipes</h1>
-        <SearchBar 
-          searchTerm={searchTerm} 
-          setSearchTerm={setSearchTerm} 
-        />
+      {/* Sticky header */}
+      <div className="sticky top-0 bg-white z-10 py-4 -mx-4 px-4 shadow-sm">
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-3xl font-bold mb-4">My Recipes</h1>
+          <SearchBar 
+            searchTerm={searchTerm} 
+            setSearchTerm={setSearchTerm} 
+          />
+        </div>
       </div>
 
-      {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3, 4, 5, 6].map((n) => (
-            <div key={n} className="animate-pulse">
-              <div className="bg-gray-200 h-48 rounded-xl mb-4"></div>
-              <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-            </div>
-          ))}
-        </div>
-      ) : filteredRecipes.length > 0 ? (
-        <div>
-          {/* Pinned Recipes */}
-          <div className="mb-8">
-            <h2 className="text-gray-600 text-sm font-semibold pb-2 border-b">
-              📌 Pinned Recipes
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
-              {pinnedRecipes.map((recipe) => (
-                <RecipeCard 
-                  key={recipe.id} 
-                  recipe={recipe}
-                  showMenu={true}
-                  onMenuClick={(id) => setMenuOpen(id)}
-                />
-              ))}
-            </div>
+      {/* Content with top padding to account for sticky header */}
+      <div className="mt-8">
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((n) => (
+              <div key={n} className="animate-pulse">
+                <div className="bg-gray-200 h-48 rounded-xl mb-4"></div>
+                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+              </div>
+            ))}
           </div>
+        ) : filteredRecipes.length > 0 ? (
+          <>
+            <div>
+              {/* Pinned Recipes */}
+              <div className="mb-8">
+                <h2 className="text-gray-600 text-sm font-semibold pb-2 border-b">
+                  📌 Pinned Recipes
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+                  {pinnedRecipes.map((recipe) => (
+                    <RecipeCard 
+                      key={recipe.id} 
+                      recipe={recipe}
+                      showMenu={true}
+                      onMenuClick={(id) => setMenuOpen(id)}
+                    />
+                  ))}
+                </div>
+              </div>
 
-          {/* All Recipes */}
-          <div>
-            <h2 className="text-gray-600 text-sm font-semibold pb-2 border-b">
-              🍳 All Recipes
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
-              {unpinnedRecipes.map((recipe) => (
-                <RecipeCard 
-                  key={recipe.id} 
-                  recipe={recipe}
-                  showMenu={true}
-                  onMenuClick={(id) => setMenuOpen(id)}
-                />
-              ))}
+              {/* All Recipes */}
+              <div>
+                <h2 className="text-gray-600 text-sm font-semibold pb-2 border-b">
+                  🍳 All Recipes
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+                  {unpinnedRecipes.map((recipe) => (
+                    <RecipeCard 
+                      key={recipe.id} 
+                      recipe={recipe}
+                      showMenu={true}
+                      onMenuClick={(id) => setMenuOpen(id)}
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
+
+            {/* Load More Button */}
+            {!searchTerm && hasMore && (
+              <div className="flex justify-center mt-8">
+                <button
+                  onClick={() => fetchRecipes(true)}
+                  disabled={loadingMore}
+                  className="bg-black text-white px-6 py-3 rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loadingMore ? (
+                    <div className="flex items-center">
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                      Loading...
+                    </div>
+                  ) : (
+                    'Load More Recipes'
+                  )}
+                </button>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="text-center py-12">
+            <div className="text-4xl mb-4">🤔</div>
+            <h3 className="text-xl font-semibold mb-2">No recipes found</h3>
+            <p className="text-gray-600">
+              Try adjusting your search or check back later for new recipes
+            </p>
           </div>
-        </div>
-      ) : (
-        <div className="text-center py-12">
-          <div className="text-4xl mb-4">🤔</div>
-          <h3 className="text-xl font-semibold mb-2">No recipes found</h3>
-          <p className="text-gray-600">
-            Try adjusting your search or check back later for new recipes
-          </p>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

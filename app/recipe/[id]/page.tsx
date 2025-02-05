@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation"; // Use useParams and useRouter for navigation
 import { db, storage } from "../../firebase/firebase"; // Import Firestore db and storage
-import { doc, getDoc, deleteDoc, updateDoc, query, getDocs, collection, where, addDoc, serverTimestamp } from "firebase/firestore"; // Firestore methods
+import { doc, getDoc, deleteDoc, updateDoc, query, getDocs, collection, where, addDoc, serverTimestamp, arrayUnion, increment, Timestamp } from "firebase/firestore"; // Firestore methods
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { useEffect, useState, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -55,6 +55,8 @@ const toBase64 = (str: string) =>
     ? Buffer.from(str).toString('base64')
     : window.btoa(str);
 
+const POINTS_FOR_LIKE = 5; // Points awarded when someone likes your recipe
+
 const RecipeDetails = () => {
   const [recipe, setRecipe] = useState<Recipe | null>(null); // State to store the recipe details
   const [checkedDirections, setCheckedDirections] = useState<boolean[]>([]); // Track checked directions
@@ -88,6 +90,7 @@ const RecipeDetails = () => {
   const { showDeletePopup } = useDeleteRecipe();
   const { user } = useAuth();
   const { showPointsToast } = usePoints();
+  const [currentUsername, setCurrentUsername] = useState<string>('');
 
   useEffect(() => {
     if (!id) return; // If no id, do nothing
@@ -122,6 +125,8 @@ const RecipeDetails = () => {
             dishPairings: data.dishPairings || "",
             pinned: data.pinned || false,
             lastPinnedAt: data.lastPinnedAt || null,
+            likes: data.likes || [],
+            username: data.username || "Anonymous Chef"
           });
           setNotes(data.recipeNotes || "");
           // Set the states from saved data if they exist
@@ -704,6 +709,69 @@ const RecipeDetails = () => {
     }
   };
 
+  // Add function to fetch current username
+  const fetchCurrentUsername = async () => {
+    if (!user) return;
+    try {
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      if (userDoc.exists()) {
+        setCurrentUsername(userDoc.data().username || 'Anonymous Chef');
+      }
+    } catch (error) {
+      console.error("Error fetching username:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchCurrentUsername();
+  }, [user]);
+
+  // Add handleLike function
+  const handleLike = async () => {
+    if (!user || !recipe) return;
+
+    try {
+      const recipeRef = doc(db, "recipes", recipe.id);
+      const currentLikes = recipe.likes || [];
+      const hasLiked = currentLikes.includes(user.uid);
+      
+      // If already liked, do nothing
+      if (hasLiked) {
+        return;
+      }
+
+      // Like (one-way action)
+      await updateDoc(recipeRef, {
+        likes: arrayUnion(user.uid)
+      });
+      
+      // Update local state
+      setRecipe(prev => prev ? {
+        ...prev,
+        likes: [...(prev.likes || []), user.uid]
+      } : null);
+
+      // Award points to recipe owner if it's not their own recipe
+      if (recipe.userId !== user.uid) {
+        const spoonRef = doc(db, "spoonPoints", recipe.userId);
+        const transaction = {
+          actionType: "RECIPE_SAVED_BY_OTHER",
+          points: POINTS_FOR_LIKE,
+          timestamp: Timestamp.now(),
+          targetId: recipe.id,
+          details: `Recipe "${recipe.recipeTitle}" liked by @${currentUsername}`
+        };
+
+        await updateDoc(spoonRef, {
+          totalPoints: increment(POINTS_FOR_LIKE),
+          transactions: arrayUnion(transaction)
+        });
+      }
+    } catch (error) {
+      console.error("Error updating like:", error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 py-8 px-4">
       {recipe ? (
@@ -729,6 +797,8 @@ const RecipeDetails = () => {
             handleCopyRecipe={handleCopyRecipe}
             handlePinToggle={handlePinToggle}
             handleDelete={handleDelete}
+            handleLike={handleLike}
+            currentUser={user}
           />
 
           <RecipeImage

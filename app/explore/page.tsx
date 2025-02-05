@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { db } from '../firebase/firebase';
-import { collection, query, orderBy, getDocs, doc, updateDoc, arrayUnion, arrayRemove, Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, doc, updateDoc, arrayUnion, arrayRemove, Timestamp, increment, getDoc, startAfter, limit } from 'firebase/firestore';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSearch, faHeart } from '@fortawesome/free-solid-svg-icons';
 import { useAuth } from '../context/AuthContext';
@@ -12,6 +12,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { SearchBar } from '../components/SearchBar';
 import { RecipeCard } from '../components/RecipeCard';
+import { SpoonPointSystem } from '../lib/spoonPoints';
 
 const POINTS_FOR_LIKE = 5; // Points awarded when someone likes your recipe
 
@@ -38,23 +39,44 @@ export default function ExplorePage() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [lastVisible, setLastVisible] = useState<any>(null);
+  const [hasMore, setHasMore] = useState(true);
   const { user } = useAuth();
   const { showPointsToast } = usePoints();
+  const [currentUsername, setCurrentUsername] = useState<string>('');
+
+  const RECIPES_PER_PAGE = 12;
 
   const isRecipeComplete = (recipe: Recipe) => {
     return recipe.recipeSummary && 
-           recipe.macroInfo && 
-           recipe.dishPairings && 
-           recipe.imageURL;
+           recipe.imageURL; // Simplified conditions to just require summary and image
   };
 
-  const fetchRecipes = async () => {
+  const fetchRecipes = async (loadMore = false) => {
     try {
-      setLoading(true);
-      const recipesQuery = query(
-        collection(db, "recipes"),
-        orderBy("lastPinnedAt", "desc")
-      );
+      if (loadMore) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+      }
+
+      let recipesQuery;
+      if (loadMore && lastVisible) {
+        recipesQuery = query(
+          collection(db, "recipes"),
+          orderBy("createdAt", "desc"),
+          startAfter(lastVisible),
+          limit(RECIPES_PER_PAGE)
+        );
+      } else {
+        recipesQuery = query(
+          collection(db, "recipes"),
+          orderBy("createdAt", "desc"),
+          limit(RECIPES_PER_PAGE)
+        );
+      }
+
       const recipeDocs = await getDocs(recipesQuery);
       
       // Get all user documents to map usernames
@@ -65,25 +87,53 @@ export default function ExplorePage() {
         userMap.set(doc.id, doc.data().username);
       });
 
-      const allRecipes = recipeDocs.docs
+      const fetchedRecipes = recipeDocs.docs
         .map(doc => ({
           id: doc.id,
           ...doc.data(),
-          username: userMap.get(doc.data().userId)
+          username: userMap.get(doc.data().userId),
+          likes: doc.data().likes || []
         })) as Recipe[];
 
       // Filter for completed recipes only
-      const completedRecipes = allRecipes.filter(isRecipeComplete);
-      setRecipes(completedRecipes);
+      const completedRecipes = fetchedRecipes.filter(isRecipeComplete);
+
+      // Update lastVisible for pagination
+      const lastDoc = recipeDocs.docs[recipeDocs.docs.length - 1];
+      setLastVisible(lastDoc);
+      setHasMore(recipeDocs.docs.length === RECIPES_PER_PAGE);
+
+      if (loadMore) {
+        setRecipes(prev => [...prev, ...completedRecipes]);
+      } else {
+        setRecipes(completedRecipes);
+      }
     } catch (error) {
       console.error("Error fetching recipes:", error);
     } finally {
-      setLoading(false);
+      if (loadMore) {
+        setLoadingMore(false);
+      } else {
+        setLoading(false);
+      }
+    }
+  };
+
+  const fetchCurrentUsername = async () => {
+    if (!user) return;
+    try {
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      if (userDoc.exists()) {
+        setCurrentUsername(userDoc.data().username || 'Anonymous Chef');
+      }
+    } catch (error) {
+      console.error("Error fetching username:", error);
     }
   };
 
   useEffect(() => {
     fetchRecipes();
+    fetchCurrentUsername();
   }, []);
 
   const handleLike = async (recipe: Recipe) => {
@@ -94,44 +144,36 @@ export default function ExplorePage() {
       const currentLikes = recipe.likes || [];
       const hasLiked = currentLikes.includes(user.uid);
       
+      // If already liked, do nothing
       if (hasLiked) {
-        // Unlike
-        await updateDoc(recipeRef, {
-          likes: arrayRemove(user.uid)
-        });
-        setRecipes(prev => prev.map(r => 
-          r.id === recipe.id 
-            ? { ...r, likes: r.likes?.filter(id => id !== user.uid) }
-            : r
-        ));
-      } else {
-        // Like
-        await updateDoc(recipeRef, {
-          likes: arrayUnion(user.uid)
-        });
-        setRecipes(prev => prev.map(r => 
-          r.id === recipe.id 
-            ? { ...r, likes: [...(r.likes || []), user.uid] }
-            : r
-        ));
+        return;
+      }
 
-        // Add points and transaction record for the recipe owner
-        if (recipe.userId !== user.uid) {
-          const spoonRef = doc(db, "spoonPoints", recipe.userId);
-          await updateDoc(spoonRef, {
-            points: POINTS_FOR_LIKE,
-            transactions: arrayUnion({
-              type: "like",
-              points: POINTS_FOR_LIKE,
-              timestamp: Timestamp.now(),
-              description: `${user.displayName || 'Someone'} liked your recipe "${recipe.recipeTitle}"`,
-              recipeId: recipe.id
-            })
-          });
+      // Like (one-way action)
+      await updateDoc(recipeRef, {
+        likes: arrayUnion(user.uid)
+      });
+      setRecipes(prev => prev.map(r => 
+        r.id === recipe.id 
+          ? { ...r, likes: [...(r.likes || []), user.uid] }
+          : r
+      ));
 
-          // Show points toast to the recipe owner
-          showPointsToast(POINTS_FOR_LIKE, "Someone liked your recipe!");
-        }
+      // Award points to recipe owner if it's not their own recipe
+      if (recipe.userId !== user.uid) {
+        const spoonRef = doc(db, "spoonPoints", recipe.userId);
+        const transaction = {
+          actionType: "RECIPE_SAVED_BY_OTHER",
+          points: POINTS_FOR_LIKE,
+          timestamp: Timestamp.now(),
+          targetId: recipe.id,
+          details: `Recipe "${recipe.recipeTitle}" liked by @${currentUsername}`
+        };
+
+        await updateDoc(spoonRef, {
+          totalPoints: increment(POINTS_FOR_LIKE),
+          transactions: arrayUnion(transaction)
+        });
       }
     } catch (error) {
       console.error("Error updating like:", error);
@@ -162,42 +204,70 @@ export default function ExplorePage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-4">Explore Recipes</h1>
-        <SearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+      {/* Sticky header */}
+      <div className="sticky top-0 bg-white z-10 py-4 -mx-4 px-4 shadow-sm">
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-3xl font-bold mb-4">Explore Recipes</h1>
+          <SearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+        </div>
       </div>
 
-      {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3, 4, 5, 6].map((n) => (
-            <div key={n} className="animate-pulse">
-              <div className="bg-gray-200 h-48 rounded-xl mb-4"></div>
-              <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+      {/* Content with top padding to account for sticky header */}
+      <div className="mt-8">
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((n) => (
+              <div key={n} className="animate-pulse">
+                <div className="bg-gray-200 h-48 rounded-xl mb-4"></div>
+                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+              </div>
+            ))}
+          </div>
+        ) : filteredRecipes.length > 0 ? (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredRecipes.map((recipe) => (
+                <RecipeCard 
+                  key={recipe.id} 
+                  recipe={recipe}
+                  onLike={handleLike}
+                  currentUser={user}
+                  showUsername={true}
+                />
+              ))}
             </div>
-          ))}
-        </div>
-      ) : filteredRecipes.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredRecipes.map((recipe) => (
-            <RecipeCard 
-              key={recipe.id} 
-              recipe={recipe}
-              onLike={handleLike}
-              currentUser={user}
-              showUsername={true}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-12">
-          <div className="text-4xl mb-4">🤔</div>
-          <h3 className="text-xl font-semibold mb-2">No recipes found</h3>
-          <p className="text-gray-600">
-            Try adjusting your search or check back later for new recipes
-          </p>
-        </div>
-      )}
+
+            {/* Load More Button */}
+            {!searchTerm && hasMore && (
+              <div className="flex justify-center mt-8">
+                <button
+                  onClick={() => fetchRecipes(true)}
+                  disabled={loadingMore}
+                  className="bg-black text-white px-6 py-3 rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loadingMore ? (
+                    <div className="flex items-center">
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                      Loading...
+                    </div>
+                  ) : (
+                    'Load More Recipes'
+                  )}
+                </button>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="text-center py-12">
+            <div className="text-4xl mb-4">🤔</div>
+            <h3 className="text-xl font-semibold mb-2">No recipes found</h3>
+            <p className="text-gray-600">
+              Try adjusting your search or check back later for new recipes
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 } 

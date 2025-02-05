@@ -1,7 +1,7 @@
 "use client";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCopy, faThumbtack, faTrashCan } from "@fortawesome/free-solid-svg-icons";
+import { faCopy, faThumbtack, faTrashCan, faHeart } from "@fortawesome/free-solid-svg-icons";
 import { Recipe } from "../types";
 
 interface RecipeHeaderProps {
@@ -11,6 +11,8 @@ interface RecipeHeaderProps {
   handleCopyRecipe: () => void;
   handlePinToggle: () => void;
   handleDelete: () => void;
+  handleLike?: () => void;
+  currentUser?: any;
 }
 
 export const RecipeHeader = ({
@@ -20,7 +22,11 @@ export const RecipeHeader = ({
   handleCopyRecipe,
   handlePinToggle,
   handleDelete,
+  handleLike,
+  currentUser,
 }: RecipeHeaderProps) => {
+  const hasLiked = recipe.likes?.includes(currentUser?.uid || '');
+
   return (
     <>
       {/* Recipe Classifications */}
@@ -60,6 +66,30 @@ export const RecipeHeader = ({
           <FontAwesomeIcon icon={faCopy} className="w-5 h-5" />
           <span className="ml-2 text-sm">{copySuccess ? 'Link Copied!' : 'Share Recipe'}</span>
         </button>
+
+        {/* Like button for all users */}
+        <div className="w-px h-6 bg-gray-200" /> {/* Divider */}
+        {handleLike && currentUser ? (
+          <button
+            onClick={handleLike}
+            disabled={hasLiked}
+            className={`flex items-center transition-colors duration-200 ${
+              hasLiked ? 'text-red-500 cursor-default' : 'text-gray-700 hover:text-red-500'
+            }`}
+          >
+            <FontAwesomeIcon icon={faHeart} className="w-5 h-5" />
+            <span className="ml-2 text-sm">
+              {hasLiked ? 'Liked' : 'Like Recipe'} {recipe.likes?.length ? `(${recipe.likes.length})` : ''}
+            </span>
+          </button>
+        ) : (
+          <div className={`flex items-center text-gray-500`}>
+            <FontAwesomeIcon icon={faHeart} className="w-5 h-5" />
+            <span className="ml-2 text-sm">
+              {recipe.likes?.length || 0} {recipe.likes?.length === 1 ? 'Like' : 'Likes'}
+            </span>
+          </div>
+        )}
 
         {isOwner && (
           <>
