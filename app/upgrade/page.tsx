@@ -167,7 +167,23 @@ export default function UpgradePlan() {
                             <span className="text-lg mr-3">🤔</span>
                             <span>Ask Baba Selo anything about life, cooking, etc.</span>
                         </li>
+                        <li className="flex items-start">
+                            <span className="text-lg mr-3">🌟</span>
+                            <span><strong>Unlimited spoon points</strong> - earn as many as you want!</span>
+                        </li>
+                        <li className="flex items-start">
+                            <span className="text-lg mr-3">🛍️</span>
+                            <span>Full access to the marketplace with no restrictions</span>
+                        </li>
                     </ul>
+
+                    {/* Added clarification about free tier */}
+                    <div className="mt-6 pt-6 border-t border-gray-100">
+                        <div className="flex items-center justify-center text-sm text-gray-600">
+                            <span className="mr-2">💫</span>
+                            No limits on points or core features
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
