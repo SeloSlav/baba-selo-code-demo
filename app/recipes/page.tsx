@@ -22,18 +22,42 @@ import { getAuth } from "firebase/auth";
 import { useDeleteRecipe } from "../context/DeleteRecipeContext";
 import { SearchBar } from '../components/SearchBar';
 import { RecipeCard } from '../components/RecipeCard';
+import { Recipe } from '../recipe/types';
 
-interface Recipe {
-  id: string;
+// Add type for Firestore document data
+interface RecipeDocument {
   recipeTitle: string;
-  cookingDifficulty: string;
+  recipeContent: string;
   cuisineType: string;
+  cookingDifficulty: string;
   cookingTime: string;
   diet: string[];
+  directions: string[];
+  ingredients: string[];
   imageURL?: string;
   recipeSummary?: string;
+  recipeNotes?: string;
+  macroInfo?: {
+    servings: number;
+    total: {
+      calories: number;
+      proteins: number;
+      carbs: number;
+      fats: number;
+    };
+    per_serving: {
+      calories: number;
+      proteins: number;
+      carbs: number;
+      fats: number;
+    };
+  };
+  dishPairings?: string;
   pinned?: boolean;
-  userId?: string;
+  lastPinnedAt?: string;
+  userId: string;
+  likes?: string[];
+  createdAt: any;
 }
 
 const Recipes = () => {
@@ -150,12 +174,15 @@ const Recipes = () => {
       }
 
       const querySnapshot = await getDocs(recipesQuery);
-      const fetchedRecipes: Recipe[] = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...(doc.data() as Recipe),
-        pinned: doc.data().pinned || false,
-        userId: doc.data().userId || "",
-      }));
+      const fetchedRecipes = querySnapshot.docs.map((doc) => {
+        const data = doc.data() as RecipeDocument;
+        return {
+          id: doc.id,
+          ...data,
+          pinned: data.pinned || false,
+          userId: data.userId || "",
+        };
+      }) as Recipe[];
 
       // Update lastVisible for pagination
       const lastDoc = querySnapshot.docs[querySnapshot.docs.length - 1];

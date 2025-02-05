@@ -35,6 +35,42 @@ const toBase64 = (str: string) =>
     ? Buffer.from(str).toString('base64')
     : window.btoa(str);
 
+// Add type for Firestore document data
+interface RecipeDocument {
+  recipeTitle: string;
+  recipeContent: string;
+  cuisineType: string;
+  cookingDifficulty: string;
+  cookingTime: string;
+  diet: string[];
+  directions: string[];
+  ingredients: string[];
+  imageURL?: string;
+  recipeSummary?: string;
+  recipeNotes?: string;
+  macroInfo?: {
+    servings: number;
+    total: {
+      calories: number;
+      proteins: number;
+      carbs: number;
+      fats: number;
+    };
+    per_serving: {
+      calories: number;
+      proteins: number;
+      carbs: number;
+      fats: number;
+    };
+  };
+  dishPairings?: string;
+  pinned?: boolean;
+  lastPinnedAt?: string;
+  userId: string;
+  likes?: string[];
+  createdAt: any;
+}
+
 export default function ExplorePage() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -88,12 +124,15 @@ export default function ExplorePage() {
       });
 
       const fetchedRecipes = recipeDocs.docs
-        .map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          username: userMap.get(doc.data().userId),
-          likes: doc.data().likes || []
-        })) as Recipe[];
+        .map(doc => {
+          const data = doc.data() as RecipeDocument;
+          return {
+            id: doc.id,
+            ...data,
+            username: userMap.get(data.userId),
+            likes: data.likes || []
+          };
+        }) as Recipe[];
 
       // Filter for completed recipes only
       const completedRecipes = fetchedRecipes.filter(isRecipeComplete);

@@ -8,7 +8,7 @@ import { initializeApp, getApps, cert } from 'firebase-admin/app';
 // Image style options with their prompts - must match settings page
 const imageStyleOptions = {
     "rustic-traditional": {
-        prompt: "Create this in a rustic, traditional style set in a cozy kitchen environment. The scene should feature richly detailed traditional tablecloths with classic  embroidery patterns in red and white. The style should be warm and inviting, with soft natural lighting filtering through lace curtains. Use a rich color palette with deep reds, warm woods, and cream whites typical of traditional homes. Add subtle textures that suggest handwoven fabrics and well-loved wooden surfaces. The overall effect should be nostalgic and heartwarming, like stepping into a grandmother's cherished country kitchen."
+        prompt: "Create this in a rustic, traditional style set in a cozy kitchen environment. The scene should feature richly detailed traditional tablecloths with classic embroidery patterns in red and white. The style should be warm and inviting, with soft natural lighting. Use a rich color palette with deep reds, warm woods, and cream whites typical of traditional homes. The overall effect should be nostalgic and heartwarming, like stepping into a grandmother's cherished country kitchen."
     },
     "modern-cookbook": {
         prompt: "Create this in a modern cookbook photography style with clean, professional lighting. Use soft, natural light with subtle shadows to highlight textures and details. The style should be crisp and appetizing with a shallow depth of field effect. Add a hint of styled food photography elements like carefully placed herbs or droplets. The overall effect should be contemporary and magazine-worthy."
