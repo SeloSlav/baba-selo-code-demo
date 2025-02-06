@@ -8,6 +8,7 @@ import { usePoints } from '../context/PointsContext';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { useRouter } from 'next/navigation';
 import { Goodie } from '../marketplace/types';
+import { RecipeModernizer } from './components/RecipeModernizer';
 
 // List of admin UIDs who can access this page
 const ADMIN_UIDS = ['B9E3AdsEAYSrcfl4yPcT1XqyIfC2'];
@@ -314,6 +315,9 @@ export default function AdminPage() {
     return (
         <div className="max-w-4xl mx-auto px-4 py-8">
             <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
+
+            {/* Recipe Modernizer Section */}
+            <RecipeModernizer showPointsToast={showPointsToast} />
 
             {/* Marketplace Management */}
             <div className="bg-white rounded-xl shadow-md p-6 mb-8">

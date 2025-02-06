@@ -384,7 +384,7 @@ export const ChatWindow = forwardRef(
             </div>
 
             <div className="text-center text-2xl font-semibold mb-4">
-              Ask me anything, dear.
+              Ask me anything, dear
             </div>
 
             <ChatMessages
