@@ -189,32 +189,37 @@ export default function Marketplace() {
     }
 
     return (
-        <div className="max-w-7xl mx-auto px-4 py-8">
-            <div className="text-center mb-12">
-                <h1 className="text-2xl font-bold mb-4">Marketplace</h1>
-                <p className="text-gray-600">Spend your hard-earned spoons on special goodies!</p>
-            </div>
-
-            {/* Mobile: Inventory first, Desktop: Side by side */}
-            <div className="flex flex-col lg:grid lg:grid-cols-2 gap-8">
-                {/* Your Inventory - Shows first on mobile */}
-                <div className="order-1 lg:order-2">
-                    <div className="sticky top-4">
-                        <h2 className="text-2xl font-semibold mb-6">Your Inventory</h2>
-                        <div className="max-h-[calc(100vh-12rem)] overflow-y-auto pr-2 custom-scrollbar">
-                            <UserInventory items={state.userInventory} />
-                        </div>
-                    </div>
+        <div className="min-h-[200vh]">
+            <div className="max-w-7xl mx-auto px-4 py-8">
+                <div className="flex flex-col items-center mb-12">
+                    <img src="/baba-removebg.png" alt="Baba" className="w-32 h-32 mb-4" />
+                    <h1 className="text-center text-2xl font-semibold mb-4">Marketplace</h1>
+                    <p className="text-gray-600">Spend your hard-earned spoons on special goodies!</p>
                 </div>
 
-                {/* Available Items */}
-                <div className="order-2 lg:order-1">
-                    <h2 className="text-2xl font-semibold mb-6">Available Items</h2>
-                    <div className="max-h-[calc(100vh-12rem)] overflow-y-auto pr-2 custom-scrollbar">
-                        <MarketplaceList 
-                            goodies={state.goodies} 
-                            onPurchase={handlePurchase}
-                        />
+                {/* Mobile: Inventory first, Desktop: Side by side */}
+                <div className="flex flex-col lg:grid lg:grid-cols-2 gap-8 h-[180vh]">
+                    {/* Your Inventory - Shows first on mobile */}
+                    <div className="order-1 lg:order-2 h-full overflow-hidden">
+                        <div className="h-full flex flex-col">
+                            <h2 className="text-2xl font-semibold mb-4">Your Inventory</h2>
+                            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                                <UserInventory items={state.userInventory} />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Available Items */}
+                    <div className="order-2 lg:order-1 h-full overflow-hidden">
+                        <div className="h-full flex flex-col">
+                            <h2 className="text-2xl font-semibold mb-4">Available Items</h2>
+                            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                                <MarketplaceList 
+                                    goodies={state.goodies} 
+                                    onPurchase={handlePurchase}
+                                />
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

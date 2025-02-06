@@ -1,11 +1,62 @@
 import { NextResponse } from 'next/server';
 import { SpoonPointSystem } from '../../lib/spoonPoints';
 
+// Add timer detection helper
+const isTimerRequest = (text) => {
+    const timerKeywords = ['timer', 'countdown', 'remind me in', 'set timer', 'set a timer'];
+    const lowerText = text.toLowerCase();
+    
+    // First, check if any timer keywords are present
+    const hasTimerKeyword = timerKeywords.some(keyword => lowerText.includes(keyword));
+    if (!hasTimerKeyword) return { isTimer: false, seconds: 0 };
+    
+    // Look for time patterns
+    const timePatterns = [
+        // Minutes patterns
+        /(\d+)\s*(?:minute|min|minutes|mins?)\b/i,  // "5 minutes", "5 min", "5mins"
+        /(?:timer for|set timer for|countdown for)\s*(\d+)\s*(?:minute|min|minutes|mins?)\b/i,  // "timer for 5 minutes"
+        /(?:timer for|set timer for|countdown for)\s*(\d+)(?!\s*sec)/i,  // "timer for 5" (assume minutes if no unit)
+        // Seconds patterns
+        /(\d+)\s*(?:second|sec|seconds|secs?)\b/i,  // "30 seconds", "30 sec", "30secs"
+        /(?:timer for|set timer for|countdown for)\s*(\d+)\s*(?:second|sec|seconds|secs?)\b/i,  // "timer for 30 seconds"
+    ];
+
+    for (const pattern of timePatterns) {
+        const match = lowerText.match(pattern);
+        if (match && match[1]) {
+            let seconds = parseInt(match[1]);
+            
+            // Convert to seconds if it's a minutes pattern
+            if (!pattern.source.includes('second|sec|seconds|secs')) {
+                seconds = seconds * 60;
+            }
+            
+            // Ensure the time is reasonable (between 5 seconds and 2 hours)
+            if (seconds >= 5 && seconds <= 7200) {
+                return { isTimer: true, seconds };
+            }
+        }
+    }
+    
+    return { isTimer: false, seconds: 0 };
+};
+
 export async function POST(req) {
-  const { messages, dietaryPreferences, preferredCookingOil, userId } = await req.json(); // Add userId to destructuring
+  const { messages, dietaryPreferences, preferredCookingOil, userId } = await req.json();
 
   if (!messages || !Array.isArray(messages)) {
     return NextResponse.json({ error: "Invalid or missing messages array" }, { status: 400 });
+  }
+
+  // Check for timer request in the last user message
+  const lastMessage = messages[messages.length - 1];
+  if (lastMessage.role === "user") {
+    const timerCheck = isTimerRequest(lastMessage.content);
+    if (timerCheck.isTimer && timerCheck.seconds > 0) {
+      return NextResponse.json({
+        assistantMessage: `TIMER_REQUEST_${timerCheck.seconds}`
+      });
+    }
   }
 
   const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -236,6 +287,18 @@ The user also prefers to use ${preferredCookingOil} as a cooking oil.
             hasUserId: !!userId,
             userId
         });
+    }
+
+    // Check if it's a timer request
+    const timerCheck = isTimerRequest(assistantMessage);
+    if (timerCheck.isTimer && timerCheck.seconds > 0) {
+        return new Response(
+            JSON.stringify({
+                role: "assistant",
+                content: `TIMER_REQUEST_${timerCheck.seconds}`,
+            }),
+            { status: 200 }
+        );
     }
 
     return NextResponse.json({ 

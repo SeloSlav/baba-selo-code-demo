@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { RecipeClassification } from './types';
 import { RecipeMessage } from './RecipeMessage';
 import {
@@ -50,6 +50,136 @@ const isSelo = (text: string): boolean => {
     return text.toLowerCase().includes("selo olive oil");
 };
 
+// Update Timer component to accept seconds instead of minutes
+const Timer: React.FC<{ initialSeconds: number }> = ({ initialSeconds }) => {
+    const [timeLeft, setTimeLeft] = useState(initialSeconds);
+    const [isRunning, setIsRunning] = useState(false);
+    const [hasFinished, setHasFinished] = useState(false);
+    const [isAlarmPlaying, setIsAlarmPlaying] = useState(false);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+
+        if (isRunning && timeLeft > 0) {
+            interval = setInterval(() => {
+                setTimeLeft(time => time - 1);
+            }, 1000);
+        } else if (timeLeft === 0 && isRunning) {
+            setIsRunning(false);
+            setHasFinished(true);
+            setIsAlarmPlaying(true);
+            // Play beep sound
+            audioRef.current = new Audio('/timer-beep.mp3');
+            audioRef.current.loop = true;
+            audioRef.current.play();
+        }
+
+        return () => {
+            clearInterval(interval);
+        };
+    }, [isRunning, timeLeft]);
+
+    const stopAlarm = () => {
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+        }
+        setIsAlarmPlaying(false);
+    };
+
+    const toggleTimer = () => {
+        if (timeLeft === 0) {
+            setTimeLeft(initialSeconds);
+            setHasFinished(false);
+            stopAlarm();
+        }
+        setIsRunning(!isRunning);
+    };
+
+    const resetTimer = () => {
+        setTimeLeft(initialSeconds);
+        setIsRunning(false);
+        setHasFinished(false);
+        stopAlarm();
+    };
+
+    const formatTime = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    return (
+        <div className="bg-white rounded-2xl shadow-md p-4 max-w-xs mx-auto border border-gray-200">
+            <div className="text-center mb-4">
+                <div className={`text-3xl font-bold mb-2 ${hasFinished ? 'text-red-500' : 'text-gray-800'}`}>
+                    {formatTime(timeLeft)}
+                </div>
+                <div className="text-sm text-gray-500 mb-4">
+                    {hasFinished ? 'Time\'s up!' : timeLeft >= 60 
+                        ? `${Math.floor(timeLeft / 60)} minute timer`
+                        : `${timeLeft} second timer`
+                    }
+                </div>
+            </div>
+            <div className="flex justify-center gap-2">
+                <button
+                    onClick={toggleTimer}
+                    className={`px-4 py-2 rounded-xl font-medium transition-colors ${
+                        isRunning
+                            ? 'bg-red-500 text-white hover:bg-red-600'
+                            : 'bg-black text-white hover:bg-gray-800'
+                    }`}
+                >
+                    {timeLeft === 0 ? 'Restart' : isRunning ? 'Pause' : 'Start'}
+                </button>
+                {(isRunning || timeLeft < initialSeconds) && (
+                    <button
+                        onClick={resetTimer}
+                        className="px-4 py-2 rounded-xl font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                    >
+                        Reset
+                    </button>
+                )}
+                {isAlarmPlaying && (
+                    <button
+                        onClick={stopAlarm}
+                        className="px-4 py-2 rounded-xl font-medium bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
+                    >
+                        Stop Alarm
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+};
+
+// Update the isTimerRequest function
+const isTimerRequest = (text: string): { isTimer: boolean; seconds: number } => {
+    // Check for special timer response format
+    const timerMatch = text.match(/^TIMER_REQUEST_(\d+)$/);
+    if (timerMatch) {
+        return { isTimer: true, seconds: parseInt(timerMatch[1]) };
+    }
+    return { isTimer: false, seconds: 0 };
+};
+
+// Update TimerMessage component
+const TimerMessage: React.FC<{ seconds: number; messageRef: React.RefObject<HTMLDivElement> | null }> = ({ seconds, messageRef }) => (
+    <AssistantMessageWrapper messageRef={messageRef}>
+        <div className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl">
+            <p className="mb-4">
+                Here's your {seconds >= 60 
+                    ? `${Math.floor(seconds / 60)} minute` 
+                    : `${seconds} second`
+                } timer, dear! I'll let you know when it's done. 🕒
+            </p>
+            <Timer initialSeconds={seconds} />
+        </div>
+    </AssistantMessageWrapper>
+);
+
 // Subcomponents for different message types
 const UserMessage: React.FC<{ content: string; imageUrl?: string }> = ({ content, imageUrl }) => (
     <div className="flex justify-end">
@@ -68,28 +198,42 @@ const UserMessage: React.FC<{ content: string; imageUrl?: string }> = ({ content
     </div>
 );
 
+const AssistantMessageWrapper: React.FC<{ children: React.ReactNode; messageRef: React.RefObject<HTMLDivElement> | null }> = ({ children, messageRef }) => (
+    <div ref={messageRef} className="flex items-start space-x-3">
+        <div className="flex-shrink-0 overflow-hidden rounded-full border-2 border-gray-200">
+            <img 
+                src="/apple-touch-icon.png" 
+                alt="Baba" 
+                className="w-12 h-12 object-cover scale-150"
+                style={{ objectPosition: '50% 35%', transform: 'scale(1.5)' }}
+            />
+        </div>
+        {children}
+    </div>
+);
+
 const LinkedMessage: React.FC<{ content: string; messageRef: React.RefObject<HTMLDivElement> | null }> = ({ content, messageRef }) => (
-    <div ref={messageRef} className="flex items-start space-x-2">
+    <AssistantMessageWrapper messageRef={messageRef}>
         <div
             className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl"
             dangerouslySetInnerHTML={{ __html: content }}
         />
-    </div>
+    </AssistantMessageWrapper>
 );
 
 const CalorieMessage: React.FC<{ content: any; messageRef: React.RefObject<HTMLDivElement> | null }> = ({ content, messageRef }) => (
-    <div ref={messageRef} className="flex items-start space-x-2">
+    <AssistantMessageWrapper messageRef={messageRef}>
         {renderNutritionInfo(content)}
-    </div>
+    </AssistantMessageWrapper>
 );
 
 const SeloMessage: React.FC<{ content: string; messageRef: React.RefObject<HTMLDivElement> | null }> = ({ content, messageRef }) => (
-    <div ref={messageRef} className="flex items-start space-x-2">
+    <AssistantMessageWrapper messageRef={messageRef}>
         <div className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl">
             {renderMarkdown(content)}
             {renderDiscountButton()}
         </div>
-    </div>
+    </AssistantMessageWrapper>
 );
 
 export const MessageRenderer: React.FC<MessageRendererProps> = ({
@@ -108,6 +252,11 @@ export const MessageRenderer: React.FC<MessageRendererProps> = ({
     }
 
     if (message.role === "assistant") {
+        const timerCheck = isTimerRequest(message.content);
+        if (timerCheck.isTimer && timerCheck.seconds > 0) {
+            return <TimerMessage seconds={timerCheck.seconds} messageRef={messageRef} />;
+        }
+
         if (/<a .*?<\/a>/i.test(message.content)) {
             return <LinkedMessage content={message.content} messageRef={messageRef} />;
         }
@@ -122,42 +271,46 @@ export const MessageRenderer: React.FC<MessageRendererProps> = ({
 
         if (isSelo(message.content)) {
             return (
-                <div ref={messageRef} className="flex items-start space-x-2">
+                <AssistantMessageWrapper messageRef={messageRef}>
                     <div className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl">
                         {linkifyLastSelo(message.content)}
                     </div>
-                </div>
+                </AssistantMessageWrapper>
             );
         }
 
         if (isRecipe(message.content)) {
-            return <RecipeMessage 
-                content={message.content}
-                messageRef={messageRef}
-                classification={recipeClassification || null}
-                onSuggestionClick={onSuggestionClick}
-                onAssistantResponse={onAssistantResponse}
-                setLoading={setLoading}
-                handleSaveRecipe={handleSaveRecipe}
-            />;
+            return (
+                <AssistantMessageWrapper messageRef={messageRef}>
+                    <RecipeMessage 
+                        content={message.content}
+                        messageRef={messageRef}
+                        classification={recipeClassification || null}
+                        onSuggestionClick={onSuggestionClick}
+                        onAssistantResponse={onAssistantResponse}
+                        setLoading={setLoading}
+                        handleSaveRecipe={handleSaveRecipe}
+                    />
+                </AssistantMessageWrapper>
+            );
         }
 
         if (message.content.includes("pairing") || message.content.includes("complement")) {
             return (
-                <div ref={messageRef} className="flex items-start space-x-2">
+                <AssistantMessageWrapper messageRef={messageRef}>
                     <div className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl">
                         {renderDishPairingLinks(formattedPairings[index] || message.content, onSuggestionClick)}
                     </div>
-                </div>
+                </AssistantMessageWrapper>
             );
         }
 
         return (
-            <div ref={messageRef} className="flex items-start space-x-2">
+            <AssistantMessageWrapper messageRef={messageRef}>
                 <div className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl">
                     {renderMarkdown(message.content)}
                 </div>
-            </div>
+            </AssistantMessageWrapper>
         );
     }
 

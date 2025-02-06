@@ -77,7 +77,7 @@ export const PointsHistory: React.FC<PointsHistoryProps> = ({ transactions }) =>
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6">
+    <div className="bg-white rounded-3xl shadow-lg border border-gray-300 p-6">
       <h2 className="text-xl font-semibold mb-4">Points History</h2>
       <div className="divide-y divide-gray-100 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
         {transactions && transactions.length > 0 ? (

@@ -144,7 +144,7 @@ export const SpoonHistoryMenu: React.FC<SpoonHistoryMenuProps> = ({
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-semibold">Recent Activity</h3>
-            <p className="text-sm text-gray-500">Track your cooking achievements</p>
+            <p className="text-sm text-gray-500">Track your cooking<br />achievements</p>
           </div>
           <div className="flex items-center text-yellow-600">
             <FontAwesomeIcon icon={faSpoon} className="mr-2" />
@@ -167,6 +167,8 @@ export const SpoonHistoryMenu: React.FC<SpoonHistoryMenuProps> = ({
           </div>
         )}
       </div>
+
+      <hr className="border-t border-gray-200 mb-2" />
 
       <div className="space-y-1">
         {transactions && transactions.length > 0 ? (

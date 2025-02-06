@@ -5,7 +5,7 @@ import { Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, TimeScale } from 'chart.js';
 import 'chartjs-adapter-date-fns';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSpoon, faChevronDown, faChevronUp, faLightbulb, faTrophy, faGear } from '@fortawesome/free-solid-svg-icons';
+import { faSpoon, faChevronDown, faChevronUp, faLightbulb, faTrophy, faGear, faInfoCircle, faXmark, faStar } from '@fortawesome/free-solid-svg-icons';
 import { useAuth } from '../context/AuthContext';
 import { doc, getDoc, setDoc, collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
@@ -14,6 +14,8 @@ import { format } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
 import { POINT_ACTIONS } from '../lib/spoonPoints';
 import { PointsHistory } from './components/PointsHistory';
+import { usePoints } from '../context/PointsContext';
+import { LeaderboardList } from './components/LeaderboardList';
 
 // Register ChartJS components
 ChartJS.register(
@@ -53,6 +55,7 @@ const SpoonStats = () => {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isInfoExpanded, setIsInfoExpanded] = useState(false);
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
 
   // Function to fetch leaderboard data
   const fetchLeaderboard = async () => {
@@ -64,7 +67,7 @@ const SpoonStats = () => {
         limit(25)
       );
       const leaderboardDocs = await getDocs(leaderboardQuery);
-      
+
       // Get all user documents for additional user data
       const userDocs = await Promise.all(
         leaderboardDocs.docs.map(async (doc) => {
@@ -143,21 +146,27 @@ const SpoonStats = () => {
         <h1 className="text-center text-2xl font-semibold mb-4">
           Let's see how many points you've earned, dear!
         </h1>
-        <p className="text-lg text-gray-600">Every interaction with Baba counts!</p>
+        <div className="flex items-center gap-2">
+          <p className="text-gray-600">Track your cooking achievements</p>
+          <button
+            onClick={() => setIsInfoModalOpen(true)}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+            title="Learn about spoon points"
+          >
+            <FontAwesomeIcon icon={faInfoCircle} className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Header with total points */}
-      <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+      <div className="bg-white rounded-3xl shadow-lg border border-gray-300 p-6 mb-8">
         {userData?.totalPoints ? (
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <div className="bg-yellow-100 p-4 rounded-full mr-4">
                 <FontAwesomeIcon icon={faSpoon} className="text-2xl text-yellow-600" />
               </div>
-              <div>
-                <h1 className="text-xl md:text-3xl font-bold">Your Spoon Stats</h1>
-                <p className="text-gray-600">Track your cooking achievements</p>
-              </div>
+              <h1 className="text-xl md:text-3xl font-bold">Your Spoon Stats</h1>
             </div>
             <div className="text-right">
               <div className="text-4xl font-bold text-yellow-600">{userData.totalPoints}</div>
@@ -168,7 +177,7 @@ const SpoonStats = () => {
           <div className="text-center py-8">
             <div className="text-2xl font-bold mb-4">No Points Yet!</div>
             <p className="text-gray-600 mb-6">Time to start your cooking journey with Baba!</p>
-            <Link 
+            <Link
               href="/"
               className="inline-flex items-center px-6 py-3 bg-black text-white rounded-full hover:bg-gray-800 transition-colors"
             >
@@ -178,153 +187,122 @@ const SpoonStats = () => {
           </div>
         )}
       </div>
-
-      {/* Info Section */}
-      <div className="bg-white rounded-xl shadow-lg p-6 mb-8 transition-all duration-200">
-        <button 
-          onClick={() => setIsInfoExpanded(!isInfoExpanded)}
-          className="w-full flex items-center justify-between text-left"
-        >
-          <div className="flex items-center">
-            <div className="bg-blue-100 p-2 rounded-full mr-3">
-              <FontAwesomeIcon icon={faLightbulb} className="text-blue-600" />
-            </div>
-            <h2 className="text-lg font-semibold">How do Spoon Points work?</h2>
-          </div>
-          <FontAwesomeIcon 
-            icon={isInfoExpanded ? faChevronUp : faChevronDown} 
-            className="text-gray-400"
-          />
-        </button>
-        
-        {isInfoExpanded && (
-          <div className="mt-4 space-y-4 text-gray-600 animate-fadeIn">
-            <p>
-              <span className="font-semibold">Spoon Points</span> are your cooking achievement score! 
-              Earn them by interacting with Baba Selo and building your recipe collection.
-            </p>
-            
-            <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-              <p className="font-semibold">Ways to earn points:</p>
-              <ul className="list-disc list-inside space-y-1 ml-2">
-                <li>Generating new recipes (5 points)</li>
-                <li>Generating recipe summaries (15 points)</li>
-                <li>Getting calorie and nutritional information (20 points)</li>
-                <li>Discovering perfect dish pairings (15 points)</li>
-                <li>Generating AI recipe images (10 points)</li>
-                <li>Uploading your own recipe photos (250-1000 points for authentic food photos, 0 points if unrelated)</li>
-                <li>Chatting with Baba about your recipe (5 points per meaningful interaction)</li>
-                <li>Having others save your shared recipes (10 points per save)</li>
-              </ul>
-            </div>
-
-            <div className="bg-yellow-50 rounded-lg p-4">
-              <p className="font-semibold text-yellow-800">🌟 Pro tips:</p>
-              <ul className="list-disc list-inside space-y-1 ml-2 text-yellow-800">
-                <li>Completing all recipe sections in one session earns bonus points!</li>
-                <li>Regular interactions with Baba unlock special achievements</li>
-                <li>Try asking Baba about traditional cooking techniques</li>
-                <li>Share your recipes to earn points from the community</li>
-              </ul>
-            </div>
-
-            <div className="bg-blue-50 rounded-lg p-4">
-              <p className="font-semibold text-blue-800">⚡ Important Notes:</p>
-              <ul className="list-disc list-inside space-y-1 ml-2 text-blue-800">
-                <li>Each activity has hourly and daily limits - experiment to discover them!</li>
-                <li>Submitting the same recipes repeatedly won't earn points - get creative!</li>
-                <li>Points are awarded for meaningful interactions, not repetitive actions</li>
-                <li>The more unique and diverse your contributions, the more points you can earn</li>
-              </ul>
-            </div>
-
-            <div className="bg-green-50 rounded-lg p-4 mt-4">
-              <p className="font-semibold text-green-800">🎁 Coming Soon:</p>
-              <ul className="list-disc list-inside space-y-1 ml-2 text-green-800">
-                <li>Exclusive discounts on SELO olive oil and partnering brands</li>
-                <li>Special rewards and free product giveaways</li>
-                <li>Seasonal cooking contests with exciting prizes</li>
-                <li>Early access to new Baba Selo features</li>
-              </ul>
-              <p className="mt-2 text-sm text-green-700 italic">Baba Selo is currently finalizing these exciting rewards - keep earning those points!</p>
-            </div>
-          </div>
-        )}
-      </div>
-
       {/* Leaderboard section */}
-      <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-        <h2 className="text-xl font-semibold mb-6">Global Leaderboard</h2>
-        {leaderboard.length > 0 ? (
-          <div className="space-y-4">
-            {leaderboard.map((entry, index) => (
-              <div
-                key={entry.userId}
-                className="flex items-center justify-between p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
-              >
-                <div className="flex items-center">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center"
-                    style={{
-                      background: index === 0 ? 'linear-gradient(135deg, #FFD700, #FFA500)' :
-                                index === 1 ? 'linear-gradient(135deg, #C0C0C0, #E0E0E0)' :
-                                index === 2 ? 'linear-gradient(135deg, #CD7F32, #DEB887)' :
-                                'bg-yellow-100'
-                    }}
-                  >
-                    {index < 3 ? (
-                      <FontAwesomeIcon 
-                        icon={faTrophy} 
-                        className={`${
-                          index === 0 ? 'text-yellow-600' :
-                          index === 1 ? 'text-gray-600' :
-                          'text-orange-600'
-                        }`}
-                      />
-                    ) : (
-                      <span className="font-bold text-yellow-600">#{index + 1}</span>
-                    )}
-                  </div>
-                  <div className="ml-4">
-                    <div className="flex items-center gap-2">
-                      <div className="font-semibold">
-                        {entry.username === 'Anonymous Chef' && entry.userId === user?.uid ? (
-                          <span className="text-gray-400">Set your username</span>
-                        ) : (
-                          entry.username
-                        )}
-                      </div>
-                      {entry.userId === user?.uid && entry.username === 'Anonymous Chef' && (
-                        <Link 
-                          href="/settings"
-                          className="inline-flex items-center gap-1 text-xs px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full hover:bg-yellow-200 transition-colors"
-                        >
-                          <FontAwesomeIcon icon={faGear} className="text-xs" />
-                          <span>Set Username</span>
-                        </Link>
-                      )}
-                      {entry.userId === user?.uid && entry.username !== 'Anonymous Chef' && (
-                        <div className="text-xs text-yellow-600">That's you!</div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center">
-                  <FontAwesomeIcon icon={faSpoon} className="text-yellow-600 mr-2" />
-                  <span className="font-bold">{entry.totalPoints.toLocaleString()}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center text-gray-500 py-8">
-            No spoon points recorded yet. Start interacting with recipes to earn points!
-          </div>
-        )}
-      </div>
+      <LeaderboardList leaderboard={leaderboard} currentUserId={user?.uid}/>
 
       {/* Points History */}
-      {userData && <PointsHistory transactions={userData.transactions} />}
+      {userData && (
+        <PointsHistory transactions={userData.transactions} />
+      )}
 
+      {/* Info Modal */}
+      {isInfoModalOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+          onClick={() => setIsInfoModalOpen(false)}
+        >
+          <div
+            className="bg-white rounded-3xl shadow-xl max-w-2xl w-full max-h-[80vh] relative"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-bold text-gray-900">How Do Spoon Points Work?</h2>
+              <button
+                onClick={() => setIsInfoModalOpen(false)}
+                className="text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                <FontAwesomeIcon icon={faXmark} className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-4 sm:p-6 overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(80vh - 140px)' }}>
+              <div className="space-y-6">
+                <p>
+                  <span className="font-semibold">Spoon Points</span> are your cooking achievement score!
+                  Earn them by interacting with Baba Selo and building your recipe collection.
+                </p>
+
+                <div className="bg-yellow-50 rounded-lg p-4 sm:p-6 space-y-4 border border-yellow-100">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-yellow-100 p-3 rounded-full flex-shrink-0">
+                      <FontAwesomeIcon icon={faSpoon} className="text-yellow-600 w-5 h-5" />
+                    </div>
+                    <h3 className="font-semibold text-yellow-900 text-lg">Ways to earn points</h3>
+                  </div>
+                  <div className="grid gap-2">
+                    {[
+                      { action: "Generating new recipes", points: "5", emoji: "✨" },
+                      { action: "Generating recipe summaries", points: "15", emoji: "📝" },
+                      { action: "Getting calorie and nutritional information", points: "20", emoji: "📊" },
+                      { action: "Discovering perfect dish pairings", points: "15", emoji: "🍷" },
+                      { action: "Generating AI recipe images", points: "10", emoji: "🎨" },
+                      { action: "Uploading your own recipe photos", points: "250-1000", note: "(for authentic food photos)", emoji: "📸" },
+                      { action: "Chatting with Baba about your recipe", points: "5", note: "(per meaningful interaction)", emoji: "💬" },
+                      { action: "Having others like your shared recipes", points: "10", note: "(per like)", emoji: "❤️" }
+                    ].map((item, index) => (
+                      <div
+                        key={index}
+                        className="grid grid-cols-[2rem_1fr_auto] items-start bg-white p-3 rounded-lg hover:bg-yellow-50 transition-all duration-200 border border-yellow-100 gap-3"
+                      >
+                        <span className="text-xl" role="img" aria-label={item.action}>
+                          {item.emoji}
+                        </span>
+                        <div className="min-w-0">
+                          <div className="text-yellow-900 break-words">
+                            {item.action}
+                          </div>
+                          {item.note &&
+                            <div className="text-sm text-yellow-600">
+                              {item.note}
+                            </div>
+                          }
+                        </div>
+                        <div className="font-medium text-yellow-700 flex items-center gap-2 bg-yellow-100 px-3 py-1 rounded-full whitespace-nowrap">
+                          <FontAwesomeIcon icon={faSpoon} className="w-3 h-3" />
+                          {item.points}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-yellow-50 rounded-lg p-4">
+                  <p className="font-semibold text-yellow-800">🌟 Pro tips:</p>
+                  <ul className="list-disc list-inside space-y-1 ml-2 text-yellow-800">
+                    <li>Completing all recipe sections in one session earns bonus points!</li>
+                    <li>Regular interactions with Baba unlock special achievements</li>
+                    <li>Try asking Baba about traditional cooking techniques</li>
+                    <li>Share your recipes to earn points from the community</li>
+                  </ul>
+                </div>
+
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <p className="font-semibold text-blue-800">⚡ Important Notes:</p>
+                  <ul className="list-disc list-inside space-y-1 ml-2 text-blue-800">
+                    <li>Each activity has hourly and daily limits - experiment to discover them!</li>
+                    <li>Submitting the same recipes repeatedly won't earn points - get creative!</li>
+                    <li>Points are awarded for meaningful interactions, not repetitive actions</li>
+                    <li>The more unique and diverse your contributions, the more points you can earn</li>
+                  </ul>
+                </div>
+
+                <div className="bg-green-50 rounded-lg p-4">
+                  <p className="font-semibold text-green-800">🎁 Coming Soon:</p>
+                  <ul className="list-disc list-inside space-y-1 ml-2 text-green-800">
+                    <li>Exclusive discounts on SELO olive oil and partnering brands</li>
+                    <li>Special rewards and free product giveaways</li>
+                    <li>Seasonal cooking contests with exciting prizes</li>
+                    <li>Early access to new Baba Selo features</li>
+                  </ul>
+                  <p className="mt-2 text-sm text-green-700 italic">Baba Selo is currently finalizing these exciting rewards - keep earning those points!</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
