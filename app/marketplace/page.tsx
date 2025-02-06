@@ -139,8 +139,8 @@ export default function Marketplace() {
                 setState(prev => ({
                     ...prev,
                     userInventory: [
-                        ...prev.userInventory,
-                        { ...goodie, purchasedAt: purchaseTime }
+                        { ...goodie, purchasedAt: purchaseTime },
+                        ...prev.userInventory
                     ]
                 }));
 
@@ -204,7 +204,15 @@ export default function Marketplace() {
                         <div className="h-full flex flex-col">
                             <h2 className="text-2xl font-semibold mb-4">Your Inventory</h2>
                             <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                                <UserInventory items={state.userInventory} />
+                                <UserInventory items={state.userInventory.sort((a, b) => {
+                                    const dateA = a.purchasedAt instanceof Timestamp ? 
+                                        a.purchasedAt.toDate().getTime() : 
+                                        a.purchasedAt.getTime();
+                                    const dateB = b.purchasedAt instanceof Timestamp ? 
+                                        b.purchasedAt.toDate().getTime() : 
+                                        b.purchasedAt.getTime();
+                                    return dateB - dateA; // Sort in descending order (newest first)
+                                })} />
                             </div>
                         </div>
                     </div>

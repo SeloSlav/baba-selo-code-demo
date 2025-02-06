@@ -52,10 +52,22 @@ export const MarketplaceList: React.FC<MarketplaceListProps> = ({ goodies, onPur
             filtered = filtered.filter(goodie => selectedCategories.has(goodie.category));
         }
 
-        // Apply price sorting
-        filtered.sort((a, b) => {
-            return sortOrder === 'asc' ? a.cost - b.cost : b.cost - a.cost;
-        });
+        // If no category filters are applied, sort Olive Oil items to the top
+        if (selectedCategories.size === 0) {
+            filtered.sort((a, b) => {
+                // First prioritize Olive Oil category
+                if (a.category === 'Olive Oil' && b.category !== 'Olive Oil') return -1;
+                if (a.category !== 'Olive Oil' && b.category === 'Olive Oil') return 1;
+                
+                // Then apply price sorting
+                return sortOrder === 'asc' ? a.cost - b.cost : b.cost - a.cost;
+            });
+        } else {
+            // Apply only price sorting if category filters are active
+            filtered.sort((a, b) => {
+                return sortOrder === 'asc' ? a.cost - b.cost : b.cost - a.cost;
+            });
+        }
 
         return filtered;
     }, [goodies, selectedRarities, selectedCategories, sortOrder]);
@@ -201,15 +213,6 @@ export const MarketplaceList: React.FC<MarketplaceListProps> = ({ goodies, onPur
                 <div className="bg-white rounded-3xl border border-gray-300 p-6">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         {filteredGoodies
-                            .sort((a, b) => {
-                                // If no filters are active, prioritize Olive Oil items
-                                if (selectedRarities.size === 0 && selectedCategories.size === 0) {
-                                    if (a.category === 'Olive Oil' && b.category !== 'Olive Oil') return -1;
-                                    if (a.category !== 'Olive Oil' && b.category === 'Olive Oil') return 1;
-                                }
-                                // Then apply price sorting
-                                return sortOrder === 'asc' ? a.cost - b.cost : b.cost - a.cost;
-                            })
                             .map((goodie) => (
                                 <div 
                                     key={goodie.id}

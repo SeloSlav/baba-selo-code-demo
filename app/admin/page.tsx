@@ -18,7 +18,8 @@ interface EditableGoodie extends Goodie {
 
 export default function AdminPage() {
     const [initializing, setInitializing] = useState(false);
-    const [adminPoints, setAdminPoints] = useState<string>('');
+    const [ownPointsInput, setOwnPointsInput] = useState<string>('');
+    const [userPointsInput, setUserPointsInput] = useState<string>('');
     const [username, setUsername] = useState<string>('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -137,14 +138,14 @@ export default function AdminPage() {
     const handleSetOwnPoints = async () => {
         if (!user || !ADMIN_UIDS.includes(user.uid)) return;
         
-        const value = parseInt(adminPoints);
+        const value = parseInt(ownPointsInput);
         if (!isNaN(value)) {
             const userPointsRef = doc(db, 'spoonPoints', user.uid);
             await updateDoc(userPointsRef, {
                 totalPoints: value
             });
             showPointsToast(0, `Your points set to ${value}`);
-            setAdminPoints(''); // Clear input after setting
+            setOwnPointsInput(''); // Clear input after setting
         }
     };
 
@@ -168,7 +169,7 @@ export default function AdminPage() {
             }
 
             const targetUser = userSnapshot.docs[0];
-            const value = parseInt(adminPoints);
+            const value = parseInt(userPointsInput);
 
             if (isNaN(value)) {
                 setError('Please enter a valid number');
@@ -182,7 +183,7 @@ export default function AdminPage() {
             });
 
             showPointsToast(0, `Set ${username}'s points to ${value}`);
-            setAdminPoints('');
+            setUserPointsInput('');
             setUsername('');
         } catch (error) {
             console.error('Error setting user points:', error);
@@ -659,8 +660,8 @@ export default function AdminPage() {
                     <div className="flex items-center gap-2">
                         <input
                             type="number"
-                            value={adminPoints}
-                            onChange={(e) => setAdminPoints(e.target.value)}
+                            value={ownPointsInput}
+                            onChange={(e) => setOwnPointsInput(e.target.value)}
                             placeholder="Set points..."
                             className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
                         />
@@ -689,8 +690,8 @@ export default function AdminPage() {
                         <div className="flex items-center gap-2">
                             <input
                                 type="number"
-                                value={adminPoints}
-                                onChange={(e) => setAdminPoints(e.target.value)}
+                                value={userPointsInput}
+                                onChange={(e) => setUserPointsInput(e.target.value)}
                                 placeholder="Set points..."
                                 className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
                             />

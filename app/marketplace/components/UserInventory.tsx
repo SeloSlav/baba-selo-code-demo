@@ -70,6 +70,24 @@ export const UserInventory: React.FC<UserInventoryProps> = ({ items }) => {
             filtered = filtered.filter(item => selectedCategories.has(item.category));
         }
 
+        // If no category filters are applied, sort Olive Oil items to the top
+        if (selectedCategories.size === 0) {
+            filtered.sort((a, b) => {
+                // First prioritize Olive Oil category
+                if (a.category === 'Olive Oil' && b.category !== 'Olive Oil') return -1;
+                if (a.category !== 'Olive Oil' && b.category === 'Olive Oil') return 1;
+                
+                // Then sort by purchase date (newest first)
+                const dateA = a.purchasedAt instanceof Timestamp ? 
+                    a.purchasedAt.toDate().getTime() : 
+                    a.purchasedAt.getTime();
+                const dateB = b.purchasedAt instanceof Timestamp ? 
+                    b.purchasedAt.toDate().getTime() : 
+                    b.purchasedAt.getTime();
+                return dateB - dateA;
+            });
+        }
+
         return filtered;
     }, [items, selectedRarities, selectedCategories]);
 
@@ -189,64 +207,58 @@ export const UserInventory: React.FC<UserInventoryProps> = ({ items }) => {
             <div className="mt-4 flex-1 overflow-y-auto pr-6">
                 <div className="bg-white rounded-3xl border border-gray-300 p-6">
                     <div className="grid grid-cols-1 gap-4">
-                        {filteredItems
-                            .sort((a, b) => {
-                                const dateA = a.purchasedAt instanceof Timestamp ? a.purchasedAt.toDate() : a.purchasedAt;
-                                const dateB = b.purchasedAt instanceof Timestamp ? b.purchasedAt.toDate() : b.purchasedAt;
-                                return dateB.getTime() - dateA.getTime();
-                            })
-                            .map((item) => {
-                                const purchaseDate = item.purchasedAt instanceof Timestamp ? 
-                                    item.purchasedAt.toDate() : 
-                                    item.purchasedAt;
-                                
-                                return (
-                                    <div 
-                                        key={`${item.id}-${purchaseDate.getTime()}`}
-                                        className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow"
-                                    >
-                                        <div className="flex">
-                                            <div className="relative h-24 w-24 flex-shrink-0">
-                                                <Image
-                                                    src={item.imageUrl}
-                                                    alt={item.name}
-                                                    fill
-                                                    className="object-cover"
-                                                    onError={(e) => {
-                                                        const imgElement = e.target as HTMLImageElement;
-                                                        const parent = imgElement.parentElement;
-                                                        if (parent) {
-                                                            parent.classList.add('bg-gray-100', 'flex', 'items-center', 'justify-center');
-                                                            parent.innerHTML = `
-                                                                <div class="text-gray-400 text-center">
-                                                                    <div class="text-2xl">🎁</div>
-                                                                </div>
-                                                            `;
-                                                        }
-                                                    }}
-                                                />
-                                            </div>
-                                            <div className="p-4 flex-grow">
-                                                <div className="mb-2">
-                                                    <h3 className="font-semibold mb-2">{item.name}</h3>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getRarityColor(item.rarity)}`}>
-                                                            {item.rarity.charAt(0).toUpperCase() + item.rarity.slice(1)}
-                                                        </span>
-                                                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getCategoryColor(item.category)}`}>
-                                                            {item.category.charAt(0).toUpperCase() + item.category.slice(1)}
-                                                        </span>
-                                                    </div>
+                        {filteredItems.map((item) => {
+                            const purchaseDate = item.purchasedAt instanceof Timestamp ? 
+                                item.purchasedAt.toDate() : 
+                                item.purchasedAt;
+                            
+                            return (
+                                <div 
+                                    key={`${item.id}-${purchaseDate.getTime()}`}
+                                    className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+                                >
+                                    <div className="flex">
+                                        <div className="relative h-24 w-24 flex-shrink-0">
+                                            <Image
+                                                src={item.imageUrl}
+                                                alt={item.name}
+                                                fill
+                                                className="object-cover"
+                                                onError={(e) => {
+                                                    const imgElement = e.target as HTMLImageElement;
+                                                    const parent = imgElement.parentElement;
+                                                    if (parent) {
+                                                        parent.classList.add('bg-gray-100', 'flex', 'items-center', 'justify-center');
+                                                        parent.innerHTML = `
+                                                            <div class="text-gray-400 text-center">
+                                                                <div class="text-2xl">🎁</div>
+                                                            </div>
+                                                        `;
+                                                    }
+                                                }}
+                                            />
+                                        </div>
+                                        <div className="p-4 flex-grow">
+                                            <div className="mb-2">
+                                                <h3 className="font-semibold mb-2">{item.name}</h3>
+                                                <div className="flex flex-wrap gap-2">
+                                                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getRarityColor(item.rarity)}`}>
+                                                        {item.rarity.charAt(0).toUpperCase() + item.rarity.slice(1)}
+                                                    </span>
+                                                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getCategoryColor(item.category)}`}>
+                                                        {item.category.charAt(0).toUpperCase() + item.category.slice(1)}
+                                                    </span>
                                                 </div>
-                                                <p className="text-gray-600 text-sm mb-2">{item.description}</p>
-                                                <p className="text-xs text-gray-400">
-                                                    Purchased on {format(purchaseDate, 'MMM d, yyyy')}
-                                                </p>
                                             </div>
+                                            <p className="text-gray-600 text-sm mb-2">{item.description}</p>
+                                            <p className="text-xs text-gray-400">
+                                                Purchased on {format(purchaseDate, 'MMM d, yyyy')}
+                                            </p>
                                         </div>
                                     </div>
-                                );
-                            })}
+                                </div>
+                            );
+                        })}
                     </div>
 
                     {/* No results message */}
