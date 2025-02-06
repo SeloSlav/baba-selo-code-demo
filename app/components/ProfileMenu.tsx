@@ -78,7 +78,7 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
                             <span>Market</span>
                         </div>
                         <span className="text-xs bg-purple-100 text-purple-600 px-2 py-1 rounded-full">
-                            Spend! 🎁
+                            Redeem! 🎁
                         </span>
                     </Link>
                 </li>
