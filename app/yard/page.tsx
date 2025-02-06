@@ -168,7 +168,6 @@ export default function Yard() {
                         </a>
                         {' '}on your phone for the optimal gaming experience!
                     </p>
-                    <p className="text-sm text-gray-500">You can still explore the yard on desktop, but the mobile version offers the best gameplay.</p>
                 </div>
             </div>
 
