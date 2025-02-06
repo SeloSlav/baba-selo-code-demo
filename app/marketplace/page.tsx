@@ -194,7 +194,7 @@ export default function Marketplace() {
                 <div className="flex flex-col items-center mb-12">
                     <img src="/baba-removebg.png" alt="Baba" className="w-32 h-32 mb-4" />
                     <h1 className="text-center text-2xl font-semibold mb-4">Spend your hard-earned spoons on special goodies!</h1>
-                    <p className="text-gray-600">Earn special vouchers for SELO Olive Oil and other premium products by collecting rare items!</p>
+                    <p className="text-gray-600">Earn special vouchers for <a href="https://seloolive.com/products/authentic-croatian-olive-oil?variant=40790542549035" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 transition-colors underline">SELO Olive Oil</a> by collecting spoons! Other rare items can be used in special game features.</p>
                 </div>
 
                 {/* Mobile: Inventory first, Desktop: Side by side */}
@@ -220,7 +220,7 @@ export default function Marketplace() {
                     {/* Available Items */}
                     <div className="order-2 lg:order-1 h-full overflow-hidden">
                         <div className="h-full flex flex-col">
-                            <h2 className="text-2xl font-semibold mb-4">Available Items</h2>
+                            <h2 className="text-2xl font-semibold mb-4">Marketplace</h2>
                             <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
                                 <MarketplaceList 
                                     goodies={state.goodies} 

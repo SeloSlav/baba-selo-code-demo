@@ -250,10 +250,21 @@ export const UserInventory: React.FC<UserInventoryProps> = ({ items }) => {
                                                     </span>
                                                 </div>
                                             </div>
-                                            <p className="text-gray-600 text-sm mb-2">{item.description}</p>
-                                            <p className="text-xs text-gray-400">
-                                                Purchased on {format(purchaseDate, 'MMM d, yyyy')}
-                                            </p>
+                                            <p className="text-gray-600 text-sm mb-4">{item.description}</p>
+                                            <div className="flex flex-col gap-2">
+                                                <p className="text-xs text-gray-400">
+                                                    Purchased on {format(purchaseDate, 'MMM d, yyyy')}
+                                                </p>
+                                                {item.category === 'Olive Oil' && (
+                                                    <button
+                                                        className="w-full px-4 py-2 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white text-sm rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-sm hover:shadow-md transform hover:-translate-y-0.5"
+                                                        onClick={() => {}}
+                                                    >
+                                                        <span className="text-lg">🎁</span>
+                                                        <span className="font-medium">Unwrap Voucher</span>
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
