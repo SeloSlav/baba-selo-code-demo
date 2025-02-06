@@ -15,8 +15,12 @@ const Login = () => {
         alt="Baba Logo"
         width={150}
         height={150}
-        className="mb-8"
+        className="mb-4"
       />
+
+      {/* Title and Subtitle */}
+      <h1 className="text-2xl font-bold text-gray-900 mb-2">Ask me anything, dear</h1>
+      <p className="text-gray-600 mb-8 text-center max-w-sm">Your personal digital grandmother, ready to share recipes, stories, and wisdom</p>
 
       {/* Google Sign-In Button */}
       <button
@@ -50,6 +54,28 @@ const Login = () => {
         </svg>
         <span className="text-gray-700 font-medium">Sign in with Google</span>
       </button>
+
+      {/* Terms Text */}
+      <p className="text-gray-500 text-xs text-center mt-6 max-w-sm">
+        By continuing, you agree to our{' '}
+        <a 
+          href="/terms" 
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:text-blue-800 underline"
+        >
+          Terms of Service
+        </a>{' '}
+        and{' '}
+        <a 
+          href="/privacy" 
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:text-blue-800 underline"
+        >
+          Privacy Policy
+        </a>
+      </p>
     </div>
   );
 };
