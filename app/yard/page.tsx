@@ -229,7 +229,7 @@ export default function Yard() {
 
             {/* Mobile Inventory Menu - Fixed at bottom with pull-up bar */}
             <div className={`fixed bottom-0 left-0 right-0 transition-transform duration-300 ease-in-out transform md:hidden ${
-                isInventoryOpen ? 'translate-y-0' : 'translate-y-[calc(100%-72px)]'
+                isInventoryOpen ? 'translate-y-0' : 'translate-y-[calc(100%-92px)]'
             }`}>
                 {/* Pull-up bar */}
                 <div 
