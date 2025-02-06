@@ -3,33 +3,73 @@ import { SpoonPointSystem } from '../../lib/spoonPoints';
 
 // Add timer detection helper
 const isTimerRequest = (text) => {
-    const timerKeywords = ['timer', 'countdown', 'remind me in', 'set timer', 'set a timer'];
-    const lowerText = text.toLowerCase();
+    const lowerText = text.toLowerCase().trim();
+    
+    // Common timer keywords that might appear in the request
+    const timerKeywords = [
+        'timer', 'countdown', 'remind me in', 'set timer', 'set a timer',
+        'set alarm', 'wake me up in', 'alert me in', 'notify me in'
+    ];
     
     // First, check if any timer keywords are present
     const hasTimerKeyword = timerKeywords.some(keyword => lowerText.includes(keyword));
     if (!hasTimerKeyword) return { isTimer: false, seconds: 0 };
     
-    // Look for time patterns
+    // Complex time patterns
     const timePatterns = [
-        // Minutes patterns
-        /(\d+)\s*(?:minute|min|minutes|mins?)\b/i,  // "5 minutes", "5 min", "5mins"
-        /(?:timer for|set timer for|countdown for)\s*(\d+)\s*(?:minute|min|minutes|mins?)\b/i,  // "timer for 5 minutes"
-        /(?:timer for|set timer for|countdown for)\s*(\d+)(?!\s*sec)/i,  // "timer for 5" (assume minutes if no unit)
-        // Seconds patterns
-        /(\d+)\s*(?:second|sec|seconds|secs?)\b/i,  // "30 seconds", "30 sec", "30secs"
-        /(?:timer for|set timer for|countdown for)\s*(\d+)\s*(?:second|sec|seconds|secs?)\b/i,  // "timer for 30 seconds"
+        // Hours and minutes patterns
+        {
+            pattern: /(\d+)\s*hours?\s*(?:and\s*)?(\d+)\s*(?:min(?:ute)?s?)?/i,
+            handler: (match) => (parseInt(match[1]) * 3600) + (parseInt(match[2]) * 60)
+        },
+        {
+            pattern: /(\d+)\s*hrs?\s*(?:and\s*)?(\d+)\s*(?:min(?:ute)?s?)?/i,
+            handler: (match) => (parseInt(match[1]) * 3600) + (parseInt(match[2]) * 60)
+        },
+        {
+            pattern: /(\d+):(\d+)(?::(\d+))?/,
+            handler: (match) => (parseInt(match[1]) * 3600) + (parseInt(match[2]) * 60) + (parseInt(match[3] || '0'))
+        },
+        
+        // Hours only patterns
+        {
+            pattern: /(\d+)\s*hours?/i,
+            handler: (match) => parseInt(match[1]) * 3600
+        },
+        {
+            pattern: /(\d+)\s*hrs?/i,
+            handler: (match) => parseInt(match[1]) * 3600
+        },
+        
+        // Minutes and seconds patterns
+        {
+            pattern: /(\d+)\s*min(?:ute)?s?\s*(?:and\s*)?(\d+)\s*sec(?:ond)?s?/i,
+            handler: (match) => (parseInt(match[1]) * 60) + parseInt(match[2])
+        },
+        
+        // Minutes only patterns
+        {
+            pattern: /(\d+)\s*min(?:ute)?s?/i,
+            handler: (match) => parseInt(match[1]) * 60
+        },
+        
+        // Seconds only patterns
+        {
+            pattern: /(\d+)\s*sec(?:ond)?s?/i,
+            handler: (match) => parseInt(match[1])
+        },
+        
+        // Bare number with timer keyword (assume minutes)
+        {
+            pattern: /(?:timer for|set timer for|countdown for|remind me in)\s*(\d+)(?!\s*(?:sec|hr|hour|minute|min))/i,
+            handler: (match) => parseInt(match[1]) * 60
+        }
     ];
 
-    for (const pattern of timePatterns) {
+    for (const { pattern, handler } of timePatterns) {
         const match = lowerText.match(pattern);
-        if (match && match[1]) {
-            let seconds = parseInt(match[1]);
-            
-            // Convert to seconds if it's a minutes pattern
-            if (!pattern.source.includes('second|sec|seconds|secs')) {
-                seconds = seconds * 60;
-            }
+        if (match) {
+            const seconds = handler(match);
             
             // Ensure the time is reasonable (between 5 seconds and 2 hours)
             if (seconds >= 5 && seconds <= 7200) {
@@ -48,11 +88,19 @@ export async function POST(req) {
     return NextResponse.json({ error: "Invalid or missing messages array" }, { status: 400 });
   }
 
-  // Check for timer request in the last user message
+  // Get the last user message
   const lastMessage = messages[messages.length - 1];
+  
+  // Check if it's a timer request from the user
   if (lastMessage.role === "user") {
     const timerCheck = isTimerRequest(lastMessage.content);
     if (timerCheck.isTimer && timerCheck.seconds > 0) {
+      // If it's less than 5 seconds, return a friendly message
+      if (timerCheck.seconds < 5) {
+        return NextResponse.json({
+          assistantMessage: "Oh dear, that's too short for a timer! Let me help you with something at least 5 seconds long. *winks*"
+        });
+      }
       return NextResponse.json({
         assistantMessage: `TIMER_REQUEST_${timerCheck.seconds}`
       });
@@ -287,18 +335,6 @@ The user also prefers to use ${preferredCookingOil} as a cooking oil.
             hasUserId: !!userId,
             userId
         });
-    }
-
-    // Check if it's a timer request
-    const timerCheck = isTimerRequest(assistantMessage);
-    if (timerCheck.isTimer && timerCheck.seconds > 0) {
-        return new Response(
-            JSON.stringify({
-                role: "assistant",
-                content: `TIMER_REQUEST_${timerCheck.seconds}`,
-            }),
-            { status: 200 }
-        );
     }
 
     return NextResponse.json({ 

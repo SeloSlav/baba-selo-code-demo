@@ -104,23 +104,38 @@ const Timer: React.FC<{ initialSeconds: number }> = ({ initialSeconds }) => {
         stopAlarm();
     };
 
-    const formatTime = (seconds: number) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    const formatTime = (totalSeconds: number) => {
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+        
+        if (hours > 0) {
+            return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    };
+
+    const getTimerText = (totalSeconds: number) => {
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+        
+        const parts = [];
+        if (hours > 0) parts.push(`${hours} hour${hours !== 1 ? 's' : ''}`);
+        if (minutes > 0) parts.push(`${minutes} minute${minutes !== 1 ? 's' : ''}`);
+        if (seconds > 0 || parts.length === 0) parts.push(`${seconds} second${seconds !== 1 ? 's' : ''}`);
+        
+        return parts.join(' ');
     };
 
     return (
         <div className="bg-white rounded-2xl shadow-md p-4 max-w-xs mx-auto border border-gray-200">
             <div className="text-center mb-4">
-                <div className={`text-3xl font-bold mb-2 ${hasFinished ? 'text-red-500' : 'text-gray-800'}`}>
+                <div className={`text-3xl font-bold mb-2 font-mono ${hasFinished ? 'text-red-500' : 'text-gray-800'}`}>
                     {formatTime(timeLeft)}
                 </div>
                 <div className="text-sm text-gray-500 mb-4">
-                    {hasFinished ? 'Time\'s up!' : timeLeft >= 60 
-                        ? `${Math.floor(timeLeft / 60)} minute timer`
-                        : `${timeLeft} second timer`
-                    }
+                    {hasFinished ? 'Time\'s up!' : getTimerText(timeLeft)}
                 </div>
             </div>
             <div className="flex justify-center gap-2">

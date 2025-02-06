@@ -350,7 +350,8 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
         "Help me use up these leftovers",
         "Tell me a funny cooking disaster story",
         "Give me a recipe for my date",
-        "Tell me about SELO olive oil"
+        "Tell me about SELO olive oil",
+        "Set a timer for 15 minutes"
     ];
 
     const [firstMessage, ...restMessages] = messages;
@@ -367,6 +368,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                         else if (suggestion.toLowerCase().includes("disaster")) emoji = "😅";
                         else if (suggestion.toLowerCase().includes("date")) emoji = "❤️";
                         else if (suggestion.toLowerCase().includes("olive")) emoji = "🌿";
+                        else if (suggestion.toLowerCase().includes("timer")) emoji = "⏲️";
 
                         return (
                             <button
