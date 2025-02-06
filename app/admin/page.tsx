@@ -66,6 +66,8 @@ export default function AdminPage() {
                 return 'bg-indigo-100 text-indigo-600';
             case 'accessory':
                 return 'bg-pink-100 text-pink-600';
+            case 'Olive Oil':
+                return 'bg-green-100 text-green-600';
             default:
                 return 'bg-gray-100 text-gray-600';
         }
@@ -357,6 +359,7 @@ export default function AdminPage() {
                                         <option value="food">Food</option>
                                         <option value="toy">Toy</option>
                                         <option value="accessory">Accessory</option>
+                                        <option value="Olive Oil">Olive Oil</option>
                                     </select>
                                 </div>
                                 <div>
@@ -447,13 +450,14 @@ export default function AdminPage() {
                                 <label className="block text-sm font-medium mb-1">Cost (spoons)</label>
                                 <input
                                     type="number"
-                                    value={editingGoodie.cost}
+                                    value={editingGoodie.cost || ''}
                                     onChange={e => setEditingGoodie({
                                         ...editingGoodie,
-                                        cost: parseInt(e.target.value)
+                                        cost: e.target.value === '' ? 0 : parseInt(e.target.value)
                                     })}
                                     className="w-full px-3 py-2 border rounded-lg"
                                     placeholder="0"
+                                    min="0"
                                 />
                             </div>
 
@@ -509,7 +513,7 @@ export default function AdminPage() {
                                 <div>
                                     <h3 className="font-semibold mb-3">Filter by Category</h3>
                                     <div className="flex flex-wrap gap-3">
-                                        {['food', 'toy', 'accessory'].map((category) => (
+                                        {['food', 'toy', 'accessory', 'Olive Oil'].map((category) => (
                                             <button
                                                 key={category}
                                                 onClick={() => {

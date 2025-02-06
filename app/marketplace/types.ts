@@ -1,3 +1,5 @@
+export type Category = 'food' | 'toy' | 'accessory' | 'Olive Oil';
+
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 
 export interface Goodie {
@@ -7,7 +9,7 @@ export interface Goodie {
     cost: number;
     rarity: Rarity;
     imageUrl: string;
-    category: 'food' | 'toy' | 'accessory';
+    category: Category;
 }
 
 export interface UserInventoryItem extends Goodie {

@@ -193,8 +193,8 @@ export default function Marketplace() {
             <div className="max-w-7xl mx-auto px-4 py-8">
                 <div className="flex flex-col items-center mb-12">
                     <img src="/baba-removebg.png" alt="Baba" className="w-32 h-32 mb-4" />
-                    <h1 className="text-center text-2xl font-semibold mb-4">Marketplace</h1>
-                    <p className="text-gray-600">Spend your hard-earned spoons on special goodies!</p>
+                    <h1 className="text-center text-2xl font-semibold mb-4">Spend your hard-earned spoons on special goodies!</h1>
+                    <p className="text-gray-600">Earn special vouchers for SELO Olive Oil and other premium products by collecting rare items!</p>
                 </div>
 
                 {/* Mobile: Inventory first, Desktop: Side by side */}

@@ -41,6 +41,8 @@ const getCategoryColor = (category: string): string => {
             return 'bg-indigo-100 text-indigo-600';
         case 'accessory':
             return 'bg-pink-100 text-pink-600';
+        case 'Olive Oil':
+            return 'bg-green-100 text-green-600';
         default:
             return 'bg-gray-100 text-gray-600';
     }
@@ -51,8 +53,8 @@ export const UserInventory: React.FC<UserInventoryProps> = ({ items }) => {
     const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
     const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
-    // Get unique categories from items
-    const categories = [...new Set(items.map(item => item.category))];
+    // Update the categories array to include all possible categories
+    const categories = [...new Set([...items.map(item => item.category), 'food', 'toy', 'accessory', 'Olive Oil'])];
 
     // Filter items
     const filteredItems = useMemo(() => {
@@ -167,7 +169,9 @@ export const UserInventory: React.FC<UserInventoryProps> = ({ items }) => {
                                             className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200
                                                 ${selectedRarities.has(rarity as Rarity)
                                                     ? getRarityColor(rarity as Rarity) + ' ring-2 ring-offset-2 ring-gray-500'
-                                                    : 'bg-gray-100 text-gray-500 hover:' + getRarityColor(rarity as Rarity).replace('bg-', '')
+                                                    : rarity === 'rare'
+                                                        ? 'bg-gray-100 text-blue-600'
+                                                        : 'bg-gray-100 text-gray-500 hover:' + getRarityColor(rarity as Rarity).replace('bg-', '')
                                                 }
                                                 transform hover:scale-105 active:scale-95`}
                                         >
@@ -185,58 +189,64 @@ export const UserInventory: React.FC<UserInventoryProps> = ({ items }) => {
             <div className="mt-4 flex-1 overflow-y-auto pr-6">
                 <div className="bg-white rounded-3xl border border-gray-300 p-6">
                     <div className="grid grid-cols-1 gap-4">
-                        {filteredItems.map((item) => {
-                            const purchaseDate = item.purchasedAt instanceof Timestamp ? 
-                                item.purchasedAt.toDate() : 
-                                item.purchasedAt;
-                            
-                            return (
-                                <div 
-                                    key={`${item.id}-${purchaseDate.getTime()}`}
-                                    className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow"
-                                >
-                                    <div className="flex">
-                                        <div className="relative h-24 w-24 flex-shrink-0">
-                                            <Image
-                                                src={item.imageUrl}
-                                                alt={item.name}
-                                                fill
-                                                className="object-cover"
-                                                onError={(e) => {
-                                                    const imgElement = e.target as HTMLImageElement;
-                                                    const parent = imgElement.parentElement;
-                                                    if (parent) {
-                                                        parent.classList.add('bg-gray-100', 'flex', 'items-center', 'justify-center');
-                                                        parent.innerHTML = `
-                                                            <div class="text-gray-400 text-center">
-                                                                <div class="text-2xl">🎁</div>
-                                                            </div>
-                                                        `;
-                                                    }
-                                                }}
-                                            />
-                                        </div>
-                                        <div className="p-4 flex-grow">
-                                            <div className="mb-2">
-                                                <h3 className="font-semibold mb-2">{item.name}</h3>
-                                                <div className="flex flex-wrap gap-2">
-                                                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getRarityColor(item.rarity)}`}>
-                                                        {item.rarity.charAt(0).toUpperCase() + item.rarity.slice(1)}
-                                                    </span>
-                                                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getCategoryColor(item.category)}`}>
-                                                        {item.category.charAt(0).toUpperCase() + item.category.slice(1)}
-                                                    </span>
-                                                </div>
+                        {filteredItems
+                            .sort((a, b) => {
+                                const dateA = a.purchasedAt instanceof Timestamp ? a.purchasedAt.toDate() : a.purchasedAt;
+                                const dateB = b.purchasedAt instanceof Timestamp ? b.purchasedAt.toDate() : b.purchasedAt;
+                                return dateB.getTime() - dateA.getTime();
+                            })
+                            .map((item) => {
+                                const purchaseDate = item.purchasedAt instanceof Timestamp ? 
+                                    item.purchasedAt.toDate() : 
+                                    item.purchasedAt;
+                                
+                                return (
+                                    <div 
+                                        key={`${item.id}-${purchaseDate.getTime()}`}
+                                        className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+                                    >
+                                        <div className="flex">
+                                            <div className="relative h-24 w-24 flex-shrink-0">
+                                                <Image
+                                                    src={item.imageUrl}
+                                                    alt={item.name}
+                                                    fill
+                                                    className="object-cover"
+                                                    onError={(e) => {
+                                                        const imgElement = e.target as HTMLImageElement;
+                                                        const parent = imgElement.parentElement;
+                                                        if (parent) {
+                                                            parent.classList.add('bg-gray-100', 'flex', 'items-center', 'justify-center');
+                                                            parent.innerHTML = `
+                                                                <div class="text-gray-400 text-center">
+                                                                    <div class="text-2xl">🎁</div>
+                                                                </div>
+                                                            `;
+                                                        }
+                                                    }}
+                                                />
                                             </div>
-                                            <p className="text-gray-600 text-sm mb-2">{item.description}</p>
-                                            <p className="text-xs text-gray-400">
-                                                Purchased on {format(purchaseDate, 'MMM d, yyyy')}
-                                            </p>
+                                            <div className="p-4 flex-grow">
+                                                <div className="mb-2">
+                                                    <h3 className="font-semibold mb-2">{item.name}</h3>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getRarityColor(item.rarity)}`}>
+                                                            {item.rarity.charAt(0).toUpperCase() + item.rarity.slice(1)}
+                                                        </span>
+                                                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getCategoryColor(item.category)}`}>
+                                                            {item.category.charAt(0).toUpperCase() + item.category.slice(1)}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <p className="text-gray-600 text-sm mb-2">{item.description}</p>
+                                                <p className="text-xs text-gray-400">
+                                                    Purchased on {format(purchaseDate, 'MMM d, yyyy')}
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            );
-                        })}
+                                );
+                            })}
                     </div>
 
                     {/* No results message */}

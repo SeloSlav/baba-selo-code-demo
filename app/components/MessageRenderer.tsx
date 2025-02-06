@@ -129,7 +129,7 @@ const Timer: React.FC<{ initialSeconds: number }> = ({ initialSeconds }) => {
     };
 
     return (
-        <div className="bg-white rounded-2xl shadow-md p-4 max-w-xs mx-auto border border-gray-200">
+        <div className="bg-white rounded-2xl shadow-md p-4 max-w-xs mx-auto border border-gray-200 mb-2">
             <div className="text-center mb-4">
                 <div className={`text-3xl font-bold mb-2 font-mono ${hasFinished ? 'text-red-500' : 'text-gray-800'}`}>
                     {formatTime(timeLeft)}

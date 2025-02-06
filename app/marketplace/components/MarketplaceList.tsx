@@ -102,6 +102,8 @@ export const MarketplaceList: React.FC<MarketplaceListProps> = ({ goodies, onPur
                 return 'bg-indigo-100 text-indigo-600';
             case 'accessory':
                 return 'bg-pink-100 text-pink-600';
+            case 'Olive Oil':
+                return 'bg-green-100 text-green-600';
             default:
                 return 'bg-gray-100 text-gray-600';
         }
@@ -138,7 +140,7 @@ export const MarketplaceList: React.FC<MarketplaceListProps> = ({ goodies, onPur
                             <div>
                                 <h3 className="font-semibold mb-3">Filter by Category</h3>
                                 <div className="flex flex-wrap gap-3">
-                                    {['food', 'toy', 'accessory'].map((category) => (
+                                    {['food', 'toy', 'accessory', 'Olive Oil'].map((category) => (
                                         <button
                                             key={category}
                                             onClick={() => handleCategoryToggle(category)}
@@ -166,7 +168,9 @@ export const MarketplaceList: React.FC<MarketplaceListProps> = ({ goodies, onPur
                                             className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200
                                                 ${selectedRarities.has(rarity as Rarity)
                                                     ? getRarityColor(rarity as Rarity) + ' ring-2 ring-offset-2 ring-gray-500'
-                                                    : 'bg-gray-100 text-gray-500 hover:' + getRarityColor(rarity as Rarity).replace('bg-', '')
+                                                    : rarity === 'rare'
+                                                        ? 'bg-gray-100 text-blue-600'
+                                                        : 'bg-gray-100 text-gray-500 hover:' + getRarityColor(rarity as Rarity).replace('bg-', '')
                                                 }
                                                 transform hover:scale-105 active:scale-95`}
                                         >
@@ -181,10 +185,10 @@ export const MarketplaceList: React.FC<MarketplaceListProps> = ({ goodies, onPur
                                 <h3 className="font-semibold mb-3">Sort by Price</h3>
                                 <button
                                     onClick={toggleSortOrder}
-                                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-all duration-200 text-sm transform hover:scale-105 active:scale-95"
+                                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 text-sm transform hover:scale-105 active:scale-95 transition-all duration-200"
                                 >
-                                    <span className="text-yellow-600">🥄</span>
-                                    <span>Price: {sortOrder === 'asc' ? 'Low to High' : 'High to Low'}</span>
+                                    <FontAwesomeIcon icon={faSpoon} className="text-yellow-600" />
+                                    <span className="text-gray-700">Price: {sortOrder === 'asc' ? 'Low to High' : 'High to Low'}</span>
                                 </button>
                             </div>
                         </div>
@@ -197,7 +201,15 @@ export const MarketplaceList: React.FC<MarketplaceListProps> = ({ goodies, onPur
                 <div className="bg-white rounded-3xl border border-gray-300 p-6">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         {filteredGoodies
-                            .sort((a, b) => sortOrder === 'asc' ? a.cost - b.cost : b.cost - a.cost)
+                            .sort((a, b) => {
+                                // If no filters are active, prioritize Olive Oil items
+                                if (selectedRarities.size === 0 && selectedCategories.size === 0) {
+                                    if (a.category === 'Olive Oil' && b.category !== 'Olive Oil') return -1;
+                                    if (a.category !== 'Olive Oil' && b.category === 'Olive Oil') return 1;
+                                }
+                                // Then apply price sorting
+                                return sortOrder === 'asc' ? a.cost - b.cost : b.cost - a.cost;
+                            })
                             .map((goodie) => (
                                 <div 
                                     key={goodie.id}
