@@ -204,7 +204,7 @@ const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ user, showPoint
     };
 
     return (
-        <div className="bg-white rounded-xl shadow-md p-6 mb-8">
+        <div className="bg-white rounded-xl p-6 mb-8">
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-semibold">Marketplace Management</h2>
             </div>

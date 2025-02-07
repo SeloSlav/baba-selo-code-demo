@@ -9,6 +9,33 @@ import RecipeModernizer from './components/RecipeModernizer';
 import MarketplaceManager from './components/MarketplaceManager';
 import PointsManager from './components/PointsManager';
 import { isAdmin } from '../config/admin';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faChevronDown, faChevronRight } from '@fortawesome/free-solid-svg-icons';
+
+interface CollapsibleSectionProps {
+    title: string;
+    isOpen: boolean;
+    onToggle: () => void;
+    children: React.ReactNode;
+}
+
+const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({ title, isOpen, onToggle, children }) => (
+    <div className="bg-white rounded-3xl shadow-lg border border-gray-300 overflow-hidden mb-8">
+        <button 
+            onClick={onToggle}
+            className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-100 transition-colors"
+        >
+            <h2 className="text-lg font-medium text-[#5d5d5d]">{title}</h2>
+            <FontAwesomeIcon 
+                icon={isOpen ? faChevronDown : faChevronRight} 
+                className={`text-[#5d5d5d] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+            />
+        </button>
+        <div className={`transition-all duration-200 ${isOpen ? 'block border-t border-gray-300' : 'hidden'}`}>
+            {children}
+        </div>
+    </div>
+);
 
 export default function AdminPage() {
     const [initializing, setInitializing] = useState(true);
@@ -16,6 +43,11 @@ export default function AdminPage() {
     const { user } = useAuth();
     const { showPointsToast } = usePoints();
     const router = useRouter();
+
+    // Add state for each section's collapse state
+    const [isRecipeModernizerOpen, setIsRecipeModernizerOpen] = useState(false);
+    const [isMarketplaceOpen, setIsMarketplaceOpen] = useState(false);
+    const [isPointsManagerOpen, setIsPointsManagerOpen] = useState(false);
 
     // First, wait for auth to initialize
     useEffect(() => {
@@ -91,14 +123,29 @@ export default function AdminPage() {
         <div className="max-w-4xl mx-auto px-4 py-8">
             <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
 
-            {/* Recipe Modernizer Section */}
-            <RecipeModernizer showPointsToast={showPointsToast} />
+            <CollapsibleSection 
+                title="Recipe Modernizer" 
+                isOpen={isRecipeModernizerOpen}
+                onToggle={() => setIsRecipeModernizerOpen(!isRecipeModernizerOpen)}
+            >
+                <RecipeModernizer showPointsToast={showPointsToast} />
+            </CollapsibleSection>
 
-            {/* Marketplace Management */}
-            <MarketplaceManager user={user} showPointsToast={showPointsToast} />
+            <CollapsibleSection 
+                title="Marketplace Management" 
+                isOpen={isMarketplaceOpen}
+                onToggle={() => setIsMarketplaceOpen(!isMarketplaceOpen)}
+            >
+                <MarketplaceManager user={user} showPointsToast={showPointsToast} />
+            </CollapsibleSection>
 
-            {/* Points Management */}
-            <PointsManager user={user} showPointsToast={showPointsToast} />
+            <CollapsibleSection 
+                title="Points Management" 
+                isOpen={isPointsManagerOpen}
+                onToggle={() => setIsPointsManagerOpen(!isPointsManagerOpen)}
+            >
+                <PointsManager user={user} showPointsToast={showPointsToast} />
+            </CollapsibleSection>
         </div>
     );
 } 

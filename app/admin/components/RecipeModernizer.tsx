@@ -765,7 +765,7 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
   }, []);
 
   return (
-    <div className="bg-white rounded-xl shadow-md p-6 mb-8">
+    <div className="bg-white rounded-xl p-6 mb-8">
       <div className="flex justify-between items-center mb-4">
         <div>
           <h2 className="text-xl font-semibold">Recipe Modernizer</h2>
