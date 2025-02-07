@@ -21,12 +21,12 @@ export async function POST(req) {
       },
       body: JSON.stringify({
         model: "gpt-4o-mini", // Use "gpt-4" or "gpt-3.5-turbo" if unavailable
-        max_tokens: 500,
+        max_tokens: 500,  
         temperature: 0.7,
         messages: [
           {
             role: "system",
-            content: `You are an expert sommelier and culinary pairing specialist. Given a recipe, suggest an ideal dish pairing (e.g., wine, side dish, or dessert) that complements it. Respond concisely and elegantly.`
+            content: `You are an expert sommelier and culinary pairing specialist. Given a recipe, suggest an ideal dish pairing (e.g., wine, side dish, or dessert) that complements it. Respond concisely and elegantly. Do not use any markdown formatting or asterisks in your response. Respond concisely and elegantly.`
           },
           { role: "user", content: recipe }
         ],

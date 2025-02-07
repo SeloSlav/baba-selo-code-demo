@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpoon } from "@fortawesome/free-solid-svg-icons";
+import { faSpoon, faXmark } from "@fortawesome/free-solid-svg-icons";
 
 interface PointsToastProps {
   points: number;
@@ -20,8 +20,9 @@ export const PointsToast: React.FC<PointsToastProps> = ({
   useEffect(() => {
     if (isVisible) {
       setIsShowing(true);
-      // Show purchase and warning messages longer than success messages
-      const duration = points <= 0 ? 4000 : 2000; // 4 seconds for purchases/warnings, 2 seconds for earning points
+      
+      // Show all toasts for 4 seconds
+      const duration = 4000;
 
       // Start exit animation before completely removing
       const hideTimer = setTimeout(() => {
@@ -38,7 +39,7 @@ export const PointsToast: React.FC<PointsToastProps> = ({
         clearTimeout(removeTimer);
       };
     }
-  }, [isVisible, points, onHide]);
+  }, [isVisible, onHide]);
 
   // Helper function to determine toast style
   const getToastStyle = () => {
@@ -68,13 +69,19 @@ export const PointsToast: React.FC<PointsToastProps> = ({
 
   const style = getToastStyle();
 
+  const handleClose = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsShowing(false);
+    setTimeout(onHide, 500); // Wait for exit animation before removing
+  };
+
   return (
     <div
       className={`transform transition-all duration-500 ease-in-out ${
         isShowing ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
       }`}
     >
-      <div className={`px-6 py-3 rounded-xl shadow-lg flex items-center gap-3 ${style.container}`}>
+      <div className={`px-6 py-3 rounded-xl shadow-lg flex items-center gap-3 relative ${style.container}`}>
         <div className={`p-2 rounded-lg ${style.icon}`}>
           <FontAwesomeIcon icon={faSpoon} className="text-white" />
         </div>
@@ -86,6 +93,13 @@ export const PointsToast: React.FC<PointsToastProps> = ({
           </div>
           <div className={`text-sm ${style.textColor} opacity-90`}>{message}</div>
         </div>
+        <button 
+          onClick={handleClose}
+          className="absolute top-2 right-2 p-1 hover:bg-black/10 rounded-full transition-colors"
+          aria-label="Close notification"
+        >
+          <FontAwesomeIcon icon={faXmark} className="text-white w-4 h-4" />
+        </button>
       </div>
     </div>
   );
