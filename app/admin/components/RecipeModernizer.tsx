@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { collection, query, getDocs, doc, updateDoc, orderBy, limit, startAfter, where, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firebase/firebase';
 import { Recipe } from '../../recipe/types';
@@ -28,6 +28,15 @@ interface RecipeModernizerProps {
   showPointsToast: (points: number, message: string) => void;
 }
 
+// Add new types for the automation
+type ColumnType = 'classification' | 'summary' | 'nutrition' | 'pairings';
+type AutomationState = {
+  isRunning: boolean;
+  currentColumn: ColumnType;
+  currentPage: number;
+  processingRecipes: Set<string>;
+};
+
 const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) => {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(false);
@@ -43,6 +52,12 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSnapshots, setPageSnapshots] = useState<any[]>([null]);
   const BATCH_SIZE = 7;
+  const [automation, setAutomation] = useState<AutomationState>({
+    isRunning: false,
+    currentColumn: 'classification',
+    currentPage: 1,
+    processingRecipes: new Set()
+  });
 
   // Calculate total pages
   const totalPages = Math.ceil(totalRecipes / BATCH_SIZE);
@@ -189,6 +204,25 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
     }
     
     return pageNumbers;
+  };
+
+  // Helper to check if a recipe is ready for a specific column
+  const isRecipeReadyForColumn = (recipe: Recipe, column: ColumnType): boolean => {
+    switch (column) {
+      case 'classification':
+        return true; // Classification can always be generated
+      case 'summary':
+        // Need classification data before generating summary
+        return !!(recipe.cookingTime && recipe.cuisineType && recipe.cookingDifficulty && recipe.diet);
+      case 'nutrition':
+        // Need basic recipe data for nutrition
+        return !!(recipe.ingredients?.length && recipe.directions?.length);
+      case 'pairings':
+        // Need basic recipe data for pairings
+        return !!(recipe.ingredients?.length && recipe.directions?.length);
+      default:
+        return false;
+    }
   };
 
   // Function to modernize a recipe
@@ -534,9 +568,200 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
     }
   };
 
+  // Helper to check if a column is complete for current page
+  const isColumnComplete = useCallback((column: ColumnType) => {
+    return recipes.every(recipe => {
+      switch (column) {
+        case 'classification':
+          return recipe.cookingTime && recipe.cuisineType && recipe.cookingDifficulty && recipe.diet;
+        case 'summary':
+          return recipe.recipeSummary;
+        case 'nutrition':
+          return recipe.macroInfo;
+        case 'pairings':
+          return recipe.dishPairings;
+      }
+    });
+  }, [recipes]);
+
+  // Helper to get next column
+  const getNextColumn = (current: ColumnType): ColumnType | null => {
+    const columns: ColumnType[] = ['classification', 'summary', 'nutrition', 'pairings'];
+    const currentIndex = columns.indexOf(current);
+    return currentIndex < columns.length - 1 ? columns[currentIndex + 1] : null;
+  };
+
+  // Function to process current column
+  const processColumn = useCallback(async () => {
+    if (!automation.isRunning) return;
+
+    // If all recipes in current page are processed for current column
+    if (recipes.length === 0 || isColumnComplete(automation.currentColumn)) {
+      const nextColumn = getNextColumn(automation.currentColumn);
+      if (nextColumn) {
+        // Move to next column on same page
+        setAutomation(prev => ({
+          ...prev,
+          currentColumn: nextColumn,
+          processingRecipes: new Set()
+        }));
+        return;
+      } else if (currentPage < totalPages) {
+        // Move to next page
+        setCurrentPage(currentPage + 1);
+        setAutomation(prev => ({
+          ...prev,
+          currentColumn: 'classification',
+          processingRecipes: new Set()
+        }));
+        return;
+      } else {
+        // All done!
+        setAutomation(prev => ({
+          ...prev,
+          isRunning: false
+        }));
+        showPointsToast(0, "Automation complete! All recipes processed.");
+        return;
+      }
+    }
+
+    // Process recipes that need work in current column
+    const recipesToProcess = recipes.filter(recipe => {
+      // First check if the recipe is ready for this column
+      if (!isRecipeReadyForColumn(recipe, automation.currentColumn)) {
+        return false;
+      }
+
+      // Then check if the column needs to be processed
+      switch (automation.currentColumn) {
+        case 'classification':
+          return !recipe.cookingTime || !recipe.cuisineType || !recipe.cookingDifficulty || !recipe.diet;
+        case 'summary':
+          return !recipe.recipeSummary;
+        case 'nutrition':
+          return !recipe.macroInfo;
+        case 'pairings':
+          return !recipe.dishPairings;
+      }
+    });
+
+    // Start processing all recipes in current column
+    for (const recipe of recipesToProcess) {
+      if (!automation.isRunning) break;
+      if (automation.processingRecipes.has(recipe.id)) continue;
+
+      setAutomation(prev => ({
+        ...prev,
+        processingRecipes: new Set([...prev.processingRecipes, recipe.id])
+      }));
+
+      try {
+        switch (automation.currentColumn) {
+          case 'classification':
+            await generateClassification(recipe).catch(() => {
+              console.log(`Skipping classification for ${recipe.recipeTitle} due to error`);
+            });
+            break;
+          case 'summary':
+            if (isRecipeReadyForColumn(recipe, 'summary')) {
+              await generateSummary(recipe).catch(() => {
+                console.log(`Skipping summary for ${recipe.recipeTitle} due to error`);
+              });
+            } else {
+              console.log(`Skipping summary for ${recipe.recipeTitle} - missing classification data`);
+            }
+            break;
+          case 'nutrition':
+            if (isRecipeReadyForColumn(recipe, 'nutrition')) {
+              await generateMacroInfo(recipe).catch(() => {
+                console.log(`Skipping nutrition for ${recipe.recipeTitle} due to error`);
+              });
+            } else {
+              console.log(`Skipping nutrition for ${recipe.recipeTitle} - missing required data`);
+            }
+            break;
+          case 'pairings':
+            if (isRecipeReadyForColumn(recipe, 'pairings')) {
+              await generatePairings(recipe).catch(() => {
+                console.log(`Skipping pairings for ${recipe.recipeTitle} due to error`);
+              });
+            } else {
+              console.log(`Skipping pairings for ${recipe.recipeTitle} - missing required data`);
+            }
+            break;
+        }
+      } catch (error) {
+        // Log error but continue with next recipe
+        console.log(`Error processing ${recipe.recipeTitle}, skipping to next recipe:`, error);
+      } finally {
+        setAutomation(prev => ({
+          ...prev,
+          processingRecipes: new Set([...prev.processingRecipes].filter(id => id !== recipe.id))
+        }));
+      }
+    }
+  }, [automation.isRunning, automation.currentColumn, automation.processingRecipes, recipes, currentPage, totalPages, isColumnComplete]);
+
+  // Effect to handle page changes
   useEffect(() => {
-    fetchRecipes(1);
-    fetchTotalCount();
+    if (automation.isRunning) {
+      const loadPage = async () => {
+        setLoading(true);
+        await fetchRecipes(currentPage);
+        // Reset to classification column whenever we load a new page
+        setAutomation(prev => ({
+          ...prev,
+          currentColumn: 'classification',
+          processingRecipes: new Set()
+        }));
+        setLoading(false);
+      };
+      loadPage();
+    }
+  }, [currentPage, automation.isRunning]);
+
+  // Effect to run automation
+  useEffect(() => {
+    const runAutomation = async () => {
+      if (automation.isRunning && !loading && automation.processingRecipes.size === 0) {
+        // Check if current page is complete
+        if (recipes.length === 0 || isColumnComplete(automation.currentColumn)) {
+          const nextColumn = getNextColumn(automation.currentColumn);
+          if (nextColumn) {
+            // Move to next column on same page
+            setAutomation(prev => ({
+              ...prev,
+              currentColumn: nextColumn,
+              processingRecipes: new Set()
+            }));
+          } else if (currentPage < totalPages) {
+            // Move to next page and reset to classification
+            setCurrentPage(prev => prev + 1);
+          } else {
+            // All done!
+            setAutomation(prev => ({
+              ...prev,
+              isRunning: false
+            }));
+            showPointsToast(0, "Automation complete! All recipes processed.");
+          }
+        } else {
+          // Process current column
+          await processColumn();
+        }
+      }
+    };
+    runAutomation();
+  }, [automation.isRunning, loading, automation.processingRecipes.size, recipes, currentPage, totalPages, processColumn, isColumnComplete]);
+
+  // Initial fetch
+  useEffect(() => {
+    const initialFetch = async () => {
+      await fetchRecipes(1);
+      await fetchTotalCount();
+    };
+    initialFetch();
   }, []);
 
   return (
@@ -558,6 +783,30 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
           >
             <FontAwesomeIcon icon={faSync} className={loading ? 'animate-spin' : ''} />
           </button>
+
+          <button
+            onClick={() => setAutomation(prev => ({
+              ...prev,
+              isRunning: !prev.isRunning,
+              currentColumn: 'classification',
+              currentPage: 1,
+              processingRecipes: new Set()
+            }))}
+            className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+              automation.isRunning
+                ? 'bg-red-100 text-red-600 hover:bg-red-200'
+                : 'bg-green-100 text-green-600 hover:bg-green-200'
+            }`}
+          >
+            {automation.isRunning ? '⏹️ Stop Agent' : '▶️ Start Agent'}
+          </button>
+
+          {automation.isRunning && (
+            <span className="text-sm text-gray-600">
+              Processing {automation.currentColumn} 
+              {automation.processingRecipes.size > 0 && ` (${automation.processingRecipes.size} active)`}
+            </span>
+          )}
         </div>
       </div>
 

@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useState } from 'react';
 import Image from "next/image";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash, faUpload } from "@fortawesome/free-solid-svg-icons";
@@ -8,11 +9,11 @@ import { ActionButton } from "../../components/ActionButton";
 import { Recipe } from "../types";
 import { RegenerateImagePopup } from "./RegenerateImagePopup";
 import { ClearImagePopup } from "./ClearImagePopup";
-import { useState } from "react";
 
 interface RecipeImageProps {
   recipe: Recipe;
   isOwner: boolean;
+  isUserAdmin?: boolean;
   isImageLoading: boolean;
   imageError: boolean;
   loadingImage: boolean;
@@ -29,6 +30,7 @@ interface RecipeImageProps {
 export const RecipeImage = ({
   recipe,
   isOwner,
+  isUserAdmin,
   isImageLoading,
   imageError,
   loadingImage,
@@ -43,6 +45,9 @@ export const RecipeImage = ({
 }: RecipeImageProps) => {
   const [showRegeneratePopup, setShowRegeneratePopup] = useState(false);
   const [showClearPopup, setShowClearPopup] = useState(false);
+
+  // Show controls if user is owner OR admin
+  const canManageImages = isOwner || isUserAdmin;
 
   return (
     <div className="relative aspect-[16/12] sm:aspect-video w-full mb-6 bg-gray-100 rounded-lg overflow-hidden group">
@@ -65,7 +70,7 @@ export const RecipeImage = ({
           {isImageLoading && (
             <div className="absolute inset-0 bg-gray-100 animate-pulse" />
           )}
-          {isOwner && (
+          {canManageImages && (
             <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-4">
               <ActionButton
                 onClick={() => setShowRegeneratePopup(true)}
@@ -91,7 +96,7 @@ export const RecipeImage = ({
           <div className="relative -top-8 sm:top-0">
             <span className="text-6xl">🍳</span>
           </div>
-          {isOwner && (
+          {canManageImages && (
             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex flex-col sm:flex-row gap-4 w-[90%] sm:w-auto px-4 sm:px-0">
               <ActionButton
                 onClick={handleGenerateImage}

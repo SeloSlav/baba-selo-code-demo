@@ -35,6 +35,7 @@ import {
   checkRecipeImageLimit, 
   checkPreviousAnalyses
 } from '../../lib/imageUtils';
+import { isAdmin } from '../../config/admin';
 
 const shimmer = (w: number, h: number) => `
 <svg width="${w}" height="${h}" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -93,6 +94,7 @@ const RecipeDetails = () => {
   const { user } = useAuth();
   const { showPointsToast } = usePoints();
   const [currentUsername, setCurrentUsername] = useState<string>('');
+  const [isUserAdmin, setIsUserAdmin] = useState(false);
 
   useEffect(() => {
     if (!id) return; // If no id, do nothing
@@ -801,6 +803,20 @@ const RecipeDetails = () => {
     }
   };
 
+  // Add admin check effect
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+        if (user) {
+            const adminStatus = await isAdmin(user.uid);
+            setIsUserAdmin(adminStatus);
+        } else {
+            setIsUserAdmin(false);
+        }
+    };
+
+    checkAdminStatus();
+  }, [user]);
+
   return (
     <div className="min-h-screen bg-gray-100 py-8 px-4">
       {recipe ? (
@@ -835,6 +851,7 @@ const RecipeDetails = () => {
           <RecipeImage
             recipe={recipe}
             isOwner={isOwner}
+            isUserAdmin={isUserAdmin}
             isImageLoading={isImageLoading}
             imageError={imageError}
             loadingImage={loadingImage}

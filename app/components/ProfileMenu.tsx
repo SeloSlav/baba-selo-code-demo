@@ -1,12 +1,10 @@
 // app/components/ProfileMenu.tsx
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBookOpenReader, faGear, faHome, faSignOut, faStarOfLife, faSpoon, faCompass, faStore, faShieldHalved, faSeedling } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 import { useAuth } from '../context/AuthContext';
-
-// List of admin UIDs
-const ADMIN_UIDS = ['B9E3AdsEAYSrcfl4yPcT1XqyIfC2'];
+import { isAdmin } from '../config/admin';
 
 interface ProfileMenuProps {
     isOpen: boolean;
@@ -17,6 +15,20 @@ interface ProfileMenuProps {
 export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLogout }) => {
     const menuRef = useRef<HTMLDivElement | null>(null);
     const { user } = useAuth();
+    const [isUserAdmin, setIsUserAdmin] = useState(false);
+
+    useEffect(() => {
+        const checkAdminStatus = async () => {
+            if (user) {
+                const adminStatus = await isAdmin(user.uid);
+                setIsUserAdmin(adminStatus);
+            } else {
+                setIsUserAdmin(false);
+            }
+        };
+
+        checkAdminStatus();
+    }, [user]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -99,7 +111,7 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
                         <span>Settings</span>
                     </Link>
                 </li>
-                {user && ADMIN_UIDS.includes(user.uid) && (
+                {isUserAdmin && (
                     <li className="flex items-center px-4 py-2 rounded-md hover:bg-gray-100 cursor-pointer">
                         <Link href="/admin" className="flex items-center w-full">
                             <FontAwesomeIcon icon={faShieldHalved} className="text-[#5d5d5d] mr-3" />

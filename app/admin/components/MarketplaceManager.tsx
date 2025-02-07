@@ -502,18 +502,20 @@ const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ user, showPoint
                                         </div>
                                     )}
                                     <div className="absolute top-2 right-2 flex gap-1">
-                                        <button
-                                            onClick={() => setEditingGoodie(goodie)}
-                                            className="p-2 bg-black bg-opacity-50 hover:bg-opacity-75 text-white rounded-lg transition-colors"
-                                        >
-                                            Edit
-                                        </button>
-                                        <button
-                                            onClick={() => handleDeleteGoodie(goodie.docId)}
-                                            className="p-2 bg-red-600 bg-opacity-50 hover:bg-opacity-75 text-white rounded-lg transition-colors"
-                                        >
-                                            Delete
-                                        </button>
+                                        <div className="flex gap-2 ml-4">
+                                            <button
+                                                onClick={() => setEditingGoodie(goodie)}
+                                                className="p-2 bg-black bg-opacity-50 hover:bg-opacity-75 text-white rounded-lg transition-colors"
+                                            >
+                                                Edit
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteGoodie(goodie.docId)}
+                                                className="p-2 bg-red-600 bg-opacity-50 hover:bg-opacity-75 text-white rounded-lg transition-colors"
+                                            >
+                                                Delete
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="p-4">
@@ -536,6 +538,131 @@ const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ user, showPoint
                         ))}
                 </div>
             </div>
+
+            {/* Edit Modal */}
+            {editingGoodie && editingGoodie.docId !== 'new' && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                        <h3 className="text-xl font-semibold mb-4">Edit Item</h3>
+                        <div className="space-y-4">
+                            {/* Category and Rarity */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Category</label>
+                                    <select
+                                        value={editingGoodie.category}
+                                        onChange={e => setEditingGoodie({
+                                            ...editingGoodie,
+                                            category: e.target.value as any
+                                        })}
+                                        className="w-full px-3 py-2 border rounded-lg"
+                                    >
+                                        <option value="food">Food</option>
+                                        <option value="toy">Toy</option>
+                                        <option value="accessory">Accessory</option>
+                                        <option value="Olive Oil">Olive Oil</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Rarity</label>
+                                    <select
+                                        value={editingGoodie.rarity}
+                                        onChange={e => setEditingGoodie({
+                                            ...editingGoodie,
+                                            rarity: e.target.value as any
+                                        })}
+                                        className="w-full px-3 py-2 border rounded-lg"
+                                    >
+                                        <option value="common">Common</option>
+                                        <option value="uncommon">Uncommon</option>
+                                        <option value="rare">Rare</option>
+                                        <option value="epic">Epic</option>
+                                        <option value="legendary">Legendary</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Name and Image URL */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Name</label>
+                                    <input
+                                        type="text"
+                                        value={editingGoodie.name}
+                                        onChange={e => setEditingGoodie({
+                                            ...editingGoodie,
+                                            name: e.target.value
+                                        })}
+                                        className="w-full px-3 py-2 border rounded-lg"
+                                        placeholder="Item name..."
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Image URL</label>
+                                    <input
+                                        type="text"
+                                        value={editingGoodie.imageUrl}
+                                        onChange={e => setEditingGoodie({
+                                            ...editingGoodie,
+                                            imageUrl: e.target.value
+                                        })}
+                                        className="w-full px-3 py-2 border rounded-lg"
+                                        placeholder="/marketplace/item.jpg"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Description */}
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Description</label>
+                                <textarea
+                                    value={editingGoodie.description}
+                                    onChange={e => setEditingGoodie({
+                                        ...editingGoodie,
+                                        description: e.target.value
+                                    })}
+                                    className="w-full px-3 py-2 border rounded-lg"
+                                    rows={3}
+                                    placeholder="Item description..."
+                                />
+                            </div>
+
+                            {/* Cost */}
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Cost (spoons)</label>
+                                <input
+                                    type="number"
+                                    value={editingGoodie.cost || ''}
+                                    onChange={e => setEditingGoodie({
+                                        ...editingGoodie,
+                                        cost: e.target.value === '' ? 0 : parseInt(e.target.value)
+                                    })}
+                                    className="w-full px-3 py-2 border rounded-lg"
+                                    placeholder="0"
+                                    min="0"
+                                />
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex justify-end gap-2 pt-2">
+                                <button
+                                    onClick={() => setEditingGoodie(null)}
+                                    className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => handleUpdateGoodie(editingGoodie)}
+                                    disabled={loading}
+                                    className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
+                                >
+                                    {loading ? <LoadingSpinner /> : 'Save Changes'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
