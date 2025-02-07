@@ -21,7 +21,13 @@ const DatabaseMigrations: React.FC<DatabaseMigrationsProps> = ({ user, showPoint
         const adminCheck = await isAdmin(user.uid);
         if (!adminCheck) return;
 
-        if (!confirm('This will update all recipes in the database. Are you sure you want to proceed?')) {
+        if (!confirm(
+            'This will:\n\n' +
+            '1. Calculate the length of each recipe\'s directions array\n' +
+            '2. Set ONLY the directionsCount field to that length\n' +
+            '3. Not modify any other fields\n\n' +
+            'Are you sure you want to proceed?'
+        )) {
             return;
         }
 
@@ -48,9 +54,10 @@ const DatabaseMigrations: React.FC<DatabaseMigrationsProps> = ({ user, showPoint
                 batchRecipes.forEach(recipeDoc => {
                     const data = recipeDoc.data();
                     const directions = data.directions || [];
-                    batch.update(doc(db, 'recipes', recipeDoc.id), {
+                    // Only set the directionsCount field, using merge to not affect other fields
+                    batch.set(doc(db, 'recipes', recipeDoc.id), {
                         directionsCount: directions.length
-                    });
+                    }, { merge: true });
                 });
 
                 await batch.commit();
@@ -58,7 +65,7 @@ const DatabaseMigrations: React.FC<DatabaseMigrationsProps> = ({ user, showPoint
                 setProgress({ current: processedCount, total: totalRecipes });
             }
 
-            showPointsToast(0, `Successfully updated ${totalRecipes} recipes with directionsCount field`);
+            showPointsToast(0, `Migration complete: Updated directionsCount for ${totalRecipes} recipes`);
         } catch (error) {
             console.error('Error in migration:', error);
             showPointsToast(0, 'Failed to complete migration');

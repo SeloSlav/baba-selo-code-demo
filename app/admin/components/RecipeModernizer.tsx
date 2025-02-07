@@ -82,11 +82,23 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
 
   // Function to check if a recipe needs modernization
   const needsModernization = (recipe: Recipe) => {
-    return !recipe.ingredients?.length || 
-           !recipe.directions?.length || 
-           !recipe.recipeSummary || 
-           !recipe.macroInfo || 
-           !recipe.dishPairings;
+    // Check each step in sequence
+    if (!recipe.ingredients?.length || !recipe.directions?.length) {
+      return 'details';
+    }
+    if (!recipe.cuisineType || !recipe.cookingDifficulty || !recipe.diet?.length) {
+      return 'classification';
+    }
+    if (!recipe.recipeSummary) {
+      return 'summary';
+    }
+    if (!recipe.macroInfo) {
+      return 'nutrition';
+    }
+    if (!recipe.dishPairings) {
+      return 'pairings';
+    }
+    return null; // Recipe is fully modernized
   };
 
   // Function to fetch total count
@@ -118,34 +130,38 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
 
       // If going to a page we haven't fetched yet
       if (page > 1) {
-        if (page > pageSnapshots.length) {
-          // We need to fetch the previous page first
-          const prevPageQuery = query(
-            collection(db, 'recipes'),
-            where('directionsCount', '==', 0),
-            orderBy('createdAt', 'asc'),
-            startAfter(pageSnapshots[pageSnapshots.length - 1]),
-            limit(BATCH_SIZE)
-          );
-          const prevPageDocs = await getDocs(prevPageQuery);
-          const lastDoc = prevPageDocs.docs[prevPageDocs.docs.length - 1];
-          setPageSnapshots(prev => [...prev, lastDoc]);
-          
-          // Now fetch the actual page we want
+        // We need to build up all snapshots until this page
+        let lastDoc = pageSnapshots[pageSnapshots.length - 1];
+        
+        // If we don't have the previous page's snapshot, we need to fetch all pages up to this one
+        if (!lastDoc || page > pageSnapshots.length) {
+          for (let i = pageSnapshots.length; i < page; i++) {
+            const prevPageQuery = query(
+              collection(db, 'recipes'),
+              where('directionsCount', '==', 0),
+              orderBy('createdAt', 'asc'),
+              startAfter(lastDoc || null),
+              limit(BATCH_SIZE)
+            );
+            const prevPageDocs = await getDocs(prevPageQuery);
+            lastDoc = prevPageDocs.docs[prevPageDocs.docs.length - 1];
+            if (lastDoc) {
+              setPageSnapshots(prev => [...prev, lastDoc]);
+            } else {
+              // If we can't get a snapshot, we've reached the end
+              setTotalRecipes((i) * BATCH_SIZE);
+              break;
+            }
+          }
+        }
+
+        // Now use the last snapshot we have
+        if (lastDoc) {
           recipesQuery = query(
             collection(db, 'recipes'),
             where('directionsCount', '==', 0),
             orderBy('createdAt', 'asc'),
             startAfter(lastDoc),
-            limit(BATCH_SIZE)
-          );
-        } else {
-          // We already have the snapshot for the previous page
-          recipesQuery = query(
-            collection(db, 'recipes'),
-            where('directionsCount', '==', 0),
-            orderBy('createdAt', 'asc'),
-            startAfter(pageSnapshots[page - 1]),
             limit(BATCH_SIZE)
           );
         }
@@ -156,7 +172,9 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
       // Store the last document of this page if we haven't stored it yet
       if (page >= pageSnapshots.length) {
         const lastDoc = recipeDocs.docs[recipeDocs.docs.length - 1];
-        setPageSnapshots(prev => [...prev, lastDoc]);
+        if (lastDoc) {
+          setPageSnapshots(prev => [...prev, lastDoc]);
+        }
       }
 
       const newRecipes = recipeDocs.docs.map(doc => {
@@ -225,24 +243,47 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
     }
   };
 
+  // Add this helper function to check if a step is ready
+  const canProcessStep = (recipe: Recipe, step: string): boolean => {
+    switch (step) {
+      case 'details':
+        return true; // Details can always be generated
+      case 'classification':
+        return !!(recipe.ingredients?.length && recipe.directions?.length);
+      case 'summary':
+        return !!(recipe.ingredients?.length && recipe.directions?.length && 
+                  recipe.cookingTime && recipe.cuisineType && recipe.cookingDifficulty && recipe.diet);
+      case 'nutrition':
+        return !!(recipe.ingredients?.length && recipe.directions?.length);
+      case 'pairings':
+        return !!(recipe.ingredients?.length && recipe.directions?.length);
+      default:
+        return false;
+    }
+  };
+
   // Function to modernize a recipe
   const modernizeRecipe = async (recipe: Recipe) => {
     try {
-      setModernizingState('details', recipe.id, true);
-      setModernizingState('classification', recipe.id, true);
-      setModernizingState('summary', recipe.id, true);
-      setModernizingState('nutrition', recipe.id, true);
-      setModernizingState('pairings', recipe.id, true);
+      const neededStep = needsModernization(recipe);
+      if (!neededStep) {
+        showPointsToast(0, `Recipe ${recipe.recipeTitle} is already fully modernized`);
+        return;
+      }
+
+      // Set loading state only for the current step
+      setModernizingState(neededStep, recipe.id, true);
       let updatedRecipe = { ...recipe };
 
-      // First, generate recipe details
+      // Generate recipe details based on the needed step
       const detailsResponse = await fetch("/api/generateRecipeDetails", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           recipeTitle: updatedRecipe.recipeTitle,
           recipeContent: updatedRecipe.recipeContent,
-          generateAll: true
+          generateAll: false,
+          generateStep: neededStep
         }),
       });
 
@@ -262,55 +303,60 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
         throw new Error('Invalid API response format');
       }
 
-      // Check if we have the basic recipe details
-      if (!Array.isArray(detailsData.ingredients) || !detailsData.ingredients.length ||
-          !Array.isArray(detailsData.directions) || !detailsData.directions.length) {
-        throw new Error('Failed to generate recipe ingredients and directions');
+      // Update recipe based on the current step
+      const updateData: any = {};
+      let updatedFields = [];
+
+      switch (neededStep) {
+        case 'details':
+          if (Array.isArray(detailsData.ingredients) && detailsData.ingredients.length &&
+              Array.isArray(detailsData.directions) && detailsData.directions.length) {
+            updateData.ingredients = detailsData.ingredients;
+            updateData.directions = detailsData.directions;
+            updateData.directionsCount = detailsData.directions.length;
+            updatedFields.push('ingredients', 'directions');
+          } else {
+            throw new Error('Failed to generate recipe ingredients and directions');
+          }
+          break;
+
+        case 'classification':
+          if (detailsData.cuisineType) updateData.cuisineType = detailsData.cuisineType;
+          if (detailsData.cookingDifficulty) updateData.cookingDifficulty = detailsData.cookingDifficulty;
+          if (Array.isArray(detailsData.diet)) updateData.diet = detailsData.diet;
+          if (detailsData.cookingTime) updateData.cookingTime = detailsData.cookingTime;
+          updatedFields.push('classification details');
+          break;
+
+        case 'summary':
+          if (detailsData.summary) {
+            updateData.recipeSummary = detailsData.summary;
+            updatedFields.push('summary');
+          }
+          break;
+
+        case 'nutrition':
+          if (detailsData.macroInfo) {
+            updateData.macroInfo = detailsData.macroInfo;
+            updatedFields.push('nutritional info');
+          }
+          break;
+
+        case 'pairings':
+          if (detailsData.dishPairings) {
+            updateData.dishPairings = detailsData.dishPairings;
+            updatedFields.push('dish pairings');
+          }
+          break;
       }
-      
-      // Update recipe with all generated data, using fallbacks for missing data
-      updatedRecipe = {
-        ...updatedRecipe,
-        ingredients: detailsData.ingredients,
-        directions: detailsData.directions,
-        recipeSummary: detailsData.summary || updatedRecipe.recipeSummary || '',
-        macroInfo: detailsData.macroInfo || updatedRecipe.macroInfo,
-        dishPairings: detailsData.dishPairings || updatedRecipe.dishPairings,
-        cookingTime: detailsData.cookingTime || updatedRecipe.cookingTime || 0,
-        cuisineType: detailsData.cuisineType || updatedRecipe.cuisineType || 'unknown',
-        cookingDifficulty: detailsData.cookingDifficulty || updatedRecipe.cookingDifficulty || 'medium',
-        diet: Array.isArray(detailsData.diet) ? detailsData.diet : updatedRecipe.diet || []
-      };
 
       // Update the recipe in Firestore
       const recipeRef = doc(db, 'recipes', updatedRecipe.id);
-      await updateDoc(recipeRef, {
-        ingredients: updatedRecipe.ingredients,
-        directions: updatedRecipe.directions,
-        directionsCount: updatedRecipe.directions.length,
-        recipeSummary: updatedRecipe.recipeSummary,
-        macroInfo: updatedRecipe.macroInfo,
-        dishPairings: updatedRecipe.dishPairings,
-        cookingTime: updatedRecipe.cookingTime,
-        cuisineType: updatedRecipe.cuisineType,
-        cookingDifficulty: updatedRecipe.cookingDifficulty,
-        diet: updatedRecipe.diet
-      });
+      await updateDoc(recipeRef, updateData);
 
       // Update local state
+      updatedRecipe = { ...updatedRecipe, ...updateData };
       setRecipes(prev => prev.map(r => r.id === updatedRecipe.id ? updatedRecipe : r));
-      
-      // Show success message with details about what was updated
-      const updatedFields = [];
-      if (detailsData.ingredients?.length) updatedFields.push('ingredients');
-      if (detailsData.directions?.length) updatedFields.push('directions');
-      if (detailsData.summary) updatedFields.push('summary');
-      if (detailsData.macroInfo) updatedFields.push('nutritional info');
-      if (detailsData.dishPairings) updatedFields.push('pairings');
-      if (detailsData.cookingTime) updatedFields.push('cooking time');
-      if (detailsData.cuisineType) updatedFields.push('cuisine');
-      if (detailsData.cookingDifficulty) updatedFields.push('difficulty');
-      if (detailsData.diet?.length) updatedFields.push('dietary info');
       
       showPointsToast(0, `Updated ${updatedRecipe.recipeTitle} with: ${updatedFields.join(', ')}`);
     } catch (error) {
@@ -318,11 +364,10 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
       const errorMessage = error.message || 'Unknown error occurred';
       showPointsToast(0, `Failed to modernize recipe: ${errorMessage}`);
     } finally {
-      setModernizingState('details', recipe.id, false);
-      setModernizingState('classification', recipe.id, false);
-      setModernizingState('summary', recipe.id, false);
-      setModernizingState('nutrition', recipe.id, false);
-      setModernizingState('pairings', recipe.id, false);
+      // Clear loading state for the current step
+      Object.keys(modernizingStates).forEach(step => {
+        setModernizingState(step, recipe.id, false);
+      });
     }
   };
 
@@ -366,8 +411,15 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
     }
   };
 
+  // Update the generateClassification function to handle missing data
   const generateClassification = async (recipe: Recipe) => {
     try {
+      // Check prerequisites
+      if (!recipe.ingredients?.length || !recipe.directions?.length) {
+        showPointsToast(0, `Please generate basic details for ${recipe.recipeTitle} first`);
+        return;
+      }
+
       setModernizingState('classification', recipe.id, true);
       const response = await fetch("/api/classifyRecipe", {
         method: "POST",
@@ -594,10 +646,35 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
 
   // Function to process current column
   const processColumn = useCallback(async () => {
-    if (!automation.isRunning) return;
+    if (!automation.isRunning || loading) return;
 
-    // If all recipes in current page are processed for current column
-    if (recipes.length === 0 || isColumnComplete(automation.currentColumn)) {
+    // Process recipes that need work in current column
+    const recipesToProcess = recipes.filter(recipe => {
+      // Skip if recipe is already being processed
+      if (automation.processingRecipes.has(recipe.id)) return false;
+
+      // First check if the recipe needs basic details
+      if (!recipe.ingredients?.length || !recipe.directions?.length) {
+        return true; // This recipe needs basic details first
+      }
+
+      // Then check if it needs the current column's processing
+      switch (automation.currentColumn) {
+        case 'classification':
+          return !recipe.cookingTime || !recipe.cuisineType || !recipe.cookingDifficulty || !recipe.diet;
+        case 'summary':
+          return !recipe.recipeSummary && canProcessStep(recipe, 'summary');
+        case 'nutrition':
+          return !recipe.macroInfo && canProcessStep(recipe, 'nutrition');
+        case 'pairings':
+          return !recipe.dishPairings && canProcessStep(recipe, 'pairings');
+        default:
+          return false;
+      }
+    });
+
+    // If no recipes to process in current column
+    if (recipesToProcess.length === 0) {
       const nextColumn = getNextColumn(automation.currentColumn);
       if (nextColumn) {
         // Move to next column on same page
@@ -606,16 +683,9 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
           currentColumn: nextColumn,
           processingRecipes: new Set()
         }));
-        return;
       } else if (currentPage < totalPages) {
         // Move to next page
-        setCurrentPage(currentPage + 1);
-        setAutomation(prev => ({
-          ...prev,
-          currentColumn: 'classification',
-          processingRecipes: new Set()
-        }));
-        return;
+        setCurrentPage(prev => prev + 1);
       } else {
         // All done!
         setAutomation(prev => ({
@@ -623,86 +693,79 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
           isRunning: false
         }));
         showPointsToast(0, "Automation complete! All recipes processed.");
-        return;
       }
+      return;
     }
 
-    // Process recipes that need work in current column
-    const recipesToProcess = recipes.filter(recipe => {
-      // First check if the recipe is ready for this column
-      if (!isRecipeReadyForColumn(recipe, automation.currentColumn)) {
-        return false;
+    // Process the first recipe that needs work
+    const recipeToProcess = recipesToProcess[0];
+    
+    // Add to processing set before starting
+    const newProcessingSet = new Set(automation.processingRecipes);
+    newProcessingSet.add(recipeToProcess.id);
+    setAutomation(prev => ({
+      ...prev,
+      processingRecipes: newProcessingSet
+    }));
+
+    try {
+      // Check if recipe needs basic details first
+      if (!recipeToProcess.ingredients?.length || !recipeToProcess.directions?.length) {
+        await generateBasicDetails(recipeToProcess);
+        return; // Exit and let the next cycle handle the next step
       }
 
-      // Then check if the column needs to be processed
+      // Process the recipe based on current column
       switch (automation.currentColumn) {
         case 'classification':
-          return !recipe.cookingTime || !recipe.cuisineType || !recipe.cookingDifficulty || !recipe.diet;
+          await generateClassification(recipeToProcess);
+          break;
         case 'summary':
-          return !recipe.recipeSummary;
+          if (canProcessStep(recipeToProcess, 'summary')) {
+            await generateSummary(recipeToProcess);
+          }
+          break;
         case 'nutrition':
-          return !recipe.macroInfo;
+          if (canProcessStep(recipeToProcess, 'nutrition')) {
+            await generateMacroInfo(recipeToProcess);
+          }
+          break;
         case 'pairings':
-          return !recipe.dishPairings;
+          if (canProcessStep(recipeToProcess, 'pairings')) {
+            await generatePairings(recipeToProcess);
+          }
+          break;
       }
-    });
-
-    // Start processing all recipes in current column
-    for (const recipe of recipesToProcess) {
-      if (!automation.isRunning) break;
-      if (automation.processingRecipes.has(recipe.id)) continue;
-
+    } catch (error) {
+      console.log(`Error processing ${recipeToProcess.recipeTitle}:`, error);
+    } finally {
+      // Remove from processing set after completion
+      const updatedProcessingSet = new Set(automation.processingRecipes);
+      updatedProcessingSet.delete(recipeToProcess.id);
       setAutomation(prev => ({
         ...prev,
-        processingRecipes: new Set([...prev.processingRecipes, recipe.id])
+        processingRecipes: updatedProcessingSet
       }));
-
-      try {
-        switch (automation.currentColumn) {
-          case 'classification':
-            await generateClassification(recipe).catch(() => {
-              console.log(`Skipping classification for ${recipe.recipeTitle} due to error`);
-            });
-            break;
-          case 'summary':
-            if (isRecipeReadyForColumn(recipe, 'summary')) {
-              await generateSummary(recipe).catch(() => {
-                console.log(`Skipping summary for ${recipe.recipeTitle} due to error`);
-              });
-            } else {
-              console.log(`Skipping summary for ${recipe.recipeTitle} - missing classification data`);
-            }
-            break;
-          case 'nutrition':
-            if (isRecipeReadyForColumn(recipe, 'nutrition')) {
-              await generateMacroInfo(recipe).catch(() => {
-                console.log(`Skipping nutrition for ${recipe.recipeTitle} due to error`);
-              });
-            } else {
-              console.log(`Skipping nutrition for ${recipe.recipeTitle} - missing required data`);
-            }
-            break;
-          case 'pairings':
-            if (isRecipeReadyForColumn(recipe, 'pairings')) {
-              await generatePairings(recipe).catch(() => {
-                console.log(`Skipping pairings for ${recipe.recipeTitle} due to error`);
-              });
-            } else {
-              console.log(`Skipping pairings for ${recipe.recipeTitle} - missing required data`);
-            }
-            break;
-        }
-      } catch (error) {
-        // Log error but continue with next recipe
-        console.log(`Error processing ${recipe.recipeTitle}, skipping to next recipe:`, error);
-      } finally {
-        setAutomation(prev => ({
-          ...prev,
-          processingRecipes: new Set([...prev.processingRecipes].filter(id => id !== recipe.id))
-        }));
-      }
     }
-  }, [automation.isRunning, automation.currentColumn, automation.processingRecipes, recipes, currentPage, totalPages, isColumnComplete]);
+  }, [automation.isRunning, automation.currentColumn, automation.processingRecipes, recipes, currentPage, totalPages, loading]);
+
+  // Effect to run automation
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    
+    if (automation.isRunning && !loading) {
+      // Add a small delay between processing attempts to prevent rapid updates
+      timeoutId = setTimeout(() => {
+        processColumn();
+      }, 1000);
+    }
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [automation.isRunning, loading, processColumn]);
 
   // Effect to handle page changes
   useEffect(() => {
@@ -721,40 +784,6 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
       loadPage();
     }
   }, [currentPage, automation.isRunning]);
-
-  // Effect to run automation
-  useEffect(() => {
-    const runAutomation = async () => {
-      if (automation.isRunning && !loading && automation.processingRecipes.size === 0) {
-        // Check if current page is complete
-        if (recipes.length === 0 || isColumnComplete(automation.currentColumn)) {
-          const nextColumn = getNextColumn(automation.currentColumn);
-          if (nextColumn) {
-            // Move to next column on same page
-            setAutomation(prev => ({
-              ...prev,
-              currentColumn: nextColumn,
-              processingRecipes: new Set()
-            }));
-          } else if (currentPage < totalPages) {
-            // Move to next page and reset to classification
-            setCurrentPage(prev => prev + 1);
-          } else {
-            // All done!
-            setAutomation(prev => ({
-              ...prev,
-              isRunning: false
-            }));
-            showPointsToast(0, "Automation complete! All recipes processed.");
-          }
-        } else {
-          // Process current column
-          await processColumn();
-        }
-      }
-    };
-    runAutomation();
-  }, [automation.isRunning, loading, automation.processingRecipes.size, recipes, currentPage, totalPages, processColumn, isColumnComplete]);
 
   // Initial fetch
   useEffect(() => {
@@ -849,74 +878,90 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
 
               <button
                 onClick={() => generateClassification(recipe)}
-                disabled={Object.values(modernizingStates).some(set => set.has(recipe.id))}
+                disabled={Object.values(modernizingStates).some(set => set.has(recipe.id)) || !canProcessStep(recipe, 'classification')}
                 className={`px-1.5 py-0.5 text-xs rounded transition-colors ${
-                  isModernizing('classification', recipe.id)
-                    ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-600' 
-                    : (!recipe.cookingTime || !recipe.cuisineType || !recipe.cookingDifficulty || !recipe.diet)
-                      ? 'bg-purple-100 text-purple-600 hover:bg-purple-200 cursor-pointer hover:scale-105'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 cursor-pointer hover:scale-105'
+                  !canProcessStep(recipe, 'classification')
+                    ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-600'
+                    : isModernizing('classification', recipe.id)
+                      ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-600' 
+                      : (!recipe.cookingTime || !recipe.cuisineType || !recipe.cookingDifficulty || !recipe.diet)
+                        ? 'bg-purple-100 text-purple-600 hover:bg-purple-200 cursor-pointer hover:scale-105'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200 cursor-pointer hover:scale-105'
                 }`}
               >
                 {isModernizing('classification', recipe.id)
                   ? 'Updating...' 
-                  : (!recipe.cookingTime || !recipe.cuisineType || !recipe.cookingDifficulty || !recipe.diet)
-                    ? 'No Classification'
-                    : 'Try Classification Again'}
+                  : !canProcessStep(recipe, 'classification')
+                    ? 'Need Details First'
+                    : (!recipe.cookingTime || !recipe.cuisineType || !recipe.cookingDifficulty || !recipe.diet)
+                      ? 'No Classification'
+                      : 'Try Classification Again'}
               </button>
 
               <button
                 onClick={() => generateSummary(recipe)}
-                disabled={Object.values(modernizingStates).some(set => set.has(recipe.id))}
+                disabled={Object.values(modernizingStates).some(set => set.has(recipe.id)) || !canProcessStep(recipe, 'summary')}
                 className={`px-1.5 py-0.5 text-xs rounded transition-colors ${
-                  isModernizing('summary', recipe.id)
-                    ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-600' 
-                    : !recipe.recipeSummary
-                      ? 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200 cursor-pointer hover:scale-105'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 cursor-pointer hover:scale-105'
+                  !canProcessStep(recipe, 'summary')
+                    ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-600'
+                    : isModernizing('summary', recipe.id)
+                      ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-600' 
+                      : !recipe.recipeSummary
+                        ? 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200 cursor-pointer hover:scale-105'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200 cursor-pointer hover:scale-105'
                 }`}
               >
                 {isModernizing('summary', recipe.id)
                   ? 'Updating...' 
-                  : !recipe.recipeSummary
-                    ? 'No Summary'
-                    : 'Try Summary Again'}
+                  : !canProcessStep(recipe, 'summary')
+                    ? 'Need Classification First'
+                    : !recipe.recipeSummary
+                      ? 'No Summary'
+                      : 'Try Summary Again'}
               </button>
 
               <button
                 onClick={() => generateMacroInfo(recipe)}
-                disabled={Object.values(modernizingStates).some(set => set.has(recipe.id))}
+                disabled={Object.values(modernizingStates).some(set => set.has(recipe.id)) || !canProcessStep(recipe, 'nutrition')}
                 className={`px-1.5 py-0.5 text-xs rounded transition-colors ${
-                  isModernizing('nutrition', recipe.id)
-                    ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-600' 
-                    : !recipe.macroInfo
-                      ? 'bg-green-100 text-green-600 hover:bg-green-200 cursor-pointer hover:scale-105'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 cursor-pointer hover:scale-105'
+                  !canProcessStep(recipe, 'nutrition')
+                    ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-600'
+                    : isModernizing('nutrition', recipe.id)
+                      ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-600' 
+                      : !recipe.macroInfo
+                        ? 'bg-green-100 text-green-600 hover:bg-green-200 cursor-pointer hover:scale-105'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200 cursor-pointer hover:scale-105'
                 }`}
               >
                 {isModernizing('nutrition', recipe.id)
                   ? 'Updating...' 
-                  : !recipe.macroInfo
-                    ? 'No Nutrition'
-                    : 'Try Nutrition Again'}
+                  : !canProcessStep(recipe, 'nutrition')
+                    ? 'Need Details First'
+                    : !recipe.macroInfo
+                      ? 'No Nutrition'
+                      : 'Try Nutrition Again'}
               </button>
 
               <button
                 onClick={() => generatePairings(recipe)}
-                disabled={Object.values(modernizingStates).some(set => set.has(recipe.id))}
+                disabled={Object.values(modernizingStates).some(set => set.has(recipe.id)) || !canProcessStep(recipe, 'pairings')}
                 className={`px-1.5 py-0.5 text-xs rounded transition-colors ${
-                  isModernizing('pairings', recipe.id)
-                    ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-600' 
-                    : !recipe.dishPairings
-                      ? 'bg-blue-100 text-blue-600 hover:bg-blue-200 cursor-pointer hover:scale-105'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 cursor-pointer hover:scale-105'
+                  !canProcessStep(recipe, 'pairings')
+                    ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-600'
+                    : isModernizing('pairings', recipe.id)
+                      ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-600' 
+                      : !recipe.dishPairings
+                        ? 'bg-blue-100 text-blue-600 hover:bg-blue-200 cursor-pointer hover:scale-105'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200 cursor-pointer hover:scale-105'
                 }`}
               >
                 {isModernizing('pairings', recipe.id)
                   ? 'Updating...' 
-                  : !recipe.dishPairings
-                    ? 'No Pairings'
-                    : 'Try Pairings Again'}
+                  : !canProcessStep(recipe, 'pairings')
+                    ? 'Need Details First'
+                    : !recipe.dishPairings
+                      ? 'No Pairings'
+                      : 'Try Pairings Again'}
               </button>
             </div>
 
