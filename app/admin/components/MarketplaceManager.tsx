@@ -4,6 +4,8 @@ import { db } from '../../firebase/firebase';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { Goodie } from '../../marketplace/types';
 import { isAdmin } from '../../config/admin';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faSpoon } from '@fortawesome/free-solid-svg-icons';
 
 interface EditableGoodie extends Goodie {
     docId: string;
@@ -276,7 +278,7 @@ const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ user, showPoint
                                 >
                                     {generatingAI ? (
                                         <>
-                                            <LoadingSpinner />
+                                            <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
                                             <span>Generating...</span>
                                         </>
                                     ) : (
@@ -375,10 +377,10 @@ const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ user, showPoint
                 <h3 className="text-lg font-medium mb-4">Current Items</h3>
                 
                 {/* Filters Section */}
-                <div className="bg-white rounded-xl shadow-md mb-6">
+                <div className="bg-white rounded-3xl shadow-lg border border-gray-300 mb-6">
                     <button
                         onClick={() => setIsFiltersOpen(prev => !prev)}
-                        className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                        className="w-full p-4 flex items-center justify-between rounded-t-3xl"
                     >
                         <div className="flex items-center gap-2">
                             <span className="text-gray-500">🔍</span>
@@ -394,7 +396,7 @@ const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ user, showPoint
                         </span>
                     </button>
 
-                    <div className={`border-t border-gray-100 overflow-hidden transition-all duration-200 ${
+                    <div className={`border-t border-gray-200 overflow-hidden transition-all duration-200 ${
                         isFiltersOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
                     }`}>
                         <div className="p-6 space-y-6">
@@ -450,7 +452,9 @@ const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ user, showPoint
                                             className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200
                                                 ${selectedRarities.has(rarity)
                                                     ? getRarityColor(rarity) + ' ring-2 ring-offset-2 ring-gray-500'
-                                                    : 'bg-gray-100 text-gray-500 hover:' + getRarityColor(rarity).replace('bg-', '')
+                                                    : rarity === 'rare'
+                                                        ? 'bg-gray-100 text-blue-600'
+                                                        : 'bg-gray-100 text-gray-500 hover:' + getRarityColor(rarity).replace('bg-', '')
                                                 }
                                                 transform hover:scale-105 active:scale-95`}
                                         >
@@ -467,7 +471,7 @@ const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ user, showPoint
                                     onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
                                     className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-all duration-200 text-sm transform hover:scale-105 active:scale-95"
                                 >
-                                    <span className="text-yellow-600">🥄</span>
+                                    <FontAwesomeIcon icon={faSpoon} className="text-yellow-600" />
                                     <span>Price: {sortOrder === 'asc' ? 'Low to High' : 'High to Low'}</span>
                                 </button>
                             </div>
@@ -475,14 +479,14 @@ const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ user, showPoint
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-4">
                     {goodies
                         .filter(goodie => selectedCategories.size === 0 || selectedCategories.has(goodie.category))
                         .filter(goodie => selectedRarities.size === 0 || selectedRarities.has(goodie.rarity))
                         .sort((a, b) => sortOrder === 'asc' ? a.cost - b.cost : b.cost - a.cost)
                         .map(goodie => (
-                            <div key={goodie.docId} className="border rounded-lg overflow-hidden bg-white shadow-md hover:shadow-lg transition-shadow">
-                                <div className="relative h-48 bg-gray-100">
+                            <div key={goodie.docId} className="border rounded-lg overflow-hidden bg-white shadow-md hover:shadow-lg transition-shadow flex">
+                                <div className="relative h-24 w-24 flex-shrink-0 bg-gray-100">
                                     {goodie.imageUrl ? (
                                         <img
                                             src={goodie.imageUrl}
@@ -496,13 +500,30 @@ const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ user, showPoint
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center text-gray-400">
                                             <div className="text-center">
-                                                <div className="text-4xl mb-2">🎁</div>
-                                                <div className="text-sm">No image</div>
+                                                <div className="text-2xl">🎁</div>
                                             </div>
                                         </div>
                                     )}
-                                    <div className="absolute top-2 right-2 flex gap-1">
-                                        <div className="flex gap-2 ml-4">
+                                </div>
+                                <div className="flex-1 p-4">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <h4 className="text-lg font-semibold mb-2">{goodie.name}</h4>
+                                            <div className="flex flex-wrap gap-2 mb-2">
+                                                <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getRarityColor(goodie.rarity)}`}>
+                                                    {goodie.rarity.charAt(0).toUpperCase() + goodie.rarity.slice(1)}
+                                                </span>
+                                                <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getCategoryColor(goodie.category)}`}>
+                                                    {goodie.category.charAt(0).toUpperCase() + goodie.category.slice(1)}
+                                                </span>
+                                            </div>
+                                            <p className="text-sm text-gray-600 mb-2">{goodie.description}</p>
+                                            <div className="flex items-center text-yellow-600">
+                                                <span className="mr-2">🥄</span>
+                                                <span className="font-bold text-lg">{goodie.cost}</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2">
                                             <button
                                                 onClick={() => setEditingGoodie(goodie)}
                                                 className="p-2 bg-black bg-opacity-50 hover:bg-opacity-75 text-white rounded-lg transition-colors"
@@ -516,22 +537,6 @@ const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ user, showPoint
                                                 Delete
                                             </button>
                                         </div>
-                                    </div>
-                                </div>
-                                <div className="p-4">
-                                    <h4 className="text-lg font-semibold mb-2">{goodie.name}</h4>
-                                    <div className="flex flex-wrap gap-2 mb-3">
-                                        <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getRarityColor(goodie.rarity)}`}>
-                                            {goodie.rarity.charAt(0).toUpperCase() + goodie.rarity.slice(1)}
-                                        </span>
-                                        <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getCategoryColor(goodie.category)}`}>
-                                            {goodie.category.charAt(0).toUpperCase() + goodie.category.slice(1)}
-                                        </span>
-                                    </div>
-                                    <p className="text-sm text-gray-600 mb-4">{goodie.description}</p>
-                                    <div className="flex items-center text-yellow-600">
-                                        <span className="mr-2">🥄</span>
-                                        <span className="font-bold text-lg">{goodie.cost}</span>
                                     </div>
                                 </div>
                             </div>

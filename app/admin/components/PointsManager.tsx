@@ -106,16 +106,14 @@ const PointsManager: React.FC<PointsManagerProps> = ({ user, showPointsToast }) 
             <div>
                 <h3 className="text-lg font-medium mb-4">Set User Points</h3>
                 <div className="space-y-4">
-                    <div>
+                    <div className="flex items-center gap-2">
                         <input
                             type="text"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                             placeholder="Username..."
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
                         />
-                    </div>
-                    <div className="flex items-center gap-2">
                         <input
                             type="number"
                             value={userPointsInput}
