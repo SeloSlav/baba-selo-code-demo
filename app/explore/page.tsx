@@ -100,10 +100,9 @@ export default function ExplorePage() {
         setLoading(true);
       }
 
-      // Create a compound query to only fetch completed recipes
+      // Create a query for all recipes, ordered by completeness and creation date
       let recipesQuery = query(
         collection(db, "recipes"),
-        where("recipeSummary", "!=", ""),
         orderBy("createdAt", "desc"),
         limit(RECIPES_PER_PAGE)
       );
@@ -111,18 +110,14 @@ export default function ExplorePage() {
       if (loadMore && lastVisible) {
         recipesQuery = query(
           collection(db, "recipes"),
-          where("recipeSummary", "!=", ""),
           orderBy("createdAt", "desc"),
           startAfter(lastVisible),
           limit(RECIPES_PER_PAGE)
         );
       }
 
-      // Get total count more efficiently
-      const totalCountQuery = query(
-        collection(db, "recipes"),
-        where("recipeSummary", "!=", "")
-      );
+      // Get total count of all recipes
+      const totalCountQuery = query(collection(db, "recipes"));
       
       // Run both queries in parallel
       const [recipeDocs, totalSnapshot] = await Promise.all([
@@ -132,20 +127,18 @@ export default function ExplorePage() {
       
       setTotalRecipes(totalSnapshot.size);
 
-      // Filter out recipes without images on the client side
-      const fetchedRecipes = recipeDocs.docs
-        .map(doc => {
-          const data = doc.data() as RecipeDocument;
-          return {
-            id: doc.id,
-            ...data,
-            username: 'Anonymous Chef', // We'll update this later
-            likes: data.likes || []
-          };
-        })
-        .filter(recipe => recipe.imageURL); // Filter recipes without images
+      // Process all recipes
+      const fetchedRecipes = recipeDocs.docs.map(doc => {
+        const data = doc.data() as RecipeDocument;
+        return {
+          id: doc.id,
+          ...data,
+          username: 'Anonymous Chef', // We'll update this later
+          likes: data.likes || []
+        };
+      });
 
-      // Get usernames only for recipes that passed the filter
+      // Get usernames for all recipes
       const userIds = new Set(fetchedRecipes.map(recipe => recipe.userId));
       const usersQuery = query(
         collection(db, "users"),
@@ -157,11 +150,22 @@ export default function ExplorePage() {
         userMap.set(doc.id, doc.data().username);
       });
 
-      // Update usernames
-      const recipesWithUsernames = fetchedRecipes.map(recipe => ({
-        ...recipe,
-        username: userMap.get(recipe.userId) || 'Anonymous Chef'
-      }));
+      // Update usernames and sort recipes by completeness and creation date
+      const recipesWithUsernames = fetchedRecipes
+        .map(recipe => ({
+          ...recipe,
+          username: userMap.get(recipe.userId) || 'Anonymous Chef'
+        }))
+        .sort((a, b) => {
+          // First sort by completeness
+          const aComplete = isRecipeComplete(a);
+          const bComplete = isRecipeComplete(b);
+          if (aComplete !== bComplete) {
+            return aComplete ? -1 : 1;
+          }
+          // Then sort by creation date (newest first)
+          return b.createdAt?.toDate?.() - a.createdAt?.toDate?.() || 0;
+        });
 
       // Update lastVisible for pagination
       const lastDoc = recipeDocs.docs[recipeDocs.docs.length - 1];
