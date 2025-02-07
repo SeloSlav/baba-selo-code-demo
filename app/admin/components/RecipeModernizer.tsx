@@ -795,15 +795,15 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
   }, []);
 
   return (
-    <div className="bg-white rounded-xl p-6 mb-8">
-      <div className="flex justify-between items-center mb-4">
+    <div className="bg-white rounded-xl p-4 md:p-6 mb-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
         <div>
           <h2 className="text-xl font-semibold">Recipe Modernizer</h2>
           <p className="text-sm text-gray-600 mt-1">
             Showing {recipes.length} of {totalRecipes} recipes missing directions
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full md:w-auto">
           <button
             onClick={() => {
               fetchRecipes();
@@ -822,7 +822,7 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
               currentPage: 1,
               processingRecipes: new Set()
             }))}
-            className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+            className={`flex-1 md:flex-none px-3 py-1.5 text-sm rounded-lg transition-colors ${
               automation.isRunning
                 ? 'bg-red-100 text-red-600 hover:bg-red-200'
                 : 'bg-green-100 text-green-600 hover:bg-green-200'
@@ -832,7 +832,7 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
           </button>
 
           {automation.isRunning && (
-            <span className="text-sm text-gray-600">
+            <span className="hidden md:inline text-sm text-gray-600">
               Processing {automation.currentColumn} 
               {automation.processingRecipes.size > 0 && ` (${automation.processingRecipes.size} active)`}
             </span>
@@ -844,9 +844,9 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
         {recipes.map((recipe) => (
           <div
             key={recipe.id}
-            className="border rounded-lg p-3 flex items-center hover:bg-gray-50 transition-colors"
+            className="border rounded-lg p-3 flex flex-col md:flex-row items-start md:items-center gap-3 hover:bg-gray-50 transition-colors"
           >
-            <div className="w-[250px] flex-shrink-0">
+            <div className="w-full md:w-[250px] flex-shrink-0">
               <a 
                 href={`/recipe/${recipe.id}`}
                 target="_blank"
@@ -857,11 +857,11 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
               </a>
             </div>
 
-            <div className="flex gap-1 flex-1">
+            <div className="flex flex-wrap gap-2 flex-1">
               <button
                 onClick={() => generateBasicDetails(recipe)}
                 disabled={Object.values(modernizingStates).some(set => set.has(recipe.id))}
-                className={`px-1.5 py-0.5 text-xs rounded transition-colors ${
+                className={`px-2 py-1 text-xs rounded transition-colors ${
                   isModernizing('details', recipe.id)
                     ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-600' 
                     : (!recipe.ingredients?.length || !recipe.directions?.length)
@@ -879,7 +879,7 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
               <button
                 onClick={() => generateClassification(recipe)}
                 disabled={Object.values(modernizingStates).some(set => set.has(recipe.id)) || !canProcessStep(recipe, 'classification')}
-                className={`px-1.5 py-0.5 text-xs rounded transition-colors ${
+                className={`px-2 py-1 text-xs rounded transition-colors ${
                   !canProcessStep(recipe, 'classification')
                     ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-600'
                     : isModernizing('classification', recipe.id)
@@ -901,7 +901,7 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
               <button
                 onClick={() => generateSummary(recipe)}
                 disabled={Object.values(modernizingStates).some(set => set.has(recipe.id)) || !canProcessStep(recipe, 'summary')}
-                className={`px-1.5 py-0.5 text-xs rounded transition-colors ${
+                className={`px-2 py-1 text-xs rounded transition-colors ${
                   !canProcessStep(recipe, 'summary')
                     ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-600'
                     : isModernizing('summary', recipe.id)
@@ -923,7 +923,7 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
               <button
                 onClick={() => generateMacroInfo(recipe)}
                 disabled={Object.values(modernizingStates).some(set => set.has(recipe.id)) || !canProcessStep(recipe, 'nutrition')}
-                className={`px-1.5 py-0.5 text-xs rounded transition-colors ${
+                className={`px-2 py-1 text-xs rounded transition-colors ${
                   !canProcessStep(recipe, 'nutrition')
                     ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-600'
                     : isModernizing('nutrition', recipe.id)
@@ -945,7 +945,7 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
               <button
                 onClick={() => generatePairings(recipe)}
                 disabled={Object.values(modernizingStates).some(set => set.has(recipe.id)) || !canProcessStep(recipe, 'pairings')}
-                className={`px-1.5 py-0.5 text-xs rounded transition-colors ${
+                className={`px-2 py-1 text-xs rounded transition-colors ${
                   !canProcessStep(recipe, 'pairings')
                     ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-600'
                     : isModernizing('pairings', recipe.id)
@@ -968,7 +968,7 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
             <button
               onClick={() => handleDeleteRecipe(recipe.id)}
               disabled={deletingId === recipe.id}
-              className={`ml-4 px-2 py-1 text-sm rounded transition-colors flex-shrink-0
+              className={`w-full md:w-auto px-2 py-1 text-sm rounded transition-colors
                 ${deletingId === recipe.id 
                   ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-600' 
                   : 'bg-red-100 text-red-600 hover:bg-red-200 cursor-pointer hover:scale-105'
