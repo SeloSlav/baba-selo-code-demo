@@ -28,7 +28,7 @@ interface RecipeModernizerProps {
   showPointsToast: (points: number, message: string) => void;
 }
 
-export const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) => {
+const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) => {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(false);
   const [modernizingId, setModernizingId] = useState<string | null>(null);
@@ -596,4 +596,6 @@ export const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsTo
       )}
     </div>
   );
-}; 
+};
+
+export default RecipeModernizer; 
