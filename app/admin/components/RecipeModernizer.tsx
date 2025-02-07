@@ -94,7 +94,7 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
     try {
       const snapshot = await getDocs(query(
         collection(db, 'recipes'),
-        where('directions', 'not-in', [[]])
+        where('directionsCount', '==', 0)
       ));
       setTotalRecipes(snapshot.size);
     } catch (error) {
@@ -108,10 +108,10 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
       setLoading(true);
       setCurrentPage(page);
       
-      // Query for recipes where directions doesn't exist
+      // Query for recipes that need modernization
       let recipesQuery = query(
         collection(db, 'recipes'),
-        where('directions', 'not-in', [[]]),
+        where('directionsCount', '==', 0),
         orderBy('createdAt', 'asc'),
         limit(BATCH_SIZE)
       );
@@ -122,7 +122,7 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
           // We need to fetch the previous page first
           const prevPageQuery = query(
             collection(db, 'recipes'),
-            where('directions', 'not-in', [[]]),
+            where('directionsCount', '==', 0),
             orderBy('createdAt', 'asc'),
             startAfter(pageSnapshots[pageSnapshots.length - 1]),
             limit(BATCH_SIZE)
@@ -134,7 +134,7 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
           // Now fetch the actual page we want
           recipesQuery = query(
             collection(db, 'recipes'),
-            where('directions', 'not-in', [[]]),
+            where('directionsCount', '==', 0),
             orderBy('createdAt', 'asc'),
             startAfter(lastDoc),
             limit(BATCH_SIZE)
@@ -143,7 +143,7 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
           // We already have the snapshot for the previous page
           recipesQuery = query(
             collection(db, 'recipes'),
-            where('directions', 'not-in', [[]]),
+            where('directionsCount', '==', 0),
             orderBy('createdAt', 'asc'),
             startAfter(pageSnapshots[page - 1]),
             limit(BATCH_SIZE)
@@ -287,6 +287,7 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
       await updateDoc(recipeRef, {
         ingredients: updatedRecipe.ingredients,
         directions: updatedRecipe.directions,
+        directionsCount: updatedRecipe.directions.length,
         recipeSummary: updatedRecipe.recipeSummary,
         macroInfo: updatedRecipe.macroInfo,
         dishPairings: updatedRecipe.dishPairings,

@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import RecipeModernizer from './components/RecipeModernizer';
 import MarketplaceManager from './components/MarketplaceManager';
 import PointsManager from './components/PointsManager';
+import DatabaseMigrations from './components/DatabaseMigrations';
 import { isAdmin } from '../config/admin';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChevronDown, faChevronRight } from '@fortawesome/free-solid-svg-icons';
@@ -120,8 +121,10 @@ export default function AdminPage() {
     }
 
     return (
-        <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="max-w-7xl mx-auto px-4 py-8">
             <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
+            
+            <DatabaseMigrations user={user} showPointsToast={showPointsToast} />
 
             <CollapsibleSection 
                 title="Recipe Modernizer" 
