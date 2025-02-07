@@ -31,12 +31,39 @@ interface RecipeModernizerProps {
 const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) => {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(false);
-  const [modernizingId, setModernizingId] = useState<string | null>(null);
-  const [lastDoc, setLastDoc] = useState<any>(null);
-  const [hasMore, setHasMore] = useState(true);
+  const [modernizingStates, setModernizingStates] = useState<{[key: string]: Set<string>}>({
+    details: new Set(),
+    classification: new Set(),
+    summary: new Set(),
+    nutrition: new Set(),
+    pairings: new Set()
+  });
   const [totalRecipes, setTotalRecipes] = useState(0);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const BATCH_SIZE = 10;
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSnapshots, setPageSnapshots] = useState<any[]>([null]);
+  const BATCH_SIZE = 7;
+
+  // Calculate total pages
+  const totalPages = Math.ceil(totalRecipes / BATCH_SIZE);
+
+  // Helper function to update modernizing states
+  const setModernizingState = (type: string, recipeId: string, isLoading: boolean) => {
+    setModernizingStates(prev => {
+      const newState = { ...prev };
+      if (isLoading) {
+        newState[type] = new Set(prev[type]).add(recipeId);
+      } else {
+        newState[type] = new Set([...prev[type]].filter(id => id !== recipeId));
+      }
+      return newState;
+    });
+  };
+
+  // Helper function to check if a recipe is being modernized
+  const isModernizing = (type: string, recipeId: string) => {
+    return modernizingStates[type]?.has(recipeId);
+  };
 
   // Function to check if a recipe needs modernization
   const needsModernization = (recipe: Recipe) => {
@@ -60,10 +87,11 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
     }
   };
 
-  // Function to fetch recipes
-  const fetchRecipes = async (isNewQuery: boolean = true) => {
+  // Function to fetch recipes for a specific page
+  const fetchRecipes = async (page: number = 1) => {
     try {
       setLoading(true);
+      setCurrentPage(page);
       
       // Query for recipes where directions doesn't exist
       let recipesQuery = query(
@@ -73,18 +101,49 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
         limit(BATCH_SIZE)
       );
 
-      if (!isNewQuery && lastDoc) {
-        recipesQuery = query(
-          collection(db, 'recipes'),
-          where('directions', 'not-in', [[]]),
-          orderBy('createdAt', 'asc'),
-          startAfter(lastDoc),
-          limit(BATCH_SIZE)
-        );
+      // If going to a page we haven't fetched yet
+      if (page > 1) {
+        if (page > pageSnapshots.length) {
+          // We need to fetch the previous page first
+          const prevPageQuery = query(
+            collection(db, 'recipes'),
+            where('directions', 'not-in', [[]]),
+            orderBy('createdAt', 'asc'),
+            startAfter(pageSnapshots[pageSnapshots.length - 1]),
+            limit(BATCH_SIZE)
+          );
+          const prevPageDocs = await getDocs(prevPageQuery);
+          const lastDoc = prevPageDocs.docs[prevPageDocs.docs.length - 1];
+          setPageSnapshots(prev => [...prev, lastDoc]);
+          
+          // Now fetch the actual page we want
+          recipesQuery = query(
+            collection(db, 'recipes'),
+            where('directions', 'not-in', [[]]),
+            orderBy('createdAt', 'asc'),
+            startAfter(lastDoc),
+            limit(BATCH_SIZE)
+          );
+        } else {
+          // We already have the snapshot for the previous page
+          recipesQuery = query(
+            collection(db, 'recipes'),
+            where('directions', 'not-in', [[]]),
+            orderBy('createdAt', 'asc'),
+            startAfter(pageSnapshots[page - 1]),
+            limit(BATCH_SIZE)
+          );
+        }
       }
 
       const recipeDocs = await getDocs(recipesQuery);
       
+      // Store the last document of this page if we haven't stored it yet
+      if (page >= pageSnapshots.length) {
+        const lastDoc = recipeDocs.docs[recipeDocs.docs.length - 1];
+        setPageSnapshots(prev => [...prev, lastDoc]);
+      }
+
       const newRecipes = recipeDocs.docs.map(doc => {
         const data = doc.data();
         return {
@@ -94,16 +153,7 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
         };
       }) as Recipe[];
 
-      setLastDoc(recipeDocs.docs[recipeDocs.docs.length - 1]);
-      setHasMore(recipeDocs.docs.length === BATCH_SIZE);
-
-      // Update the recipes state
-      if (isNewQuery) {
-        setRecipes(newRecipes);
-      } else {
-        setRecipes(prev => [...prev, ...newRecipes]);
-      }
-
+      setRecipes(newRecipes);
     } catch (error) {
       console.error('Error fetching recipes:', error);
       showPointsToast(0, 'Failed to fetch recipes');
@@ -112,10 +162,43 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
     }
   };
 
+  // Function to generate page numbers array
+  const getPageNumbers = () => {
+    const pageNumbers: (number | string)[] = [];
+    const maxVisiblePages = 5;
+    
+    if (totalPages <= maxVisiblePages) {
+      // Show all pages if total pages is less than max visible
+      for (let i = 1; i <= totalPages; i++) {
+        pageNumbers.push(i);
+      }
+    } else {
+      // Always show first page
+      pageNumbers.push(1);
+      
+      if (currentPage <= 3) {
+        // Near the start
+        pageNumbers.push(2, 3, 4, '...', totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        // Near the end
+        pageNumbers.push('...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+      } else {
+        // Middle
+        pageNumbers.push('...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages);
+      }
+    }
+    
+    return pageNumbers;
+  };
+
   // Function to modernize a recipe
   const modernizeRecipe = async (recipe: Recipe) => {
     try {
-      setModernizingId(recipe.id);
+      setModernizingState('details', recipe.id, true);
+      setModernizingState('classification', recipe.id, true);
+      setModernizingState('summary', recipe.id, true);
+      setModernizingState('nutrition', recipe.id, true);
+      setModernizingState('pairings', recipe.id, true);
       let updatedRecipe = { ...recipe };
 
       // First, generate recipe details
@@ -200,14 +283,18 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
       const errorMessage = error.message || 'Unknown error occurred';
       showPointsToast(0, `Failed to modernize recipe: ${errorMessage}`);
     } finally {
-      setModernizingId(null);
+      setModernizingState('details', recipe.id, false);
+      setModernizingState('classification', recipe.id, false);
+      setModernizingState('summary', recipe.id, false);
+      setModernizingState('nutrition', recipe.id, false);
+      setModernizingState('pairings', recipe.id, false);
     }
   };
 
   // Add these new functions for individual updates
   const generateBasicDetails = async (recipe: Recipe) => {
     try {
-      setModernizingId(recipe.id);
+      setModernizingState('details', recipe.id, true);
       const response = await fetch("/api/generateRecipeDetails", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -240,13 +327,13 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
       console.error('Error generating details:', error);
       showPointsToast(0, `Failed to generate details: ${error.message}`);
     } finally {
-      setModernizingId(null);
+      setModernizingState('details', recipe.id, false);
     }
   };
 
   const generateClassification = async (recipe: Recipe) => {
     try {
-      setModernizingId(recipe.id);
+      setModernizingState('classification', recipe.id, true);
       const response = await fetch("/api/classifyRecipe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -312,13 +399,13 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
       console.error('Error generating classification:', error);
       showPointsToast(0, `Failed to generate classification: ${error.message}`);
     } finally {
-      setModernizingId(null);
+      setModernizingState('classification', recipe.id, false);
     }
   };
 
   const generateSummary = async (recipe: Recipe) => {
     try {
-      setModernizingId(recipe.id);
+      setModernizingState('summary', recipe.id, true);
       const response = await fetch("/api/generateSummary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -353,13 +440,13 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
       console.error('Error generating summary:', error);
       showPointsToast(0, `Failed to generate summary: ${error.message}`);
     } finally {
-      setModernizingId(null);
+      setModernizingState('summary', recipe.id, false);
     }
   };
 
   const generateMacroInfo = async (recipe: Recipe) => {
     try {
-      setModernizingId(recipe.id);
+      setModernizingState('nutrition', recipe.id, true);
       const response = await fetch("/api/macroInfo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -388,13 +475,13 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
       console.error('Error generating macro info:', error);
       showPointsToast(0, `Failed to generate macro info: ${error.message}`);
     } finally {
-      setModernizingId(null);
+      setModernizingState('nutrition', recipe.id, false);
     }
   };
 
   const generatePairings = async (recipe: Recipe) => {
     try {
-      setModernizingId(recipe.id);
+      setModernizingState('pairings', recipe.id, true);
       const response = await fetch("/api/dishPairing", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -423,7 +510,7 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
       console.error('Error generating pairings:', error);
       showPointsToast(0, `Failed to generate pairings: ${error.message}`);
     } finally {
-      setModernizingId(null);
+      setModernizingState('pairings', recipe.id, false);
     }
   };
 
@@ -448,8 +535,8 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
   };
 
   useEffect(() => {
-    fetchRecipes();
-    fetchTotalCount(); // Fetch total count when component mounts
+    fetchRecipes(1);
+    fetchTotalCount();
   }, []);
 
   return (
@@ -474,136 +561,134 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
         </div>
       </div>
 
-      <div className="max-h-[600px] overflow-y-auto custom-scrollbar">
-        <div className="space-y-2">
-          {recipes.map((recipe) => (
-            <div
-              key={recipe.id}
-              className="border rounded-lg p-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
+      <div className="space-y-2">
+        {recipes.map((recipe) => (
+          <div
+            key={recipe.id}
+            className="border rounded-lg p-3 flex items-center hover:bg-gray-50 transition-colors"
+          >
+            <div className="w-[250px] flex-shrink-0">
+              <a 
+                href={`/recipe/${recipe.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-blue-600 hover:text-blue-800 hover:underline block truncate"
+              >
+                {recipe.recipeTitle}
+              </a>
+            </div>
+
+            <div className="flex gap-1 flex-1">
+              <button
+                onClick={() => generateBasicDetails(recipe)}
+                disabled={Object.values(modernizingStates).some(set => set.has(recipe.id))}
+                className={`px-1.5 py-0.5 text-xs rounded transition-colors ${
+                  isModernizing('details', recipe.id)
+                    ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-600' 
+                    : (!recipe.ingredients?.length || !recipe.directions?.length)
+                      ? 'bg-red-100 text-red-600 hover:bg-red-200 cursor-pointer hover:scale-105'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 cursor-pointer hover:scale-105'
+                }`}
+              >
+                {isModernizing('details', recipe.id)
+                  ? 'Updating...' 
+                  : (!recipe.ingredients?.length || !recipe.directions?.length)
+                    ? 'No Details'
+                    : 'Try Details Again'}
+              </button>
+
+              <button
+                onClick={() => generateClassification(recipe)}
+                disabled={Object.values(modernizingStates).some(set => set.has(recipe.id))}
+                className={`px-1.5 py-0.5 text-xs rounded transition-colors ${
+                  isModernizing('classification', recipe.id)
+                    ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-600' 
+                    : (!recipe.cookingTime || !recipe.cuisineType || !recipe.cookingDifficulty || !recipe.diet)
+                      ? 'bg-purple-100 text-purple-600 hover:bg-purple-200 cursor-pointer hover:scale-105'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 cursor-pointer hover:scale-105'
+                }`}
+              >
+                {isModernizing('classification', recipe.id)
+                  ? 'Updating...' 
+                  : (!recipe.cookingTime || !recipe.cuisineType || !recipe.cookingDifficulty || !recipe.diet)
+                    ? 'No Classification'
+                    : 'Try Classification Again'}
+              </button>
+
+              <button
+                onClick={() => generateSummary(recipe)}
+                disabled={Object.values(modernizingStates).some(set => set.has(recipe.id))}
+                className={`px-1.5 py-0.5 text-xs rounded transition-colors ${
+                  isModernizing('summary', recipe.id)
+                    ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-600' 
+                    : !recipe.recipeSummary
+                      ? 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200 cursor-pointer hover:scale-105'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 cursor-pointer hover:scale-105'
+                }`}
+              >
+                {isModernizing('summary', recipe.id)
+                  ? 'Updating...' 
+                  : !recipe.recipeSummary
+                    ? 'No Summary'
+                    : 'Try Summary Again'}
+              </button>
+
+              <button
+                onClick={() => generateMacroInfo(recipe)}
+                disabled={Object.values(modernizingStates).some(set => set.has(recipe.id))}
+                className={`px-1.5 py-0.5 text-xs rounded transition-colors ${
+                  isModernizing('nutrition', recipe.id)
+                    ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-600' 
+                    : !recipe.macroInfo
+                      ? 'bg-green-100 text-green-600 hover:bg-green-200 cursor-pointer hover:scale-105'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 cursor-pointer hover:scale-105'
+                }`}
+              >
+                {isModernizing('nutrition', recipe.id)
+                  ? 'Updating...' 
+                  : !recipe.macroInfo
+                    ? 'No Nutrition'
+                    : 'Try Nutrition Again'}
+              </button>
+
+              <button
+                onClick={() => generatePairings(recipe)}
+                disabled={Object.values(modernizingStates).some(set => set.has(recipe.id))}
+                className={`px-1.5 py-0.5 text-xs rounded transition-colors ${
+                  isModernizing('pairings', recipe.id)
+                    ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-600' 
+                    : !recipe.dishPairings
+                      ? 'bg-blue-100 text-blue-600 hover:bg-blue-200 cursor-pointer hover:scale-105'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 cursor-pointer hover:scale-105'
+                }`}
+              >
+                {isModernizing('pairings', recipe.id)
+                  ? 'Updating...' 
+                  : !recipe.dishPairings
+                    ? 'No Pairings'
+                    : 'Try Pairings Again'}
+              </button>
+            </div>
+
+            <button
+              onClick={() => handleDeleteRecipe(recipe.id)}
+              disabled={deletingId === recipe.id}
+              className={`ml-4 px-2 py-1 text-sm rounded transition-colors flex-shrink-0
+                ${deletingId === recipe.id 
+                  ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-600' 
+                  : 'bg-red-100 text-red-600 hover:bg-red-200 cursor-pointer hover:scale-105'
+                }`}
             >
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <a 
-                    href={`/recipe/${recipe.id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-medium text-blue-600 hover:text-blue-800 hover:underline truncate"
-                  >
-                    {recipe.recipeTitle}
-                  </a>
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => handleDeleteRecipe(recipe.id)}
-                      disabled={deletingId === recipe.id}
-                      className={`px-1.5 py-0.5 text-xs rounded transition-colors 
-                        ${deletingId === recipe.id 
-                          ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-600' 
-                          : 'bg-red-100 text-red-600 hover:bg-red-200 cursor-pointer hover:scale-105'
-                        }`}
-                    >
-                      {deletingId === recipe.id ? '...' : '🗑️'}
-                    </button>
-                    <button
-                      onClick={() => generateBasicDetails(recipe)}
-                      disabled={modernizingId === recipe.id}
-                      className={`px-1.5 py-0.5 text-xs rounded transition-colors ${
-                        modernizingId === recipe.id 
-                          ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-600' 
-                          : (!recipe.ingredients?.length || !recipe.directions?.length)
-                            ? 'bg-red-100 text-red-600 hover:bg-red-200 cursor-pointer hover:scale-105'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200 cursor-pointer hover:scale-105'
-                      }`}
-                    >
-                      {modernizingId === recipe.id 
-                        ? 'Updating...' 
-                        : (!recipe.ingredients?.length || !recipe.directions?.length)
-                          ? 'No Details'
-                          : 'Try Details Again'}
-                    </button>
+              {deletingId === recipe.id ? '...' : '🗑️ Delete'}
+            </button>
+          </div>
+        ))}
 
-                    <button
-                      onClick={() => generateClassification(recipe)}
-                      disabled={modernizingId === recipe.id}
-                      className={`px-1.5 py-0.5 text-xs rounded transition-colors ${
-                        modernizingId === recipe.id 
-                          ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-600' 
-                          : (!recipe.cookingTime || !recipe.cuisineType || !recipe.cookingDifficulty || !recipe.diet)
-                            ? 'bg-purple-100 text-purple-600 hover:bg-purple-200 cursor-pointer hover:scale-105'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200 cursor-pointer hover:scale-105'
-                      }`}
-                    >
-                      {modernizingId === recipe.id 
-                        ? 'Updating...' 
-                        : (!recipe.cookingTime || !recipe.cuisineType || !recipe.cookingDifficulty || !recipe.diet)
-                          ? 'No Classification'
-                          : 'Try Classification Again'}
-                    </button>
-
-                    <button
-                      onClick={() => generateSummary(recipe)}
-                      disabled={modernizingId === recipe.id}
-                      className={`px-1.5 py-0.5 text-xs rounded transition-colors ${
-                        modernizingId === recipe.id 
-                          ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-600' 
-                          : !recipe.recipeSummary
-                            ? 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200 cursor-pointer hover:scale-105'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200 cursor-pointer hover:scale-105'
-                      }`}
-                    >
-                      {modernizingId === recipe.id 
-                        ? 'Updating...' 
-                        : !recipe.recipeSummary
-                          ? 'No Summary'
-                          : 'Try Summary Again'}
-                    </button>
-
-                    <button
-                      onClick={() => generateMacroInfo(recipe)}
-                      disabled={modernizingId === recipe.id}
-                      className={`px-1.5 py-0.5 text-xs rounded transition-colors ${
-                        modernizingId === recipe.id 
-                          ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-600' 
-                          : !recipe.macroInfo
-                            ? 'bg-green-100 text-green-600 hover:bg-green-200 cursor-pointer hover:scale-105'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200 cursor-pointer hover:scale-105'
-                      }`}
-                    >
-                      {modernizingId === recipe.id 
-                        ? 'Updating...' 
-                        : !recipe.macroInfo
-                          ? 'No Nutrition'
-                          : 'Try Nutrition Again'}
-                    </button>
-
-                    <button
-                      onClick={() => generatePairings(recipe)}
-                      disabled={modernizingId === recipe.id}
-                      className={`px-1.5 py-0.5 text-xs rounded transition-colors ${
-                        modernizingId === recipe.id 
-                          ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-600' 
-                          : !recipe.dishPairings
-                            ? 'bg-blue-100 text-blue-600 hover:bg-blue-200 cursor-pointer hover:scale-105'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200 cursor-pointer hover:scale-105'
-                      }`}
-                    >
-                      {modernizingId === recipe.id 
-                        ? 'Updating...' 
-                        : !recipe.dishPairings
-                          ? 'No Pairings'
-                          : 'Try Pairings Again'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-
-          {recipes.length === 0 && !loading && (
-            <div className="text-center py-6 text-gray-500 text-sm">
-              No recipes found missing directions.
-            </div>
-          )}
-        </div>
+        {recipes.length === 0 && !loading && (
+          <div className="text-center py-6 text-gray-500 text-sm">
+            No recipes found missing directions.
+          </div>
+        )}
       </div>
 
       {loading && (
@@ -612,13 +697,43 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
         </div>
       )}
 
-      {!loading && hasMore && (
-        <div className="flex justify-center mt-4">
+      {!loading && totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2 mt-6">
           <button
-            onClick={() => fetchRecipes(false)}
-            className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+            onClick={() => fetchRecipes(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Load More
+            <FontAwesomeIcon icon={faArrowLeft} className="mr-1" />
+            Previous
+          </button>
+
+          {getPageNumbers().map((pageNum, index) => (
+            <React.Fragment key={index}>
+              {pageNum === '...' ? (
+                <span className="px-3 py-2">...</span>
+              ) : (
+                <button
+                  onClick={() => fetchRecipes(pageNum as number)}
+                  className={`px-3 py-2 rounded-lg transition-colors ${
+                    currentPage === pageNum
+                      ? 'bg-black text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              )}
+            </React.Fragment>
+          ))}
+
+          <button
+            onClick={() => fetchRecipes(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Next
+            <FontAwesomeIcon icon={faArrowRight} className="ml-1" />
           </button>
         </div>
       )}
