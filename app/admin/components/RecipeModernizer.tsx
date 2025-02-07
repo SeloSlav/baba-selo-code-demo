@@ -34,7 +34,6 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
   const [modernizingId, setModernizingId] = useState<string | null>(null);
   const [lastDoc, setLastDoc] = useState<any>(null);
   const [hasMore, setHasMore] = useState(true);
-  const [filterType, setFilterType] = useState<'all' | 'missing-ingredients'>('all');
   const [totalRecipes, setTotalRecipes] = useState(0);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const BATCH_SIZE = 10;
@@ -48,25 +47,13 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
            !recipe.dishPairings;
   };
 
-  // Function to filter recipes based on selected type
-  const filterRecipes = (recipes: Recipe[]) => {
-    if (!recipes) return [];
-    
-    switch (filterType) {
-      case 'missing-ingredients':
-        return recipes.filter(recipe => {
-          console.log('Recipe:', recipe.recipeTitle, 'Ingredients:', recipe.ingredients);
-          return !recipe.ingredients || !Array.isArray(recipe.ingredients) || recipe.ingredients.length === 0;
-        });
-      default:
-        return recipes;
-    }
-  };
-
   // Function to fetch total count
   const fetchTotalCount = async () => {
     try {
-      const snapshot = await getDocs(collection(db, 'recipes'));
+      const snapshot = await getDocs(query(
+        collection(db, 'recipes'),
+        where('directions', 'not-in', [[]])
+      ));
       setTotalRecipes(snapshot.size);
     } catch (error) {
       console.error('Error fetching total count:', error);
@@ -78,9 +65,10 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
     try {
       setLoading(true);
       
-      // Query with ordering by createdAt in ascending order
+      // Query for recipes where directions doesn't exist
       let recipesQuery = query(
         collection(db, 'recipes'),
+        where('directions', 'not-in', [[]]),
         orderBy('createdAt', 'asc'),
         limit(BATCH_SIZE)
       );
@@ -88,30 +76,26 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
       if (!isNewQuery && lastDoc) {
         recipesQuery = query(
           collection(db, 'recipes'),
+          where('directions', 'not-in', [[]]),
           orderBy('createdAt', 'asc'),
           startAfter(lastDoc),
           limit(BATCH_SIZE)
         );
       }
 
-      console.log('Fetching recipes...');
-      const snapshot = await getDocs(recipesQuery);
-      console.log('Total documents found:', snapshot.size);
-
-      const newRecipes = snapshot.docs.map(doc => {
+      const recipeDocs = await getDocs(recipesQuery);
+      
+      const newRecipes = recipeDocs.docs.map(doc => {
         const data = doc.data();
-        console.log('Recipe data:', doc.id, data);
         return {
           id: doc.id,
           ...data,
-          createdAt: data.createdAt?.toDate() || new Date() // Convert Firestore timestamp to Date
+          createdAt: data.createdAt?.toDate() || new Date()
         };
       }) as Recipe[];
 
-      console.log('Processed recipes:', newRecipes);
-
-      setLastDoc(snapshot.docs[snapshot.docs.length - 1]);
-      setHasMore(snapshot.docs.length === BATCH_SIZE);
+      setLastDoc(recipeDocs.docs[recipeDocs.docs.length - 1]);
+      setHasMore(recipeDocs.docs.length === BATCH_SIZE);
 
       // Update the recipes state
       if (isNewQuery) {
@@ -119,13 +103,6 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
       } else {
         setRecipes(prev => [...prev, ...newRecipes]);
       }
-
-      // Log the counts to help debug
-      console.log({
-        total: newRecipes.length,
-        filterType,
-        recipes: newRecipes
-      });
 
     } catch (error) {
       console.error('Error fetching recipes:', error);
@@ -473,7 +450,7 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
   useEffect(() => {
     fetchRecipes();
     fetchTotalCount(); // Fetch total count when component mounts
-  }, [filterType]);
+  }, []);
 
   return (
     <div className="bg-white rounded-xl shadow-md p-6 mb-8">
@@ -481,18 +458,10 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
         <div>
           <h2 className="text-xl font-semibold">Recipe Modernizer</h2>
           <p className="text-sm text-gray-600 mt-1">
-            Showing {recipes.length} of {totalRecipes} recipes
+            Showing {recipes.length} of {totalRecipes} recipes missing directions
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <select
-            className="px-3 py-1.5 text-sm border rounded-lg"
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value as typeof filterType)}
-          >
-            <option value="all">All Recipes</option>
-            <option value="missing-ingredients">Missing Ingredients</option>
-          </select>
           <button
             onClick={() => {
               fetchRecipes();
@@ -507,7 +476,7 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
 
       <div className="max-h-[600px] overflow-y-auto custom-scrollbar">
         <div className="space-y-2">
-          {filterRecipes(recipes).map((recipe) => (
+          {recipes.map((recipe) => (
             <div
               key={recipe.id}
               className="border rounded-lg p-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
@@ -631,7 +600,7 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
 
           {recipes.length === 0 && !loading && (
             <div className="text-center py-6 text-gray-500 text-sm">
-              No recipes found. Try adjusting your filter.
+              No recipes found missing directions.
             </div>
           )}
         </div>
