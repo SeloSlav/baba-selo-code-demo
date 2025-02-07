@@ -8,7 +8,7 @@ import React, {
   useEffect,
 } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPaperclip, faCamera, faArrowUp, faArrowDown, faImage, faMagicWandSparkles, faUpload, faFileUpload, faClock } from "@fortawesome/free-solid-svg-icons";
+import { faPaperclip, faCamera, faArrowUp, faArrowDown, faImage, faMagicWandSparkles, faUpload, faFileUpload, faClock, faMicrophone } from "@fortawesome/free-solid-svg-icons";
 import { ChatMessages } from "./ChatMessages";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
@@ -18,6 +18,7 @@ import { LoadingSpinner } from "./LoadingSpinner";
 import { SendButtonSpinner } from "./SendButtonSpinner";
 import { usePoints } from '../context/PointsContext';
 import { TimerPopup } from "./TimerPopup";
+import { VoiceRecordPopup } from "./VoiceRecordPopup";
 
 interface Message {
   role: "user" | "assistant";
@@ -55,6 +56,9 @@ export const ChatWindow = forwardRef(
 
     // Add new state for timer popup
     const [isTimerOpen, setIsTimerOpen] = useState(false);
+
+    // Add new state for voice recording popup
+    const [isVoiceRecordOpen, setIsVoiceRecordOpen] = useState(false);
 
     const { showPointsToast } = usePoints();
 
@@ -372,6 +376,11 @@ export const ChatWindow = forwardRef(
       ]);
     };
 
+    // Add new handler for voice recording submit
+    const handleVoiceSubmit = (text: string) => {
+      sendMessage(text);
+    };
+
     return (
       <div className="flex flex-col h-screen w-full">
         <div
@@ -447,6 +456,13 @@ export const ChatWindow = forwardRef(
                       onClick={() => setIsTimerOpen(true)}
                     >
                       <FontAwesomeIcon icon={faClock} className="text-black" />
+                    </button>
+                    <button
+                      className="p-2 bg-gray-200 rounded-md hover:bg-gray-300 flex items-center justify-center"
+                      style={{ background: "transparent" }}
+                      onClick={() => setIsVoiceRecordOpen(true)}
+                    >
+                      <FontAwesomeIcon icon={faMicrophone} className="text-black" />
                     </button>
                   </div>
                   <button
@@ -531,6 +547,13 @@ export const ChatWindow = forwardRef(
                 >
                   <FontAwesomeIcon icon={faClock} className="text-black" />
                 </button>
+                <button
+                  className="p-2 bg-gray-200 rounded-md hover:bg-gray-300 flex items-center justify-center"
+                  style={{ background: "transparent" }}
+                  onClick={() => setIsVoiceRecordOpen(true)}
+                >
+                  <FontAwesomeIcon icon={faMicrophone} className="text-black" />
+                </button>
               </div>
               <button
                 onClick={() => sendMessage(message)}
@@ -575,6 +598,13 @@ export const ChatWindow = forwardRef(
           isOpen={isTimerOpen}
           onClose={() => setIsTimerOpen(false)}
           onSubmit={handleTimerSubmit}
+        />
+
+        {/* Voice Record Popup */}
+        <VoiceRecordPopup
+          isOpen={isVoiceRecordOpen}
+          onClose={() => setIsVoiceRecordOpen(false)}
+          onSubmit={handleVoiceSubmit}
         />
       </div>
     );
