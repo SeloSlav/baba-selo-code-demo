@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, getDocs, doc, updateDoc, orderBy, limit, startAfter, where } from 'firebase/firestore';
+import { collection, query, getDocs, doc, updateDoc, orderBy, limit, startAfter, where, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firebase/firebase';
 import { Recipe } from '../../recipe/types';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -35,6 +35,8 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
   const [lastDoc, setLastDoc] = useState<any>(null);
   const [hasMore, setHasMore] = useState(true);
   const [filterType, setFilterType] = useState<'all' | 'missing-ingredients'>('all');
+  const [totalRecipes, setTotalRecipes] = useState(0);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const BATCH_SIZE = 10;
 
   // Function to check if a recipe needs modernization
@@ -61,19 +63,35 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
     }
   };
 
+  // Function to fetch total count
+  const fetchTotalCount = async () => {
+    try {
+      const snapshot = await getDocs(collection(db, 'recipes'));
+      setTotalRecipes(snapshot.size);
+    } catch (error) {
+      console.error('Error fetching total count:', error);
+    }
+  };
+
   // Function to fetch recipes
   const fetchRecipes = async (isNewQuery: boolean = true) => {
     try {
       setLoading(true);
       
-      // Simpler query without ordering
+      // Query with ordering by createdAt in ascending order
       let recipesQuery = query(
         collection(db, 'recipes'),
+        orderBy('createdAt', 'asc'),
         limit(BATCH_SIZE)
       );
 
       if (!isNewQuery && lastDoc) {
-        recipesQuery = query(recipesQuery, startAfter(lastDoc));
+        recipesQuery = query(
+          collection(db, 'recipes'),
+          orderBy('createdAt', 'asc'),
+          startAfter(lastDoc),
+          limit(BATCH_SIZE)
+        );
       }
 
       console.log('Fetching recipes...');
@@ -85,7 +103,8 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
         console.log('Recipe data:', doc.id, data);
         return {
           id: doc.id,
-          ...data
+          ...data,
+          createdAt: data.createdAt?.toDate() || new Date() // Convert Firestore timestamp to Date
         };
       }) as Recipe[];
 
@@ -431,14 +450,40 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
     }
   };
 
+  // Add delete recipe function
+  const handleDeleteRecipe = async (recipeId: string) => {
+    if (!window.confirm('Are you sure you want to delete this recipe? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setDeletingId(recipeId);
+      await deleteDoc(doc(db, 'recipes', recipeId));
+      setRecipes(prev => prev.filter(r => r.id !== recipeId));
+      setTotalRecipes(prev => prev - 1);
+      showPointsToast(0, 'Recipe deleted successfully');
+    } catch (error) {
+      console.error('Error deleting recipe:', error);
+      showPointsToast(0, 'Failed to delete recipe');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   useEffect(() => {
     fetchRecipes();
+    fetchTotalCount(); // Fetch total count when component mounts
   }, [filterType]);
 
   return (
     <div className="bg-white rounded-xl shadow-md p-6 mb-8">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold">Recipe Modernizer</h2>
+        <div>
+          <h2 className="text-xl font-semibold">Recipe Modernizer</h2>
+          <p className="text-sm text-gray-600 mt-1">
+            Showing {recipes.length} of {totalRecipes} recipes
+          </p>
+        </div>
         <div className="flex items-center gap-2">
           <select
             className="px-3 py-1.5 text-sm border rounded-lg"
@@ -449,7 +494,10 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
             <option value="missing-ingredients">Missing Ingredients</option>
           </select>
           <button
-            onClick={() => fetchRecipes()}
+            onClick={() => {
+              fetchRecipes();
+              fetchTotalCount();
+            }}
             className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
           >
             <FontAwesomeIcon icon={faSync} className={loading ? 'animate-spin' : ''} />
@@ -475,6 +523,17 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
                     {recipe.recipeTitle}
                   </a>
                   <div className="flex gap-1">
+                    <button
+                      onClick={() => handleDeleteRecipe(recipe.id)}
+                      disabled={deletingId === recipe.id}
+                      className={`px-1.5 py-0.5 text-xs rounded transition-colors 
+                        ${deletingId === recipe.id 
+                          ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-600' 
+                          : 'bg-red-100 text-red-600 hover:bg-red-200 cursor-pointer hover:scale-105'
+                        }`}
+                    >
+                      {deletingId === recipe.id ? '...' : '🗑️'}
+                    </button>
                     <button
                       onClick={() => generateBasicDetails(recipe)}
                       disabled={modernizingId === recipe.id}

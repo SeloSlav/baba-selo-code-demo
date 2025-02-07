@@ -29,7 +29,8 @@ export interface Recipe {
   };
   dishPairings?: string;
   pinned?: boolean;
-  lastPinnedAt?: string;
+  lastPinnedAt?: string | null;
   username?: string;
   likes?: string[];
+  createdAt?: Date;
 } 
