@@ -152,7 +152,7 @@ export default function SettingsPage() {
       }
 
       const userDocRef = doc(db, "users", user.uid);
-      await updateDoc(userDocRef, { username });
+      await setDoc(userDocRef, { username }, { merge: true });
       
       // Also update the spoonPoints document with the new username
       const spoonRef = doc(db, "spoonPoints", user.uid);
@@ -360,6 +360,17 @@ export default function SettingsPage() {
                 )}
               </button>
             </div>
+            {!username && (
+              <div className="mt-3 text-amber-600 bg-amber-50 p-3 rounded-lg text-sm flex items-start gap-2">
+                <span className="text-lg mt-0.5">⚠️</span>
+                <div>
+                  <p className="font-medium">Add a username to unlock social features!</p>
+                  <p className="text-amber-700 mt-1">
+                    Your profile will be available at www.babaselo.com/{"{username}"} where you can share recipes with friends and compete for spoons on the global leaderboard.
+                  </p>
+                </div>
+              </div>
+            )}
           </form>
         </div>
 
