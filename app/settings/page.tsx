@@ -4,6 +4,8 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useAuth } from "../context/AuthContext"; // Adjust if your AuthContext is in a different path
 import { db } from "../firebase/firebase";        // Adjust if firebase config is in a different path
 import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
+import { LoadingSpinner } from '../components/LoadingSpinner';
+import { validateUsername } from '../lib/usernameValidation';
 
 // Image style options with their prompts
 const imageStyleOptions = {
@@ -212,7 +214,7 @@ export default function SettingsPage() {
           setPreferredCookingOil(userData.preferredCookingOil || "");
           setPreferredImageStyle(userData.preferredImageStyle || "rustic-traditional");
           setOilSearch(userData.preferredCookingOil || "");
-      }
+        }
       } catch (error) {
         console.error("Error fetching user settings:", error);
       }

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { collection, query, where, getDocs, orderBy, limit, startAfter, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, limit, startAfter, doc, updateDoc, arrayUnion, arrayRemove, getDoc } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
 import { Recipe } from '../recipe/types';
 import { LoadingSpinner } from '../components/LoadingSpinner';
@@ -11,6 +11,8 @@ import { useAuth } from '../context/AuthContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faHeart as faHeartSolid } from '@fortawesome/free-solid-svg-icons';
 import { faHeart as faHeartRegular } from '@fortawesome/free-regular-svg-icons';
+import { faPen, faUser, faCamera } from '@fortawesome/free-solid-svg-icons';
+import Image from 'next/image';
 
 interface UserProfileClientProps {
     userId: string;
@@ -65,6 +67,13 @@ export default function UserProfileClient({ userId, username }: UserProfileClien
     const [totalRecipes, setTotalRecipes] = useState(0);
     const [likeLoading, setLikeLoading] = useState<string | null>(null);
     const observerRef = useRef<IntersectionObserver | null>(null);
+    const [userBio, setUserBio] = useState<string>("");
+    const [isEditingBio, setIsEditingBio] = useState(false);
+    const [editedBio, setEditedBio] = useState("");
+    const [savingBio, setSavingBio] = useState(false);
+    const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+    const [uploadingPhoto, setUploadingPhoto] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const RECIPES_PER_PAGE = 12;
 
@@ -128,6 +137,13 @@ export default function UserProfileClient({ userId, username }: UserProfileClien
         }
 
         try {
+            // Get user bio
+            const userDoc = await getDoc(doc(db, "users", userId));
+            if (userDoc.exists()) {
+                setUserBio(userDoc.data().bio || "");
+                setProfilePhoto(userDoc.data().profilePhoto || null);
+            }
+
             // Get total count first
             const totalQuery = query(
                 collection(db, "recipes"),
@@ -266,6 +282,68 @@ export default function UserProfileClient({ userId, username }: UserProfileClien
         }
     };
 
+    const handleBioSubmit = async () => {
+        if (!user || user.uid !== userId) return;
+        
+        setSavingBio(true);
+        try {
+            const userRef = doc(db, "users", userId);
+            await updateDoc(userRef, {
+                bio: editedBio.trim()
+            });
+            setUserBio(editedBio.trim());
+            setIsEditingBio(false);
+        } catch (error) {
+            console.error('Error updating bio:', error);
+            setError('Failed to update bio');
+        } finally {
+            setSavingBio(false);
+        }
+    };
+
+    const handleProfilePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!user || user.uid !== userId || !e.target.files?.[0]) return;
+        
+        const file = e.target.files[0];
+        if (!file.type.startsWith('image/')) {
+            setError('Please upload an image file');
+            return;
+        }
+
+        setUploadingPhoto(true);
+        try {
+            // Create a FormData object to send the file
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('userId', userId);
+
+            // Send to your API endpoint
+            const response = await fetch('/api/uploadProfilePhoto', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to upload photo');
+            }
+
+            const data = await response.json();
+            
+            // Update Firestore with the new photo URL
+            const userRef = doc(db, "users", userId);
+            await updateDoc(userRef, {
+                profilePhoto: data.photoUrl
+            });
+
+            setProfilePhoto(data.photoUrl);
+        } catch (error) {
+            console.error('Error uploading photo:', error);
+            setError('Failed to upload photo');
+        } finally {
+            setUploadingPhoto(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen">
@@ -287,7 +365,106 @@ export default function UserProfileClient({ userId, username }: UserProfileClien
             {/* Sticky header */}
             <div className="sticky top-0 bg-white z-10 py-4 -mx-4 px-4 shadow-sm">
                 <div className="max-w-7xl mx-auto">
-                    <h1 className="text-3xl font-bold mb-4">{username}'s Recipes</h1>
+                    <div className="flex items-start gap-4 mb-4">
+                        <div className="relative group">
+                            <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+                                {profilePhoto ? (
+                                    <Image
+                                        src={profilePhoto}
+                                        alt={`${username}'s profile`}
+                                        width={64}
+                                        height={64}
+                                        className="object-cover w-full h-full"
+                                    />
+                                ) : (
+                                    <FontAwesomeIcon 
+                                        icon={faUser} 
+                                        className="text-gray-400 text-2xl"
+                                    />
+                                )}
+                            </div>
+                            {user?.uid === userId && (
+                                <>
+                                    <button
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="absolute bottom-0 right-0 bg-black rounded-full p-1.5 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-gray-800"
+                                        aria-label="Upload profile photo"
+                                    >
+                                        {uploadingPhoto ? (
+                                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                        ) : (
+                                            <FontAwesomeIcon icon={faCamera} className="text-xs" />
+                                        )}
+                                    </button>
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleProfilePhotoUpload}
+                                        className="hidden"
+                                    />
+                                </>
+                            )}
+                        </div>
+                        <div className="flex-1">
+                            <h1 className="text-3xl font-bold mb-2">{username}'s Recipes</h1>
+                            {userBio || user?.uid === userId ? (
+                                <div className="relative group">
+                                    {isEditingBio ? (
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <textarea
+                                                value={editedBio}
+                                                onChange={(e) => setEditedBio(e.target.value)}
+                                                placeholder="Add a bio..."
+                                                className="w-full p-2 text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                                                rows={2}
+                                            />
+                                            <div className="flex flex-col gap-2">
+                                                <button
+                                                    onClick={handleBioSubmit}
+                                                    disabled={savingBio}
+                                                    className="px-3 py-1 text-xs bg-black text-white rounded-lg hover:bg-gray-800 transition-colors disabled:bg-gray-300"
+                                                >
+                                                    {savingBio ? (
+                                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                                    ) : (
+                                                        'Save'
+                                                    )}
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setIsEditingBio(false);
+                                                        setEditedBio(userBio);
+                                                    }}
+                                                    className="px-3 py-1 text-xs bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
+                                                >
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="relative">
+                                            <p className="text-gray-600 mb-4 text-sm pr-8">
+                                                {userBio || (user?.uid === userId ? "Add a bio..." : "")}
+                                            </p>
+                                            {user?.uid === userId && (
+                                                <button
+                                                    onClick={() => {
+                                                        setIsEditingBio(true);
+                                                        setEditedBio(userBio);
+                                                    }}
+                                                    className="absolute top-0 right-0 text-gray-400 opacity-0 group-hover:opacity-100 hover:text-gray-600 transition-all duration-200"
+                                                    aria-label="Edit bio"
+                                                >
+                                                    <FontAwesomeIcon icon={faPen} className="text-sm" />
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            ) : null}
+                        </div>
+                    </div>
                     <SearchBar
                         searchTerm={searchTerm}
                         setSearchTerm={setSearchTerm}

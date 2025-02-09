@@ -83,7 +83,16 @@ export const RecipeCard = ({
               </h2>
             </Link>
             {showUsername && (
-              <p className="text-sm text-gray-600 mb-2">by {recipe.username || 'Anonymous'}</p>
+              <p className="text-sm text-gray-600 mb-2">
+                by{' '}
+                {recipe.username ? (
+                  <Link href={`/${recipe.username}`} className="hover:underline">
+                    {recipe.username}
+                  </Link>
+                ) : (
+                  'Anonymous'
+                )}
+              </p>
             )}
             {recipe.recipeSummary && (
               <p className="text-gray-600 text-sm line-clamp-2 mb-3">
