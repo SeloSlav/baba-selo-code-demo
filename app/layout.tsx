@@ -4,18 +4,18 @@ import { DeleteRecipeProvider } from "./context/DeleteRecipeContext";
 import { PointsProvider } from "./context/PointsContext";
 import PWABanner from "./components/PWABanner";
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: "no",
+};
+
 export const metadata = {
   title: "Baba Selo - Your Magical Recipe Companion",
 
   description:
     "Discover and save amazing recipes with Baba Selo's magical guidance.",
-
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: "no",
-  },
 
   icons: {
     icon: [

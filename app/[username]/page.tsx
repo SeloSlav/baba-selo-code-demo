@@ -6,7 +6,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
 
 interface PageProps {
-    params: { username: string };
+    params: Promise<{ username: string }>;
     searchParams: Record<string, string | string[] | undefined>;
 }
 
@@ -19,11 +19,13 @@ async function getUser(username: string) {
 }
 
 export default async function UserProfile({ params }: PageProps) {
-    if (isReservedPath(params.username)) {
+    const { username } = await params;
+
+    if (isReservedPath(username)) {
         notFound();
     }
 
-    const userSnapshot = await getUser(params.username);
+    const userSnapshot = await getUser(username);
 
     if (userSnapshot.empty) {
         notFound();
@@ -31,5 +33,5 @@ export default async function UserProfile({ params }: PageProps) {
 
     const userId = userSnapshot.docs[0].id;
 
-    return <UserProfileClient userId={userId} username={params.username} />;
+    return <UserProfileClient userId={userId} username={username} />;
 } 
