@@ -5,27 +5,24 @@ import UserProfileClient from './UserProfileClient';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
 
-interface PageProps {
+type Props = {
     params: Promise<{ username: string }>;
-    searchParams: Record<string, string | string[] | undefined>;
 }
 
-async function getUser(username: string) {
-    const usersQuery = query(
-        collection(db, 'users'),
-        where('username', '==', username.toLowerCase())
-    );
-    return await getDocs(usersQuery);
-}
+export default async function UserProfile(props: Props) {
+    const { username } = await props.params;
 
-export default async function UserProfile({ params }: PageProps) {
-    const { username } = await params;
-
+    // Check if username is a reserved path
     if (isReservedPath(username)) {
         notFound();
     }
 
-    const userSnapshot = await getUser(username);
+    // Find user by username
+    const usersQuery = query(
+        collection(db, 'users'),
+        where('username', '==', username.toLowerCase())
+    );
+    const userSnapshot = await getDocs(usersQuery);
 
     if (userSnapshot.empty) {
         notFound();
