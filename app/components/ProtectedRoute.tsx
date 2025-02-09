@@ -10,7 +10,9 @@ const protectedPaths = [
   '/settings',
   '/yard',
   '/admin',
-  '/upgrade'
+  '/upgrade',
+  '/spoons',
+  '/recipes'
 ];
 
 export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
