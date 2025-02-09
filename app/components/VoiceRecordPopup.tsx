@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTimes, faMicrophone, faCircleInfo, faPen } from "@fortawesome/free-solid-svg-icons";
+import { faTimes, faMicrophone, faCircleInfo, faPen, faStop } from "@fortawesome/free-solid-svg-icons";
 
 interface VoiceRecordPopupProps {
   isOpen: boolean;
@@ -47,12 +47,16 @@ export const VoiceRecordPopup: React.FC<VoiceRecordPopupProps> = ({
   useEffect(() => {
     if (!isOpen) {
       cleanup();
+      setTranscribedText('');
+      setError(null);
     }
   }, [isOpen, cleanup]);
 
   const startRecording = async () => {
     try {
       setError(null); // Clear any previous errors
+      setTranscribedText(''); // Clear any previous transcription
+      
       // Clean up any existing recording
       cleanup();
 
@@ -82,41 +86,18 @@ export const VoiceRecordPopup: React.FC<VoiceRecordPopupProps> = ({
         }
       };
 
-      // Start recording in smaller chunks for more frequent data
-      mediaRecorder.start(100);
-      setIsRecording(true);
-      console.log('Recording started');
-    } catch (error: any) {
-      console.error('Error accessing microphone:', error);
-      if (error.name === 'NotAllowedError') {
-        setError('Please allow microphone access to use voice recording.');
-      } else if (error.name === 'NotFoundError') {
-        setError('No microphone found. Please ensure your microphone is properly connected.');
-      } else {
-        setError('Error accessing microphone. Please check your device settings.');
-      }
-    }
-  };
-
-  const stopRecording = useCallback(() => {
-    console.log('Stopping recording...');
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      
-      // Add the onstop handler just before stopping
-      mediaRecorderRef.current.onstop = async () => {
+      // Set up the onstop handler before starting
+      mediaRecorder.onstop = async () => {
         try {
-          setError(null); // Clear any previous errors
+          setError(null);
           console.log('Recording stopped, processing audio...');
-          // Check if we have any audio data
+          
           if (!chunksRef.current.length) {
             throw new Error('No audio data recorded');
           }
 
           const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
           
-          // Verify the blob has actual content
           if (audioBlob.size === 0) {
             throw new Error('No audio data captured');
           }
@@ -124,12 +105,10 @@ export const VoiceRecordPopup: React.FC<VoiceRecordPopupProps> = ({
           console.log('Audio blob size:', audioBlob.size, 'bytes');
           setIsTranscribing(true);
 
-          // Create form data with the audio file
           const formData = new FormData();
           formData.append('file', audioBlob, 'recording.webm');
           formData.append('model', 'whisper-1');
 
-          // Send to our API endpoint that will forward to OpenAI
           const response = await fetch('/api/transcribe', {
             method: 'POST',
             body: formData,
@@ -149,7 +128,6 @@ export const VoiceRecordPopup: React.FC<VoiceRecordPopupProps> = ({
         } catch (error: any) {
           console.error('Error transcribing audio:', error);
           
-          // Handle different types of errors with user-friendly messages
           if (error.message.includes('No audio data')) {
             setError('No speech detected. Please try recording again while speaking.');
           } else if (error.message.includes('Failed to fetch') || !navigator.onLine) {
@@ -164,8 +142,39 @@ export const VoiceRecordPopup: React.FC<VoiceRecordPopupProps> = ({
           cleanup();
         }
       };
+
+      // Start recording in smaller chunks for more frequent data
+      mediaRecorder.start(100);
+      setIsRecording(true);
+      console.log('Recording started');
+    } catch (error: any) {
+      console.error('Error accessing microphone:', error);
+      if (error.name === 'NotAllowedError') {
+        setError('Please allow microphone access to use voice recording.');
+      } else if (error.name === 'NotFoundError') {
+        setError('No microphone found. Please ensure your microphone is properly connected.');
+      } else {
+        setError('Error accessing microphone. Please check your device settings.');
+      }
+      cleanup();
     }
-  }, [cleanup]);
+  };
+
+  const stopRecording = useCallback(() => {
+    console.log('Stopping recording...');
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  }, []);
+
+  const toggleRecording = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
+  };
 
   const handleSubmit = () => {
     if (transcribedText.trim()) {
@@ -204,7 +213,7 @@ export const VoiceRecordPopup: React.FC<VoiceRecordPopupProps> = ({
                   />
                   <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-56 md:w-64 p-3 bg-black text-white text-xs md:text-sm rounded-lg shadow-lg z-50">
                     <div className="relative">
-                      <p>Click and hold the microphone button to record your message. Release to stop recording.</p>
+                      <p>Click the microphone button to start recording. Click the stop button to finish recording.</p>
                       <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 translate-y-full w-2 h-2 bg-black rotate-45"></div>
                     </div>
                   </div>
@@ -235,11 +244,7 @@ export const VoiceRecordPopup: React.FC<VoiceRecordPopupProps> = ({
         {/* Recording Button */}
         <div className="flex flex-col items-center justify-center mb-6">
           <button
-            onMouseDown={startRecording}
-            onMouseUp={stopRecording}
-            onMouseLeave={stopRecording}
-            onTouchStart={startRecording}
-            onTouchEnd={stopRecording}
+            onClick={toggleRecording}
             disabled={isTranscribing}
             className={`w-24 h-24 rounded-full flex items-center justify-center transition-all duration-200 ${
               isRecording 
@@ -250,7 +255,7 @@ export const VoiceRecordPopup: React.FC<VoiceRecordPopupProps> = ({
             }`}
           >
             <FontAwesomeIcon 
-              icon={faMicrophone} 
+              icon={isRecording ? faStop : faMicrophone} 
               className={`text-3xl text-white ${isRecording ? 'animate-pulse' : ''}`} 
             />
           </button>
@@ -258,8 +263,8 @@ export const VoiceRecordPopup: React.FC<VoiceRecordPopupProps> = ({
             {isTranscribing 
               ? 'Transcribing...' 
               : isRecording 
-                ? 'Recording... Release to stop' 
-                : 'Press and hold to record'}
+                ? 'Recording in progress... Click to stop' 
+                : 'Click to start recording'}
           </p>
         </div>
 
