@@ -144,6 +144,13 @@ export default function SettingsPage() {
     setSavingUsername(true);
     setError(null);
     try {
+      // Validate the username first
+      const validation = await validateUsername(username, user.uid);
+      if (!validation.isValid) {
+        setError(validation.error || "Invalid username");
+        return;
+      }
+
       const userDocRef = doc(db, "users", user.uid);
       await updateDoc(userDocRef, { username });
       

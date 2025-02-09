@@ -1,4 +1,4 @@
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
 import { isReservedPath } from '../config/reservedPaths';
 
@@ -7,7 +7,26 @@ export interface UsernameValidationResult {
     error?: string;
 }
 
-export const validateUsername = async (username: string): Promise<UsernameValidationResult> => {
+export const validateUsername = async (username: string, userId?: string): Promise<UsernameValidationResult> => {
+    // Check if username is empty
+    if (!username.trim()) {
+        return {
+            isValid: false,
+            error: 'Username cannot be empty'
+        };
+    }
+
+    // If userId is provided, check if user already has a username
+    if (userId) {
+        const userDoc = await getDoc(doc(db, 'users', userId));
+        if (userDoc.exists() && userDoc.data().username && !username.trim()) {
+            return {
+                isValid: false,
+                error: 'Cannot remove an existing username'
+            };
+        }
+    }
+
     // Check length
     if (username.length < 3 || username.length > 20) {
         return {
@@ -32,7 +51,7 @@ export const validateUsername = async (username: string): Promise<UsernameValida
         };
     }
 
-    // Check if username already exists
+    // Check if username already exists (excluding current user if userId provided)
     const usersQuery = query(
         collection(db, 'users'),
         where('username', '==', username.toLowerCase())
@@ -40,10 +59,21 @@ export const validateUsername = async (username: string): Promise<UsernameValida
     const userSnapshot = await getDocs(usersQuery);
 
     if (!userSnapshot.empty) {
-        return {
-            isValid: false,
-            error: 'Username is already taken'
-        };
+        // If userId is provided, check if the username belongs to the current user
+        if (userId) {
+            const exists = userSnapshot.docs.some(doc => doc.id !== userId);
+            if (exists) {
+                return {
+                    isValid: false,
+                    error: 'Username is already taken'
+                };
+            }
+        } else {
+            return {
+                isValid: false,
+                error: 'Username is already taken'
+            };
+        }
     }
 
     return { isValid: true };
