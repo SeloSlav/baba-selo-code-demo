@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 import { isReservedPath } from '../config/reservedPaths';
 import { notFound } from 'next/navigation';
@@ -7,39 +5,31 @@ import UserProfileClient from './UserProfileClient';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
 
-export default function UserProfile({
-    params,
-}: {
-    params: Promise<{ username: string }>
-}) {
-    const { username } = React.use(params);
-    const [userId, setUserId] = React.useState<string | null>(null);
+interface PageProps {
+    params: { username: string };
+    searchParams: Record<string, string | string[] | undefined>;
+}
 
-    React.useEffect(() => {
-        async function fetchUser() {
-            if (isReservedPath(username)) {
-                notFound();
-            }
+async function getUser(username: string) {
+    const usersQuery = query(
+        collection(db, 'users'),
+        where('username', '==', username.toLowerCase())
+    );
+    return await getDocs(usersQuery);
+}
 
-            const usersQuery = query(
-                collection(db, 'users'),
-                where('username', '==', username.toLowerCase())
-            );
-            const userSnapshot = await getDocs(usersQuery);
-
-            if (userSnapshot.empty) {
-                notFound();
-            }
-
-            setUserId(userSnapshot.docs[0].id);
-        }
-
-        fetchUser();
-    }, [username]);
-
-    if (!userId) {
-        return null; // or loading state
+export default async function UserProfile({ params }: PageProps) {
+    if (isReservedPath(params.username)) {
+        notFound();
     }
 
-    return <UserProfileClient userId={userId} username={username} />;
+    const userSnapshot = await getUser(params.username);
+
+    if (userSnapshot.empty) {
+        notFound();
+    }
+
+    const userId = userSnapshot.docs[0].id;
+
+    return <UserProfileClient userId={userId} username={params.username} />;
 } 
