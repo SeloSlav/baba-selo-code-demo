@@ -5,13 +5,12 @@ import UserProfileClient from './UserProfileClient';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
 
-interface UserProfileProps {
-    params: {
-        username: string;
-    };
+type Props = {
+    params: { username: string };
+    searchParams: { [key: string]: string | string[] | undefined };
 }
 
-export default async function UserProfile({ params }: UserProfileProps) {
+export default async function UserProfile({ params }: Props) {
     // Check if username is a reserved path
     if (isReservedPath(params.username)) {
         notFound();
