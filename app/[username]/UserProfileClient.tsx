@@ -57,6 +57,7 @@ interface FirestoreRecipeData {
 export default function UserProfileClient({ userId, username }: UserProfileClientProps) {
     const { user } = useAuth();
     const [recipes, setRecipes] = useState<Recipe[]>([]);
+    const [filteredRecipes, setFilteredRecipes] = useState<Recipe[]>([]);
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -79,7 +80,7 @@ export default function UserProfileClient({ userId, username }: UserProfileClien
 
     const searchRecipes = async (searchTerms: string[]) => {
         setIsSearching(true);
-        
+
         try {
             const recipesRef = collection(db, "recipes");
             let searchQuery = query(
@@ -88,8 +89,9 @@ export default function UserProfileClient({ userId, username }: UserProfileClien
                 orderBy("createdAt", "desc")
             );
 
+            // Get all matching documents
             const querySnapshot = await getDocs(searchQuery);
-            const allRecipes = querySnapshot.docs.map(doc => {
+            const allRecipes = querySnapshot.docs.map((doc) => {
                 const data = doc.data() as FirestoreRecipeData;
                 return {
                     id: doc.id,
@@ -97,21 +99,25 @@ export default function UserProfileClient({ userId, username }: UserProfileClien
                     likes: Array.isArray(data.likes) ? data.likes : [],
                     pinned: Boolean(data.pinned),
                     createdAt: data.createdAt?.toDate() || new Date(),
-                    username: username // Add username since it's required by Recipe type
+                    username: username
                 } as Recipe;
             });
 
             // Client-side filtering for complex search
             const filtered = allRecipes.filter((recipe) => {
+                // Ensure arrays are properly handled
+                const diets = Array.isArray(recipe.diet) ? recipe.diet : [];
+                const ingredients = Array.isArray(recipe.ingredients) ? recipe.ingredients : [];
+
                 const searchableFields = [
                     recipe.recipeTitle?.toLowerCase() || "",
                     recipe.cuisineType?.toLowerCase() || "",
                     recipe.cookingDifficulty?.toLowerCase() || "",
                     recipe.cookingTime?.toLowerCase() || "",
                     recipe.recipeSummary?.toLowerCase() || "",
-                    ...(Array.isArray(recipe.diet) ? recipe.diet.map(d => d.toLowerCase()) : []),
-                    ...(Array.isArray(recipe.ingredients) ? recipe.ingredients.map(i => i.toLowerCase()) : [])
-                ].filter(Boolean);
+                    ...diets.map(d => d.toLowerCase()),
+                    ...ingredients.map(i => i.toLowerCase()),
+                ].filter(Boolean); // Remove any undefined/null values
 
                 return searchTerms.every((term) =>
                     searchableFields.some((field) => field.includes(term))
@@ -119,11 +125,10 @@ export default function UserProfileClient({ userId, username }: UserProfileClien
             });
 
             setRecipes(filtered);
-            setHasMore(false);
-            setTotalRecipes(filtered.length);
+            setFilteredRecipes(filtered);
+            setHasMore(false); // Disable pagination during search
         } catch (error) {
             console.error("Error searching recipes:", error);
-            setError("Failed to search recipes");
         } finally {
             setIsSearching(false);
         }
@@ -155,7 +160,7 @@ export default function UserProfileClient({ userId, username }: UserProfileClien
             // Then get paginated results
             const recipesRef = collection(db, "recipes");
             let recipesQuery;
-            
+
             if (loadMore && lastVisible) {
                 recipesQuery = query(
                     recipesRef,
@@ -182,7 +187,7 @@ export default function UserProfileClient({ userId, username }: UserProfileClien
                     likes: Array.isArray(data.likes) ? data.likes : [],
                     pinned: Boolean(data.pinned),
                     createdAt: data.createdAt?.toDate() || new Date(),
-                    username: username // Add username since it's required by Recipe type
+                    username: username
                 } as Recipe;
             });
 
@@ -190,16 +195,14 @@ export default function UserProfileClient({ userId, username }: UserProfileClien
             const lastDoc = querySnapshot.docs[querySnapshot.docs.length - 1];
             setLastVisible(lastDoc);
 
-            // Update recipes state
+            // Update both recipes states
             if (loadMore) {
-                // Ensure we don't add duplicates when loading more
-                setRecipes(prev => {
-                    const existingIds = new Set(prev.map(r => r.id));
-                    const newRecipes = fetchedRecipes.filter(r => !existingIds.has(r.id));
-                    return [...prev, ...newRecipes];
-                });
+                const newRecipes = [...recipes, ...fetchedRecipes];
+                setRecipes(newRecipes);
+                setFilteredRecipes(newRecipes);
             } else {
                 setRecipes(fetchedRecipes);
+                setFilteredRecipes(fetchedRecipes);
             }
 
             // Check if there are more recipes to load
@@ -227,39 +230,34 @@ export default function UserProfileClient({ userId, username }: UserProfileClien
         if (node) observerRef.current.observe(node);
     }, [loadingMore, hasMore, isSearching]);
 
-    // Search effect
+    // Search effect with debounce
     useEffect(() => {
         const delayDebounceFn = setTimeout(() => {
             if (!searchTerm.trim()) {
-                // Instead of fetching again, just show all recipes
-                if (recipes.length === 0) {
-                    fetchRecipes();
-                }
+                fetchRecipes(); // Reset to paginated view
                 return;
             }
 
             const searchTerms = searchTerm.toLowerCase().split(" ");
             searchRecipes(searchTerms);
-        }, 300);
+        }, 300); // 300ms delay
 
         return () => clearTimeout(delayDebounceFn);
     }, [searchTerm]);
 
-    // Initial fetch - make sure we have recipes loaded
+    // Initial fetch
     useEffect(() => {
-        if (recipes.length === 0) {
-            fetchRecipes();
-        }
+        fetchRecipes();
     }, [userId]);
 
     const handleLike = async (recipeId: string, currentLikes: string[]) => {
         if (!user) return;
-        
+
         setLikeLoading(recipeId);
         try {
             const recipeRef = doc(db, 'recipes', recipeId);
             const isLiked = currentLikes.includes(user.uid);
-            
+
             // Update Firestore
             await updateDoc(recipeRef, {
                 likes: isLiked ? arrayRemove(user.uid) : arrayUnion(user.uid)
@@ -284,7 +282,7 @@ export default function UserProfileClient({ userId, username }: UserProfileClien
 
     const handleBioSubmit = async () => {
         if (!user || user.uid !== userId) return;
-        
+
         setSavingBio(true);
         try {
             const userRef = doc(db, "users", userId);
@@ -303,7 +301,7 @@ export default function UserProfileClient({ userId, username }: UserProfileClien
 
     const handleProfilePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!user || user.uid !== userId || !e.target.files?.[0]) return;
-        
+
         const file = e.target.files[0];
         if (!file.type.startsWith('image/')) {
             setError('Please upload an image file');
@@ -328,7 +326,7 @@ export default function UserProfileClient({ userId, username }: UserProfileClien
             }
 
             const data = await response.json();
-            
+
             // Update Firestore with the new photo URL
             const userRef = doc(db, "users", userId);
             await updateDoc(userRef, {
@@ -363,7 +361,7 @@ export default function UserProfileClient({ userId, username }: UserProfileClien
     return (
         <div className="max-w-7xl mx-auto px-4 py-8">
             {/* Sticky header */}
-            <div className="sticky top-0 bg-white z-10 py-4 -mx-4 px-4 shadow-sm">
+            <div className="sticky top-0 bg-white z-10 py-4 -mx-4 px-4 shadow-sm mb-8">
                 <div className="max-w-7xl mx-auto">
                     <div className="flex items-start gap-4 mb-4">
                         <div className="relative group">
@@ -377,8 +375,8 @@ export default function UserProfileClient({ userId, username }: UserProfileClien
                                         className="object-cover w-full h-full"
                                     />
                                 ) : (
-                                    <FontAwesomeIcon 
-                                        icon={faUser} 
+                                    <FontAwesomeIcon
+                                        icon={faUser}
                                         className="text-gray-400 text-2xl"
                                     />
                                 )}
@@ -387,7 +385,8 @@ export default function UserProfileClient({ userId, username }: UserProfileClien
                                 <>
                                     <button
                                         onClick={() => fileInputRef.current?.click()}
-                                        className="absolute bottom-0 right-0 bg-black rounded-full p-1.5 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-gray-800"
+                                        className={`absolute bottom-0 right-0 bg-black rounded-full p-1.5 text-white transition-opacity duration-200 hover:bg-gray-800 ${uploadingPhoto ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                                            }`}
                                         aria-label="Upload profile photo"
                                     >
                                         {uploadingPhoto ? (
@@ -469,7 +468,7 @@ export default function UserProfileClient({ userId, username }: UserProfileClien
                         searchTerm={searchTerm}
                         setSearchTerm={setSearchTerm}
                         isLoading={isSearching}
-                        resultCount={recipes.length}
+                        resultCount={filteredRecipes.length}
                         totalCount={totalRecipes}
                     />
                 </div>
@@ -486,16 +485,42 @@ export default function UserProfileClient({ userId, username }: UserProfileClien
                         </div>
                     ))}
                 </div>
-            ) : recipes.length > 0 ? (
+            ) : filteredRecipes.length > 0 ? (
                 <>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-                        {recipes.map((recipe, index) => (
+                    {/* Pinned Recipes */}
+                    {filteredRecipes.filter(recipe => recipe.pinned).length > 0 && (
+                        <>
+                            <h2 className="text-gray-600 text-sm font-semibold pb-2 border-b mb-4">
+                                📌 Pinned Recipes
+                            </h2>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+                                {filteredRecipes.filter(recipe => recipe.pinned).map((recipe) => (
+                                    <div key={recipe.id} className="relative group">
+                                        <RecipeCard
+                                            recipe={recipe}
+                                            onLike={() => handleLike(recipe.id, recipe.likes)}
+                                            currentUser={user}
+                                            showUsername={false}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        </>
+                    )}
+
+                    {/* All Recipes */}
+                    <h2 className="text-gray-600 text-sm font-semibold pb-2 border-b mb-4">
+                        🍳 All Recipes
+                    </h2>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {filteredRecipes.filter(recipe => !recipe.pinned).map((recipe, index) => (
                             <div
                                 key={recipe.id}
-                                ref={index === recipes.length - 1 ? lastRecipeRef : null}
+                                ref={index === filteredRecipes.length - 1 ? lastRecipeRef : null}
                                 className="relative group"
                             >
-                                <RecipeCard 
+                                <RecipeCard
                                     recipe={recipe}
                                     onLike={() => handleLike(recipe.id, recipe.likes)}
                                     currentUser={user}
@@ -507,8 +532,8 @@ export default function UserProfileClient({ userId, username }: UserProfileClien
 
                     {/* Infinite scroll trigger */}
                     {!searchTerm && hasMore && (
-                        <div 
-                            ref={lastRecipeRef} 
+                        <div
+                            ref={lastRecipeRef}
                             className="h-20 flex items-center justify-center mt-8"
                             style={{ minHeight: '100px' }}
                         >
