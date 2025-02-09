@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { isReservedPath } from '../config/reservedPaths';
 import { notFound } from 'next/navigation';
@@ -5,28 +7,39 @@ import UserProfileClient from './UserProfileClient';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
 
-export default async function UserProfile({
+export default function UserProfile({
     params,
 }: {
-    params: { username: string }
+    params: Promise<{ username: string }>
 }) {
-    // Check if username is a reserved path
-    if (isReservedPath(params.username)) {
-        notFound();
+    const { username } = React.use(params);
+    const [userId, setUserId] = React.useState<string | null>(null);
+
+    React.useEffect(() => {
+        async function fetchUser() {
+            if (isReservedPath(username)) {
+                notFound();
+            }
+
+            const usersQuery = query(
+                collection(db, 'users'),
+                where('username', '==', username.toLowerCase())
+            );
+            const userSnapshot = await getDocs(usersQuery);
+
+            if (userSnapshot.empty) {
+                notFound();
+            }
+
+            setUserId(userSnapshot.docs[0].id);
+        }
+
+        fetchUser();
+    }, [username]);
+
+    if (!userId) {
+        return null; // or loading state
     }
 
-    // Find user by username
-    const usersQuery = query(
-        collection(db, 'users'),
-        where('username', '==', params.username.toLowerCase())
-    );
-    const userSnapshot = await getDocs(usersQuery);
-
-    if (userSnapshot.empty) {
-        notFound();
-    }
-
-    const userId = userSnapshot.docs[0].id;
-
-    return <UserProfileClient userId={userId} username={params.username} />;
+    return <UserProfileClient userId={userId} username={username} />;
 } 
