@@ -211,12 +211,12 @@ export const MarketplaceList: React.FC<MarketplaceListProps> = ({ goodies, onPur
             {/* Items Grid - Now in a separate scrollable container */}
             <div className="mt-4 flex-1 overflow-y-auto pr-6">
                 <div className="bg-white rounded-3xl border border-gray-300 p-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                         {filteredGoodies
                             .map((goodie) => (
                                 <div 
                                     key={goodie.id}
-                                    className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+                                    className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow flex flex-col"
                                 >
                                     <div className="relative h-56 w-full">
                                         <Image
@@ -225,7 +225,6 @@ export const MarketplaceList: React.FC<MarketplaceListProps> = ({ goodies, onPur
                                             fill
                                             className="object-cover"
                                             onError={(e) => {
-                                                // Use a colored background with an icon as fallback
                                                 const imgElement = e.target as HTMLImageElement;
                                                 const parent = imgElement.parentElement;
                                                 if (parent) {
@@ -240,10 +239,10 @@ export const MarketplaceList: React.FC<MarketplaceListProps> = ({ goodies, onPur
                                             }}
                                         />
                                     </div>
-                                    <div className="p-6">
-                                        <div className="mb-3">
+                                    <div className="p-6 flex flex-col flex-grow">
+                                        <div>
                                             <h3 className="text-xl font-semibold mb-2">{goodie.name}</h3>
-                                            <div className="flex flex-wrap gap-2">
+                                            <div className="flex flex-wrap gap-2 mb-3">
                                                 <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getRarityColor(goodie.rarity)}`}>
                                                     {goodie.rarity.charAt(0).toUpperCase() + goodie.rarity.slice(1)}
                                                 </span>
@@ -251,19 +250,21 @@ export const MarketplaceList: React.FC<MarketplaceListProps> = ({ goodies, onPur
                                                     {goodie.category.charAt(0).toUpperCase() + goodie.category.slice(1)}
                                                 </span>
                                             </div>
+                                            <p className="text-gray-600 text-sm mb-6">{goodie.description}</p>
                                         </div>
-                                        <p className="text-gray-600 text-sm mb-6">{goodie.description}</p>
-                                        <div className="flex justify-between items-center">
-                                            <div className="flex items-center text-yellow-600">
-                                                <FontAwesomeIcon icon={faSpoon} className="mr-2 text-lg" />
-                                                <span className="font-bold text-lg">{goodie.cost}</span>
+                                        <div className="mt-auto pt-6 border-t border-gray-200">
+                                            <div className="flex justify-between items-center">
+                                                <div className="flex items-center text-yellow-600">
+                                                    <FontAwesomeIcon icon={faSpoon} className="mr-2 text-lg" />
+                                                    <span className="font-bold text-lg">{goodie.cost}</span>
+                                                </div>
+                                                <button
+                                                    onClick={() => onPurchase(goodie)}
+                                                    className="px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+                                                >
+                                                    Purchase
+                                                </button>
                                             </div>
-                                            <button
-                                                onClick={() => onPurchase(goodie)}
-                                                className="px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
-                                            >
-                                                Purchase
-                                            </button>
                                         </div>
                                     </div>
                                 </div>

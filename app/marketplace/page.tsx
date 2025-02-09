@@ -189,44 +189,40 @@ export default function Marketplace() {
     }
 
     return (
-        <div className="min-h-[200vh]">
+        <div className="min-h-[100vh]">
             <div className="max-w-7xl mx-auto px-4 py-8">
                 <div className="flex flex-col items-center mb-12">
                     <img src="/baba-removebg.png" alt="Baba" className="w-32 h-32 mb-4" />
                     <h1 className="text-center text-2xl font-semibold mb-4">Spend your hard-earned spoons on special goodies!</h1>
-                    <p className="text-gray-600">Earn special vouchers for <a href="https://seloolive.com/products/authentic-croatian-olive-oil?variant=40790542549035" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 transition-colors underline">SELO Olive Oil</a> by collecting spoons! Other rare items can be used in special game features.</p>
+                    <p className="text-gray-600 text-center">Collect spoons to unlock special vouchers for premium <a href="https://seloolive.com/products/authentic-croatian-olive-oil?variant=40790542549035" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 transition-colors underline">SELO Olive Oil</a>. Visit <a href="/yard" className="text-blue-600 hover:text-blue-800 transition-colors underline">Baba's Yard</a> where you can use your rare items to befriend stray cats and multiply your spoon earnings!</p>
                 </div>
 
-                {/* Mobile: Inventory first, Desktop: Side by side */}
-                <div className="flex flex-col lg:grid lg:grid-cols-2 gap-8 h-[180vh]">
-                    {/* Your Inventory - Shows first on mobile */}
-                    <div className="order-1 lg:order-2 h-full overflow-hidden">
-                        <div className="h-full flex flex-col">
-                            <h2 className="text-2xl font-semibold mb-4">Your Inventory</h2>
-                            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                                <UserInventory items={state.userInventory.sort((a, b) => {
-                                    const dateA = a.purchasedAt instanceof Timestamp ? 
-                                        a.purchasedAt.toDate().getTime() : 
-                                        a.purchasedAt.getTime();
-                                    const dateB = b.purchasedAt instanceof Timestamp ? 
-                                        b.purchasedAt.toDate().getTime() : 
-                                        b.purchasedAt.getTime();
-                                    return dateB - dateA; // Sort in descending order (newest first)
-                                })} />
-                            </div>
+                {/* Stack inventory above marketplace */}
+                <div className="flex flex-col gap-8">
+                    {/* Your Inventory */}
+                    <div className="w-full">
+                        <h2 className="text-2xl font-semibold mb-4">Your Inventory</h2>
+                        <div className="overflow-y-auto pr-2 custom-scrollbar">
+                            <UserInventory items={state.userInventory.sort((a, b) => {
+                                const dateA = a.purchasedAt instanceof Timestamp ? 
+                                    a.purchasedAt.toDate().getTime() : 
+                                    a.purchasedAt.getTime();
+                                const dateB = b.purchasedAt instanceof Timestamp ? 
+                                    b.purchasedAt.toDate().getTime() : 
+                                    b.purchasedAt.getTime();
+                                return dateB - dateA; // Sort in descending order (newest first)
+                            })} />
                         </div>
                     </div>
 
                     {/* Available Items */}
-                    <div className="order-2 lg:order-1 h-full overflow-hidden">
-                        <div className="h-full flex flex-col">
-                            <h2 className="text-2xl font-semibold mb-4">Marketplace</h2>
-                            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                                <MarketplaceList 
-                                    goodies={state.goodies} 
-                                    onPurchase={handlePurchase}
-                                />
-                            </div>
+                    <div className="w-full">
+                        <h2 className="text-2xl font-semibold mb-4">Marketplace</h2>
+                        <div className="overflow-y-auto pr-2 custom-scrollbar">
+                            <MarketplaceList 
+                                goodies={state.goodies} 
+                                onPurchase={handlePurchase}
+                            />
                         </div>
                     </div>
                 </div>

@@ -346,13 +346,13 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
 
     const suggestions = [
         "Create a traditional recipe",
-        "What's your secret to perfect homemade meals?",
+        "What's your secret to perfect homemade meals?", 
         "Help me use up these leftovers",
         "Tell me a funny cooking disaster story",
         "Give me a recipe for my date",
-        "Tell me about SELO olive oil",
+        "Tell me about SELO olive oil", 
         "Set a timer for 15 minutes"
-    ];
+    ].map(s => s.trim()); // Ensure no extra whitespace that could affect alignment
 
     const [firstMessage, ...restMessages] = messages;
 
@@ -374,7 +374,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                             <button
                                 key={i}
                                 onClick={() => onSuggestionClick(suggestion)}
-                                className="p-2 bg-blue-50 rounded-md hover:bg-blue-100 text-black"
+                                className="p-2 bg-blue-50 rounded-md hover:bg-blue-100 text-black text-left w-full md:w-auto"
                             >
                                 {emoji} {suggestion}
                             </button>

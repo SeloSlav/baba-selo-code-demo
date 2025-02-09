@@ -1,10 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { UserInventoryItem, Rarity } from '../types';
 import { format } from 'date-fns';
 import Image from 'next/image';
 import { Timestamp } from 'firebase/firestore';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faFilter, faChevronDown } from '@fortawesome/free-solid-svg-icons';
+import { faFilter, faChevronDown, faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
 
 interface UserInventoryProps {
     items: UserInventoryItem[];
@@ -52,6 +52,7 @@ export const UserInventory: React.FC<UserInventoryProps> = ({ items }) => {
     const [selectedRarities, setSelectedRarities] = useState<Set<Rarity>>(new Set());
     const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
     const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
 
     // Update the categories array to include all possible categories
     const categories = [...new Set([...items.map(item => item.category), 'food', 'toy', 'accessory', 'Olive Oil'])];
@@ -117,6 +118,18 @@ export const UserInventory: React.FC<UserInventoryProps> = ({ items }) => {
 
     // Get active filters count
     const activeFiltersCount = selectedRarities.size + selectedCategories.size;
+
+    // Add scroll functions
+    const scroll = (direction: 'left' | 'right') => {
+        if (scrollContainerRef.current) {
+            const scrollAmount = 300; // Adjust this value to control scroll distance
+            const newScrollPosition = scrollContainerRef.current.scrollLeft + (direction === 'left' ? -scrollAmount : scrollAmount);
+            scrollContainerRef.current.scrollTo({
+                left: newScrollPosition,
+                behavior: 'smooth'
+            });
+        }
+    };
 
     if (items.length === 0) {
         return (
@@ -203,10 +216,31 @@ export const UserInventory: React.FC<UserInventoryProps> = ({ items }) => {
                 </div>
             </div>
 
-            {/* Items Grid */}
-            <div className="mt-4 flex-1 overflow-y-auto pr-6">
+            {/* Items Grid with Scroll Arrows */}
+            <div className="mt-4 flex-1 relative group">
+                {/* Left Arrow */}
+                <button
+                    onClick={() => scroll('left')}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black bg-opacity-20 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-opacity-30"
+                    aria-label="Scroll left"
+                >
+                    <FontAwesomeIcon icon={faChevronLeft} />
+                </button>
+
+                {/* Right Arrow */}
+                <button
+                    onClick={() => scroll('right')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black bg-opacity-20 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-opacity-30"
+                    aria-label="Scroll right"
+                >
+                    <FontAwesomeIcon icon={faChevronRight} />
+                </button>
+
                 <div className="bg-white rounded-3xl border border-gray-300 p-6">
-                    <div className="grid grid-cols-1 gap-4">
+                    <div 
+                        ref={scrollContainerRef}
+                        className="flex overflow-x-auto pb-4 custom-scrollbar gap-4 snap-x snap-mandatory"
+                    >
                         {filteredItems.map((item) => {
                             const purchaseDate = item.purchasedAt instanceof Timestamp ? 
                                 item.purchasedAt.toDate() : 
@@ -215,10 +249,10 @@ export const UserInventory: React.FC<UserInventoryProps> = ({ items }) => {
                             return (
                                 <div 
                                     key={`${item.id}-${purchaseDate.getTime()}`}
-                                    className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+                                    className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow flex-shrink-0 w-[280px] snap-start"
                                 >
-                                    <div className="flex">
-                                        <div className="relative h-24 w-24 flex-shrink-0">
+                                    <div className="flex flex-col">
+                                        <div className="relative h-40 w-full">
                                             <Image
                                                 src={item.imageUrl}
                                                 alt={item.name}
@@ -238,7 +272,7 @@ export const UserInventory: React.FC<UserInventoryProps> = ({ items }) => {
                                                 }}
                                             />
                                         </div>
-                                        <div className="p-4 flex-grow">
+                                        <div className="p-4">
                                             <div className="mb-2">
                                                 <h3 className="font-semibold mb-2">{item.name}</h3>
                                                 <div className="flex flex-wrap gap-2">
@@ -249,21 +283,6 @@ export const UserInventory: React.FC<UserInventoryProps> = ({ items }) => {
                                                         {item.category.charAt(0).toUpperCase() + item.category.slice(1)}
                                                     </span>
                                                 </div>
-                                            </div>
-                                            <p className="text-gray-600 text-sm mb-4">{item.description}</p>
-                                            <div className="flex flex-col gap-2">
-                                                <p className="text-xs text-gray-400">
-                                                    Purchased on {format(purchaseDate, 'MMM d, yyyy')}
-                                                </p>
-                                                {item.category === 'Olive Oil' && (
-                                                    <button
-                                                        className="w-full px-4 py-2 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white text-sm rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-sm hover:shadow-md transform hover:-translate-y-0.5"
-                                                        onClick={() => {}}
-                                                    >
-                                                        <span className="text-lg">🎁</span>
-                                                        <span className="font-medium">Unwrap Voucher</span>
-                                                    </button>
-                                                )}
                                             </div>
                                         </div>
                                     </div>
