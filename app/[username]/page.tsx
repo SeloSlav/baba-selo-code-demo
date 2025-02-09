@@ -4,22 +4,12 @@ import { notFound } from 'next/navigation';
 import UserProfileClient from './UserProfileClient';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
-import { Metadata } from 'next';
-
-interface PageProps {
-    params: { username: string };
-}
-
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-    return {
-        title: `${params.username}'s Profile | Baba Selo`,
-        description: `Check out ${params.username}'s recipes on Baba Selo`
-    };
-}
 
 export default async function UserProfile({
     params,
-}: PageProps) {
+}: {
+    params: { username: string }
+}) {
     // Check if username is a reserved path
     if (isReservedPath(params.username)) {
         notFound();
