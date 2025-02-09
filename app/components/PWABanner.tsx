@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faDownload } from "@fortawesome/free-solid-svg-icons";
+import { faDownload, faClose } from "@fortawesome/free-solid-svg-icons";
 
 const PWABanner: React.FC = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -52,9 +52,9 @@ const PWABanner: React.FC = () => {
       <div className="flex items-center gap-2">
         <button
           onClick={() => setIsVisible(false)}
-          className="text-sm px-3 py-1 hover:bg-gray-800 rounded transition-colors"
+          className="text-white hover:text-gray-300 transition-colors p-2"
         >
-          Not now
+          <FontAwesomeIcon icon={faClose} className="w-4 h-4" />
         </button>
         <button
           onClick={handleInstallClick}
