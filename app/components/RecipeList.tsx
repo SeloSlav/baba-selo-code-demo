@@ -216,6 +216,12 @@ export const RecipeList = () => {
             {menuOpen === recipe.id && renderMenu(recipe.id, recipe.pinned, recipe.recipeTitle)}
           </div>
         ))}
+        {pinnedRecipes.length === 0 && (
+          <div className="text-center py-3 text-gray-500 text-sm">
+            <p>No pinned recipes yet</p>
+            <p className="text-xs mt-1">Pin your favorite recipes to access them quickly</p>
+          </div>
+        )}
       </div>
 
       <div>
@@ -263,6 +269,12 @@ export const RecipeList = () => {
             {menuOpen === recipe.id && renderMenu(recipe.id, recipe.pinned, recipe.recipeTitle)}
           </div>
         ))}
+        {recipes.length === 0 && (
+          <div className="text-center py-3 text-gray-500 text-sm">
+            <p>No recipes saved yet</p>
+            <p className="text-xs mt-1">Your recently saved recipes will appear here</p>
+          </div>
+        )}
       </div>
     </div>
   );

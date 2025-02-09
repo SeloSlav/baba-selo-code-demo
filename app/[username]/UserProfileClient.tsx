@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { collection, query, where, getDocs, orderBy, limit, startAfter, doc, updateDoc, arrayUnion, arrayRemove, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, limit, startAfter, doc, updateDoc, arrayUnion, arrayRemove, getDoc, Timestamp, increment, setDoc } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
 import { Recipe } from '../recipe/types';
 import { LoadingSpinner } from '../components/LoadingSpinner';
@@ -54,6 +54,8 @@ interface FirestoreRecipeData {
     createdAt?: any;
 }
 
+const POINTS_FOR_LIKE = 50; // Points awarded when someone likes your recipe
+
 export default function UserProfileClient({ userId, username }: UserProfileClientProps) {
     const { user } = useAuth();
     const [recipes, setRecipes] = useState<Recipe[]>([]);
@@ -75,6 +77,7 @@ export default function UserProfileClient({ userId, username }: UserProfileClien
     const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [currentUsername, setCurrentUsername] = useState<string>("");
 
     const RECIPES_PER_PAGE = 12;
 
@@ -250,6 +253,19 @@ export default function UserProfileClient({ userId, username }: UserProfileClien
         fetchRecipes();
     }, [userId]);
 
+    // Add effect to fetch current user's username
+    useEffect(() => {
+        const fetchCurrentUsername = async () => {
+            if (user) {
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+                if (userDoc.exists()) {
+                    setCurrentUsername(userDoc.data().username || "");
+                }
+            }
+        };
+        fetchCurrentUsername();
+    }, [user]);
+
     const handleLike = async (recipeId: string, currentLikes: string[]) => {
         if (!user) return;
 
@@ -258,21 +274,62 @@ export default function UserProfileClient({ userId, username }: UserProfileClien
             const recipeRef = doc(db, 'recipes', recipeId);
             const isLiked = currentLikes.includes(user.uid);
 
-            // Update Firestore
+            // If already liked, do nothing
+            if (isLiked) {
+                return;
+            }
+
+            // Like (one-way action)
             await updateDoc(recipeRef, {
-                likes: isLiked ? arrayRemove(user.uid) : arrayUnion(user.uid)
+                likes: arrayUnion(user.uid)
             });
 
             // Update local state
             setRecipes(prev => prev.map(recipe => {
                 if (recipe.id === recipeId) {
-                    const newLikes = isLiked
-                        ? recipe.likes.filter(id => id !== user.uid)
-                        : [...recipe.likes, user.uid];
-                    return { ...recipe, likes: newLikes };
+                    return { ...recipe, likes: [...recipe.likes, user.uid] };
                 }
                 return recipe;
             }));
+
+            setFilteredRecipes(prev => prev.map(recipe => {
+                if (recipe.id === recipeId) {
+                    return { ...recipe, likes: [...recipe.likes, user.uid] };
+                }
+                return recipe;
+            }));
+
+            // Award points to recipe owner if it's not their own recipe
+            if (userId !== user.uid) {
+                const spoonRef = doc(db, "spoonPoints", userId);
+                const transaction = {
+                    actionType: "RECIPE_SAVED_BY_OTHER",
+                    points: POINTS_FOR_LIKE,
+                    timestamp: Timestamp.now(),
+                    targetId: recipeId,
+                    details: `Recipe liked by @${currentUsername}`
+                };
+
+                try {
+                    // Try to update first
+                    await updateDoc(spoonRef, {
+                        totalPoints: increment(POINTS_FOR_LIKE),
+                        transactions: arrayUnion(transaction)
+                    });
+                } catch (error: any) {
+                    // If document doesn't exist, create it
+                    if (error.code === 'not-found') {
+                        await setDoc(spoonRef, {
+                            userId,
+                            username,
+                            totalPoints: POINTS_FOR_LIKE,
+                            transactions: [transaction]
+                        });
+                    } else {
+                        throw error; // Re-throw if it's a different error
+                    }
+                }
+            }
         } catch (error) {
             console.error('Error updating like:', error);
         } finally {

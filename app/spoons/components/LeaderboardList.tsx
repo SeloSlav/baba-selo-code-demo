@@ -52,8 +52,15 @@ export const LeaderboardList: React.FC<LeaderboardListProps> = ({ leaderboard, c
                       <div className="font-semibold">
                         {entry.username === 'Anonymous Chef' && entry.userId === currentUserId ? (
                           <span className="text-gray-400">Set your username</span>
+                        ) : entry.username === 'Anonymous Chef' ? (
+                          <span>{entry.username}</span>
                         ) : (
-                          entry.username
+                          <Link 
+                            href={`/${entry.username}`}
+                            className="hover:text-purple-600 transition-colors"
+                          >
+                            {entry.username}
+                          </Link>
                         )}
                       </div>
                       {entry.userId === currentUserId && entry.username === 'Anonymous Chef' && (

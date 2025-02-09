@@ -5,7 +5,7 @@ import { faBookOpenReader, faGear, faHome, faSignOut, faStarOfLife, faSpoon, faC
 import Link from "next/link";
 import { useAuth } from '../context/AuthContext';
 import { isAdmin } from '../config/admin';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
 
 interface ProfileMenuProps {
@@ -34,16 +34,22 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
     }, [user]);
 
     useEffect(() => {
-        const fetchUsername = async () => {
-            if (user) {
-                const userDoc = await getDoc(doc(db, "users", user.uid));
-                if (userDoc.exists()) {
-                    setUsername(userDoc.data().username || "");
-                }
-            }
-        };
+        if (!user) {
+            setUsername("");
+            return;
+        }
 
-        fetchUsername();
+        // Set up real-time listener for username changes
+        const unsubscribe = onSnapshot(doc(db, "users", user.uid), (doc) => {
+            if (doc.exists()) {
+                setUsername(doc.data().username || "");
+            } else {
+                setUsername("");
+            }
+        });
+
+        // Cleanup subscription on unmount
+        return () => unsubscribe();
     }, [user]);
 
     useEffect(() => {
