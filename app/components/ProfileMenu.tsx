@@ -5,6 +5,8 @@ import { faBookOpenReader, faGear, faHome, faSignOut, faStarOfLife, faSpoon, faC
 import Link from "next/link";
 import { useAuth } from '../context/AuthContext';
 import { isAdmin } from '../config/admin';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase/firebase';
 
 interface ProfileMenuProps {
     isOpen: boolean;
@@ -16,6 +18,7 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
     const menuRef = useRef<HTMLDivElement | null>(null);
     const { user } = useAuth();
     const [isUserAdmin, setIsUserAdmin] = useState(false);
+    const [username, setUsername] = useState<string>("");
 
     useEffect(() => {
         const checkAdminStatus = async () => {
@@ -28,6 +31,19 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
         };
 
         checkAdminStatus();
+    }, [user]);
+
+    useEffect(() => {
+        const fetchUsername = async () => {
+            if (user) {
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+                if (userDoc.exists()) {
+                    setUsername(userDoc.data().username || "");
+                }
+            }
+        };
+
+        fetchUsername();
     }, [user]);
 
     useEffect(() => {
@@ -67,7 +83,7 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
                     </Link>
                 </li>
                 <li className="flex items-center px-4 py-2 rounded-md hover:bg-gray-100 cursor-pointer">
-                    <Link href="/recipes" className="flex items-center w-full">
+                    <Link href={username ? `/${username}` : "/recipes"} className="flex items-center w-full">
                         <FontAwesomeIcon icon={faBookOpenReader} className="text-[#5d5d5d] mr-3" />
                         <span>My Recipes</span>
                     </Link>
