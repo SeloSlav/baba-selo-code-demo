@@ -2,6 +2,7 @@ import "./globals.css";
 import { AuthProvider } from "./context/AuthContext";
 import { DeleteRecipeProvider } from "./context/DeleteRecipeContext";
 import { PointsProvider } from "./context/PointsContext";
+import PWABanner from "./components/PWABanner";
 
 export const metadata = {
   title: "Baba Selo - Your Magical Recipe Companion",
@@ -79,6 +80,7 @@ export default function RootLayout({
         <AuthProvider>
           <DeleteRecipeProvider>
             <PointsProvider>
+              <PWABanner />
               {children}
             </PointsProvider>
           </DeleteRecipeProvider>
