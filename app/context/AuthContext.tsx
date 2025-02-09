@@ -192,9 +192,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <AuthContext.Provider value={{ user, signInWithGoogle, logOut, loading }}>
-      {user && (
-        <div className="fixed top-4 right-8 z-30 flex items-center gap-2">
-          {/* Spoon Menu Button */}
+      <div className="fixed top-4 right-8 z-30 flex items-center gap-2">
+        {user && (
+          /* Spoon Menu Button - only shown for authenticated users */
           <button
             onClick={toggleSpoonMenu}
             className="relative p-2 rounded-md hover:bg-gray-200 bg-white group"
@@ -206,16 +206,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               </span>
             )}
           </button>
+        )}
 
-          {/* Profile Menu Button */}
-          <button
-            onClick={toggleProfileMenu}
-            className="relative p-2 rounded-md hover:bg-gray-200 bg-white"
-          >
-            <FontAwesomeIcon icon={faUserCircle} className="text-[#5d5d5d] text-xl" />
-          </button>
+        {/* Profile Menu Button - shown for all users */}
+        <button
+          onClick={toggleProfileMenu}
+          className="relative p-2 rounded-md hover:bg-gray-200 bg-white"
+        >
+          <FontAwesomeIcon icon={faUserCircle} className="text-[#5d5d5d] text-xl" />
+        </button>
 
-          {/* Menus */}
+        {/* Menus */}
+        {user && (
           <SpoonHistoryMenu
             isOpen={isSpoonMenuOpen}
             onClose={closeSpoonMenu}
@@ -225,14 +227,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             onMarkAllRead={handleMarkAllRead}
             unreadCount={unreadCount}
           />
+        )}
 
-          <ProfileMenu
-            isOpen={isProfileMenuOpen}
-            onClose={closeProfileMenu}
-            onLogout={logOut}
-          />
-        </div>
-      )}
+        <ProfileMenu
+          isOpen={isProfileMenuOpen}
+          onClose={closeProfileMenu}
+          onLogout={logOut}
+        />
+      </div>
 
       {children}
     </AuthContext.Provider>

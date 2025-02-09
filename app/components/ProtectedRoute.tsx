@@ -2,21 +2,36 @@
 
 import React, { useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
+
+// Add paths that require authentication
+const protectedPaths = [
+  '/marketplace',
+  '/settings',
+  '/yard',
+  '/admin',
+  '/upgrade'
+];
 
 export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
-    // Redirect to login if the user is not authenticated
-    if (!loading && !user) {
-      router.push("/login");
+    // Check if current path is protected
+    const isProtectedPath = protectedPaths.some(path => pathname === path);
+    
+    // If it's a protected path and user is not authenticated (and we're done loading)
+    if (isProtectedPath && !loading && !user) {
+      // Immediate redirect
+      router.replace('/login');
+      return;
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, pathname]);
 
+  // While loading, show spinner
   if (loading) {
-    // Show a loading spinner while checking authentication
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <img src="/baba-removebg.png" alt="Baba" className="w-32 h-32 mb-6" />
@@ -29,6 +44,15 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  // Render children if user is authenticated
+  // If it's a protected path and user is not authenticated, don't render anything
+  // This prevents any flash of content before the redirect
+  const isProtectedPath = protectedPaths.some(path => pathname === path);
+  if (isProtectedPath && !user) {
+    return null;
+  }
+
+  // If we get here, either:
+  // 1. The path is not protected, or
+  // 2. The user is authenticated
   return <>{children}</>;
 };
