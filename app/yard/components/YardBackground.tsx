@@ -13,12 +13,12 @@ interface PlacementLocation {
 }
 
 const PLACEMENT_LOCATIONS: PlacementLocation[] = [
-    { id: 'food1', type: 'food', x: '50%', y: '60%' },
-    { id: 'toy1', type: 'toy', x: '30%', y: '40%' },
-    { id: 'toy2', type: 'toy', x: '45%', y: '45%' },
-    { id: 'toy3', type: 'toy', x: '55%', y: '40%' },
-    { id: 'toy4', type: 'toy', x: '65%', y: '45%' },
-    { id: 'toy5', type: 'toy', x: '75%', y: '40%' },
+    { id: 'food1', type: 'food', x: '50%', y: '77%' },
+    { id: 'toy1', type: 'toy', x: '30%', y: '77%' },
+    { id: 'toy2', type: 'toy', x: '45%', y: '65%' },
+    { id: 'toy3', type: 'toy', x: '55%', y: '29%' },
+    { id: 'toy4', type: 'toy', x: '65%', y: '58%' },
+    { id: 'toy5', type: 'toy', x: '70%', y: '73%' },
 ];
 
 interface YardBackgroundProps {
@@ -169,7 +169,7 @@ export default function YardBackground({
                                         top: location.y,
                                         transform: 'translate(-50%, -50%)'
                                     }}
-                                    className={`w-24 h-24 rounded-full ${
+                                    className={`w-12 h-12 rounded-full ${
                                         location.type === 'food' 
                                             ? 'bg-red-500 bg-opacity-40 hover:bg-opacity-60' 
                                             : 'bg-blue-500 bg-opacity-40 hover:bg-opacity-60'
