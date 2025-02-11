@@ -139,16 +139,19 @@ export default function ExplorePage() {
       });
 
       // Get usernames for all recipes
-      const userIds = new Set(fetchedRecipes.map(recipe => recipe.userId));
-      const usersQuery = query(
-        collection(db, "users"),
-        where("__name__", "in", Array.from(userIds))
-      );
-      const userDocs = await getDocs(usersQuery);
-      const userMap = new Map();
-      userDocs.docs.forEach(doc => {
-        userMap.set(doc.id, doc.data().username);
-      });
+      const userIds = new Set(fetchedRecipes.map(recipe => recipe.userId).filter(Boolean));
+      
+      let userMap = new Map();
+      if (userIds.size > 0) {
+        const usersQuery = query(
+          collection(db, "users"),
+          where("__name__", "in", Array.from(userIds))
+        );
+        const userDocs = await getDocs(usersQuery);
+        userDocs.docs.forEach(doc => {
+          userMap.set(doc.id, doc.data().username);
+        });
+      }
 
       // Update usernames and sort recipes by completeness and creation date
       const recipesWithUsernames = fetchedRecipes
@@ -229,20 +232,25 @@ export default function ExplorePage() {
       ));
 
       // Award points to recipe owner if it's not their own recipe
-      if (recipe.userId !== user.uid) {
-        const spoonRef = doc(db, "spoonPoints", recipe.userId);
-        const transaction = {
-          actionType: "RECIPE_SAVED_BY_OTHER",
-          points: POINTS_FOR_LIKE,
-          timestamp: Timestamp.now(),
-          targetId: recipe.id,
-          details: `Recipe "${recipe.recipeTitle}" liked by @${currentUsername}`
-        };
+      if (recipe.userId && recipe.userId !== user.uid) {
+        try {
+          const spoonRef = doc(db, "users", recipe.userId, "spoonPoints", "points");
+          const transaction = {
+            actionType: "RECIPE_SAVED_BY_OTHER",
+            points: POINTS_FOR_LIKE,
+            timestamp: Timestamp.now(),
+            targetId: recipe.id,
+            details: `Recipe "${recipe.recipeTitle}" liked by @${currentUsername}`
+          };
 
-        await updateDoc(spoonRef, {
-          totalPoints: increment(POINTS_FOR_LIKE),
-          transactions: arrayUnion(transaction)
-        });
+          await updateDoc(spoonRef, {
+            totalPoints: increment(POINTS_FOR_LIKE),
+            transactions: arrayUnion(transaction)
+          });
+        } catch (pointsError) {
+          console.error("Error awarding points:", pointsError);
+          // Don't throw the error since the like was still successful
+        }
       }
     } catch (error) {
       console.error("Error updating like:", error);
