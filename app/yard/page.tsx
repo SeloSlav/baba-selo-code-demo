@@ -6,6 +6,7 @@ import { db } from '../firebase/firebase';
 import { useAuth } from '../context/AuthContext';
 import { UserInventoryItem } from '../marketplace/types';
 import { Timestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 // Components
 import DesktopMessage from './components/DesktopMessage';
@@ -151,22 +152,41 @@ export default function Yard() {
                 return;
             }
 
-            // For toys, we return them to inventory
-            const inventoryItem: UserInventoryItem = {
-                id: item.id.split('-')[0], // Remove the timestamp part
-                name: item.name,
-                imageUrl: item.imageUrl,
-                category: 'toy',
-                rarity: 'common',
-                description: '',
-                purchasedAt: new Date(),
-                cost: 0
-            };
-
-            // Add item back to inventory in Firestore
+            // Find the original item in the database
+            const originalItemId = item.id.split('-')[0]; // Remove the timestamp part
             const userInventoryRef = doc(db, `users/${user.uid}/inventory/items`);
+            const inventoryDoc = await getDoc(userInventoryRef);
+            const allItems = inventoryDoc.data()?.items || [];
+            let originalItem = allItems.find(i => i.id === originalItemId);
+
+            // If not found in inventory, search in goodies collection
+            if (!originalItem) {
+                const goodiesRef = collection(db, 'goodies');
+                const q = query(goodiesRef, where('name', '==', item.name));
+                const goodiesSnapshot = await getDocs(q);
+                
+                if (!goodiesSnapshot.empty) {
+                    const goodieDoc = goodiesSnapshot.docs[0];
+                    const goodieData = goodieDoc.data();
+                    originalItem = {
+                        id: originalItemId,
+                        name: goodieData.name,
+                        imageUrl: goodieData.imageUrl,
+                        description: goodieData.description,
+                        category: goodieData.category,
+                        rarity: goodieData.rarity,
+                        cost: goodieData.cost,
+                        purchasedAt: new Date()
+                    };
+                } else {
+                    console.error('Item not found in goodies collection');
+                    return;
+                }
+            }
+
+            // Add original item back to inventory in Firestore
             await updateDoc(userInventoryRef, {
-                items: arrayUnion(inventoryItem)
+                items: arrayUnion(originalItem)
             });
 
             // Remove item from yard in Firestore
@@ -175,8 +195,8 @@ export default function Yard() {
                 items: arrayRemove(item)
             });
 
-            // Update local state
-            setInventory(prev => [...prev, inventoryItem]);
+            // Update local state with the original item
+            setInventory(prev => [...prev, originalItem]);
             setPlacedItems(prev => prev.filter(i => i.id !== item.id));
         } catch (error) {
             console.error('Error handling item:', error);
