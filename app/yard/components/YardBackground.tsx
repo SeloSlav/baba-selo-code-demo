@@ -26,6 +26,7 @@ interface YardBackgroundProps {
     selectedItem: UserInventoryItem | null;
     onLocationSelect: (locationId: string) => void;
     onCancelPlacement: () => void;
+    onItemReturn: (item: { id: string; locationId: string; imageUrl: string; name: string; }) => void;
     placedItems?: Array<{
         id: string;
         locationId: string;
@@ -39,9 +40,16 @@ export default function YardBackground({
     selectedItem,
     onLocationSelect,
     onCancelPlacement,
+    onItemReturn,
     placedItems = []
 }: YardBackgroundProps) {
     const [isImageLoading, setIsImageLoading] = useState(true);
+    const [itemToReturn, setItemToReturn] = useState<{
+        id: string;
+        locationId: string;
+        imageUrl: string;
+        name: string;
+    } | null>(null);
 
     // Placement Instructions Portal
     const renderPlacementInstructions = () => {
@@ -71,6 +79,26 @@ export default function YardBackground({
             document.body
         );
     };
+
+    const handleItemClick = (item: {
+        id: string;
+        locationId: string;
+        imageUrl: string;
+        name: string;
+    }) => {
+        if (!isPlacementMode) {
+            setItemToReturn(item);
+        }
+    };
+
+    const handleConfirmReturn = () => {
+        if (itemToReturn) {
+            onItemReturn(itemToReturn);
+            setItemToReturn(null);
+        }
+    };
+
+    const isFood = (locationId: string) => locationId.startsWith('food');
 
     return (
         <div className="relative h-screen w-screen overflow-hidden bg-gray-100">
@@ -113,7 +141,7 @@ export default function YardBackground({
             </div>
 
             {/* Placed Items */}
-            <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute inset-0">
                 {placedItems.map(item => {
                     const location = PLACEMENT_LOCATIONS.find(loc => loc.id === item.locationId);
                     if (!location) return null;
@@ -121,13 +149,14 @@ export default function YardBackground({
                     return (
                         <div
                             key={item.id}
+                            onClick={() => handleItemClick(item)}
                             style={{
                                 position: 'absolute',
                                 left: location.x,
                                 top: location.y,
                                 transform: 'translate(-50%, -50%)'
                             }}
-                            className="w-16 h-16 relative"
+                            className="w-16 h-16 relative cursor-pointer hover:scale-110 transition-transform"
                         >
                             <Image
                                 src={item.imageUrl}
@@ -191,6 +220,42 @@ export default function YardBackground({
                         <FontAwesomeIcon icon={faXmark} className="text-xl text-gray-600" />
                     </button>
                 </>
+            )}
+
+            {/* Return/Remove Confirmation Dialog */}
+            {itemToReturn && createPortal(
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99999]">
+                    <div className="bg-white rounded-2xl p-6 max-w-sm mx-4 shadow-xl">
+                        <h3 className="text-lg font-semibold mb-2">
+                            {isFood(itemToReturn.locationId) ? 'Remove Food' : 'Return Item'}
+                        </h3>
+                        <p className="text-gray-600 mb-6">
+                            {isFood(itemToReturn.locationId) 
+                                ? `Are you sure you want to throw away this ${itemToReturn.name}? Once placed, food cannot be returned to storage.`
+                                : `Do you want to return this ${itemToReturn.name} to your inventory?`
+                            }
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setItemToReturn(null)}
+                                className="flex-1 px-4 py-2 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleConfirmReturn}
+                                className={`flex-1 px-4 py-2 rounded-xl transition-colors ${
+                                    isFood(itemToReturn.locationId)
+                                        ? 'bg-red-500 hover:bg-red-600 text-white'
+                                        : 'bg-black hover:bg-gray-800 text-white'
+                                }`}
+                            >
+                                {isFood(itemToReturn.locationId) ? 'Remove Food' : 'Return to Inventory'}
+                            </button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
             )}
 
             {/* Render the portal for placement instructions */}

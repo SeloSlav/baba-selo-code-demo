@@ -137,6 +137,52 @@ export default function Yard() {
         setIsInventoryOpen(true);
     };
 
+    const handleItemReturn = async (item: PlacedItem) => {
+        if (!user) return;
+
+        try {
+            // For food items, we just remove them from the yard
+            if (item.locationId.startsWith('food')) {
+                const yardRef = doc(db, `users/${user.uid}/yard/items`);
+                await updateDoc(yardRef, {
+                    items: arrayRemove(item)
+                });
+                setPlacedItems(prev => prev.filter(i => i.id !== item.id));
+                return;
+            }
+
+            // For toys, we return them to inventory
+            const inventoryItem: UserInventoryItem = {
+                id: item.id.split('-')[0], // Remove the timestamp part
+                name: item.name,
+                imageUrl: item.imageUrl,
+                category: 'toy',
+                rarity: 'common',
+                description: '',
+                purchasedAt: new Date(),
+                cost: 0
+            };
+
+            // Add item back to inventory in Firestore
+            const userInventoryRef = doc(db, `users/${user.uid}/inventory/items`);
+            await updateDoc(userInventoryRef, {
+                items: arrayUnion(inventoryItem)
+            });
+
+            // Remove item from yard in Firestore
+            const yardRef = doc(db, `users/${user.uid}/yard/items`);
+            await updateDoc(yardRef, {
+                items: arrayRemove(item)
+            });
+
+            // Update local state
+            setInventory(prev => [...prev, inventoryItem]);
+            setPlacedItems(prev => prev.filter(i => i.id !== item.id));
+        } catch (error) {
+            console.error('Error handling item:', error);
+        }
+    };
+
     const filteredInventory = useMemo(() => {
         let filtered = inventory.filter(item => {
             if (selectedRarities.size > 0 && !selectedRarities.has(item.rarity)) return false;
@@ -177,6 +223,7 @@ export default function Yard() {
                 selectedItem={selectedItem}
                 onLocationSelect={handleLocationSelect}
                 onCancelPlacement={handleCancelPlacement}
+                onItemReturn={handleItemReturn}
                 placedItems={placedItems}
             />
 
