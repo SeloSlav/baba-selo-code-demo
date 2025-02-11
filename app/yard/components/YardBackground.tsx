@@ -4,6 +4,9 @@ import { UserInventoryItem } from '../../marketplace/types';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faXmark } from '@fortawesome/free-solid-svg-icons';
 import { createPortal } from 'react-dom';
+import { doc, updateDoc, arrayRemove } from 'firebase/firestore';
+import { db } from '../../firebase/firebase';
+import { useUser } from '../../contexts/UserContext';
 
 interface PlacementLocation {
     id: string;
@@ -33,6 +36,13 @@ interface YardBackgroundProps {
         imageUrl: string;
         name: string;
     }>;
+    userId: string;
+    setPlacedItems: React.Dispatch<React.SetStateAction<Array<{
+        id: string;
+        locationId: string;
+        imageUrl: string;
+        name: string;
+    }>>>;
 }
 
 export default function YardBackground({ 
@@ -41,7 +51,9 @@ export default function YardBackground({
     onLocationSelect,
     onCancelPlacement,
     onItemReturn,
-    placedItems = []
+    placedItems = [],
+    userId,
+    setPlacedItems
 }: YardBackgroundProps) {
     const [isImageLoading, setIsImageLoading] = useState(true);
     const [itemToReturn, setItemToReturn] = useState<{
@@ -49,6 +61,16 @@ export default function YardBackground({
         locationId: string;
         imageUrl: string;
         name: string;
+    } | null>(null);
+
+    const [itemToReplace, setItemToReplace] = useState<{
+        existingItem: {
+            id: string;
+            locationId: string;
+            imageUrl: string;
+            name: string;
+        };
+        newLocationId: string;
     } | null>(null);
 
     // Placement Instructions Portal
@@ -96,6 +118,41 @@ export default function YardBackground({
             onItemReturn(itemToReturn);
             setItemToReturn(null);
         }
+    };
+
+    const handleLocationClick = (locationId: string) => {
+        // Check if there's already an item at this location
+        const existingItem = placedItems?.find(item => item.locationId === locationId);
+        
+        if (existingItem) {
+            setItemToReplace({
+                existingItem,
+                newLocationId: locationId
+            });
+        } else {
+            onLocationSelect(locationId);
+        }
+    };
+
+    const handleConfirmReplace = async () => {
+        if (!itemToReplace || !selectedItem) return;
+
+        // First return/remove the existing item
+        if (!itemToReplace.existingItem.locationId.startsWith('food')) {
+            // For toys, return to inventory first
+            await onItemReturn(itemToReplace.existingItem);
+        } else {
+            // For food, just remove it
+            const yardRef = doc(db, `users/${userId}/yard/items`);
+            await updateDoc(yardRef, {
+                items: arrayRemove(itemToReplace.existingItem)
+            });
+            setPlacedItems(prev => prev.filter(i => i.id !== itemToReplace.existingItem.id));
+        }
+
+        // Then place the new item
+        onLocationSelect(itemToReplace.newLocationId);
+        setItemToReplace(null);
     };
 
     const isFood = (locationId: string) => locationId.startsWith('food');
@@ -191,7 +248,7 @@ export default function YardBackground({
                             .map(location => (
                                 <button
                                     key={location.id}
-                                    onClick={() => onLocationSelect(location.id)}
+                                    onClick={() => handleLocationClick(location.id)}
                                     style={{
                                         position: 'absolute',
                                         left: location.x,
@@ -211,7 +268,7 @@ export default function YardBackground({
                             ))}
                     </div>
 
-                    {/* Cancel Button - Absolute positioned at the bottom right */}
+                    {/* Cancel Button */}
                     <button
                         onClick={onCancelPlacement}
                         className="absolute bottom-8 right-8 bg-white rounded-full w-12 h-12 shadow-xl hover:bg-gray-100 transition-colors flex items-center justify-center"
@@ -257,6 +314,48 @@ export default function YardBackground({
                                 }`}
                             >
                                 {isFood(itemToReturn.locationId) ? 'Remove Food' : 'Return to Inventory'}
+                            </button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {/* Replace Item Confirmation Dialog */}
+            {itemToReplace && selectedItem && createPortal(
+                <div 
+                    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99999]"
+                    onClick={() => setItemToReplace(null)}
+                >
+                    <div 
+                        className="bg-white rounded-2xl p-6 max-w-sm mx-4 shadow-xl"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <h3 className="text-lg font-semibold mb-2">
+                            {isFood(itemToReplace.existingItem.locationId) ? 'Replace Food' : 'Replace Item'}
+                        </h3>
+                        <p className="text-gray-600 mb-6">
+                            {isFood(itemToReplace.existingItem.locationId)
+                                ? `This will remove the ${itemToReplace.existingItem.name} and place your ${selectedItem.name} here. The existing food will be thrown away.`
+                                : `This will return the ${itemToReplace.existingItem.name} to your inventory and place your ${selectedItem.name} here.`
+                            }
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setItemToReplace(null)}
+                                className="flex-1 px-4 py-2 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleConfirmReplace}
+                                className={`flex-1 px-4 py-2 rounded-xl transition-colors ${
+                                    isFood(itemToReplace.existingItem.locationId)
+                                        ? 'bg-red-500 hover:bg-red-600 text-white'
+                                        : 'bg-black hover:bg-gray-800 text-white'
+                                }`}
+                            >
+                                Replace
                             </button>
                         </div>
                     </div>

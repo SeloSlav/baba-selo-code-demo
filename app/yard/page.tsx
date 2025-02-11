@@ -245,6 +245,8 @@ export default function Yard() {
                 onCancelPlacement={handleCancelPlacement}
                 onItemReturn={handleItemReturn}
                 placedItems={placedItems}
+                userId={user?.uid || ''}
+                setPlacedItems={setPlacedItems}
             />
 
             <DesktopMessage />
