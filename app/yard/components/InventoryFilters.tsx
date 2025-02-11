@@ -20,11 +20,11 @@ export default function InventoryFilters({
     setSelectedRarities
 }: InventoryFiltersProps) {
     return (
-        <div className="px-4 pb-3 border-t border-gray-200">
+        <div className="p-6 space-y-6 border-t border-gray-200">
             {/* Categories */}
-            <div className="mb-3">
-                <h4 className="text-xs font-medium text-gray-500 mb-2">Category</h4>
-                <div className="flex flex-wrap gap-2">
+            <div>
+                <h3 className="font-semibold mb-3">Filter by Category</h3>
+                <div className="flex flex-wrap gap-3">
                     {availableCategories.map(category => (
                         <button
                             key={category}
@@ -39,11 +39,12 @@ export default function InventoryFilters({
                                     return newSet;
                                 });
                             }}
-                            className={`px-2 py-1 rounded-full text-xs font-medium transition-all ${
-                                selectedCategories.has(category)
+                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200
+                                ${selectedCategories.has(category)
                                     ? getCategoryColor(category) + ' ring-2 ring-offset-2 ring-gray-500'
-                                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                            }`}
+                                    : 'bg-gray-100 text-gray-500 hover:' + getCategoryColor(category).replace('bg-', '')
+                                }
+                                transform hover:scale-105 active:scale-95`}
                         >
                             {capitalize(category)}
                         </button>
@@ -53,8 +54,8 @@ export default function InventoryFilters({
 
             {/* Rarities */}
             <div>
-                <h4 className="text-xs font-medium text-gray-500 mb-2">Rarity</h4>
-                <div className="flex flex-wrap gap-2">
+                <h3 className="font-semibold mb-3">Filter by Rarity</h3>
+                <div className="flex flex-wrap gap-3">
                     {Object.entries(RARITY_ORDER)
                         .sort(([,a], [,b]) => a - b)
                         .map(([rarity]) => (
@@ -71,11 +72,14 @@ export default function InventoryFilters({
                                         return newSet;
                                     });
                                 }}
-                                className={`px-2 py-1 rounded-full text-xs font-medium transition-all ${
-                                    selectedRarities.has(rarity)
+                                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200
+                                    ${selectedRarities.has(rarity)
                                         ? getRarityColor(rarity) + ' ring-2 ring-offset-2 ring-gray-500'
-                                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                                }`}
+                                        : rarity === 'rare'
+                                            ? 'bg-gray-100 text-blue-600'
+                                            : 'bg-gray-100 text-gray-500 hover:' + getRarityColor(rarity).replace('bg-', '')
+                                    }
+                                    transform hover:scale-105 active:scale-95`}
                             >
                                 {capitalize(rarity)}
                             </button>
