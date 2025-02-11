@@ -6,7 +6,6 @@ import { faXmark } from '@fortawesome/free-solid-svg-icons';
 import { createPortal } from 'react-dom';
 import { doc, updateDoc, arrayRemove } from 'firebase/firestore';
 import { db } from '../../firebase/firebase';
-import { useUser } from '../../contexts/UserContext';
 
 interface PlacementLocation {
     id: string;
