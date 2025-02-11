@@ -7,6 +7,8 @@ import { RecipeList } from "./RecipeList";
 import { SeloOilPromo } from "./SeloOilPromo";
 import Link from "next/link";
 import Image from "next/image";
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase/firebase';
 
 // Add shimmer effect for loading state
 const shimmer = (w: number, h: number) => `
@@ -50,10 +52,31 @@ export const ChatSidebar = ({
     const [isHydrated, setIsHydrated] = useState(false);
     const [imageError, setImageError] = useState(false);
     const [isImageLoading, setIsImageLoading] = useState(true);
+    const [username, setUsername] = useState<string>("");
+    const { user } = useAuth();
 
     useEffect(() => {
         setIsHydrated(true);
     }, []);
+
+    useEffect(() => {
+        if (!user) {
+            setUsername("");
+            return;
+        }
+
+        // Set up real-time listener for username changes
+        const unsubscribe = onSnapshot(doc(db, "users", user.uid), (doc) => {
+            if (doc.exists()) {
+                setUsername(doc.data().username || "");
+            } else {
+                setUsername("");
+            }
+        });
+
+        // Cleanup subscription on unmount
+        return () => unsubscribe();
+    }, [user]);
 
     const renderMenu = () => {
         return (
@@ -153,7 +176,7 @@ export const ChatSidebar = ({
                         {/* View All Recipes Link */}
                         <div className="pt-4 border-t border-gray-200 space-y-2">
                             <Link 
-                                href="/recipes" 
+                                href={username ? `/${username}` : "/recipes"}
                                 className="flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-100"
                             >
                                 <span>View All Recipes</span>
