@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, setDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
 import { useAuth } from '../context/AuthContext';
 import { UserInventoryItem } from '../marketplace/types';
@@ -13,6 +13,13 @@ import YardBackground from './components/YardBackground';
 import ItemDetailModal from './components/ItemDetailModal';
 import InventoryMenu from './components/InventoryMenu';
 
+interface PlacedItem {
+    id: string;
+    locationId: string;
+    imageUrl: string;
+    name: string;
+}
+
 export default function Yard() {
     const { user } = useAuth();
     const [inventory, setInventory] = useState<UserInventoryItem[]>([]);
@@ -21,6 +28,8 @@ export default function Yard() {
     const [isFiltersOpen, setIsFiltersOpen] = useState(false);
     const [selectedRarities, setSelectedRarities] = useState<Set<string>>(new Set());
     const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
+    const [isPlacementMode, setIsPlacementMode] = useState(false);
+    const [placedItems, setPlacedItems] = useState<PlacedItem[]>([]);
 
     // Fetch user's inventory
     useEffect(() => {
@@ -45,12 +54,87 @@ export default function Yard() {
         fetchInventory();
     }, [user]);
 
+    // Fetch placed items
+    useEffect(() => {
+        const fetchPlacedItems = async () => {
+            if (!user) return;
+
+            try {
+                const yardRef = doc(db, `users/${user.uid}/yard/items`);
+                const yardDoc = await getDoc(yardRef);
+
+                if (yardDoc.exists()) {
+                    setPlacedItems(yardDoc.data()?.items || []);
+                } else {
+                    // Initialize yard document if it doesn't exist
+                    await setDoc(yardRef, { items: [] });
+                }
+            } catch (error) {
+                console.error('Error fetching placed items:', error);
+            }
+        };
+
+        fetchPlacedItems();
+    }, [user]);
+
     const handleItemClick = (item: UserInventoryItem) => {
         setSelectedItem(item);
     };
 
     const closeModal = () => {
         setSelectedItem(null);
+        setIsPlacementMode(false);
+    };
+
+    const handleUseItem = (item: UserInventoryItem) => {
+        if (item.category.toLowerCase() === 'food' || item.category.toLowerCase() === 'toy') {
+            setIsPlacementMode(true);
+            setSelectedItem(item);
+            setIsInventoryOpen(false);
+            setIsFiltersOpen(false);
+        }
+    };
+
+    const handleLocationSelect = async (locationId: string) => {
+        if (!user || !selectedItem) return;
+
+        try {
+            // Create new placed item
+            const newPlacedItem: PlacedItem = {
+                id: `${selectedItem.id}-${Date.now()}`,
+                locationId,
+                imageUrl: selectedItem.imageUrl,
+                name: selectedItem.name
+            };
+
+            // Update Firestore
+            const yardRef = doc(db, `users/${user.uid}/yard/items`);
+            await updateDoc(yardRef, {
+                items: arrayUnion(newPlacedItem)
+            });
+
+            // Remove item from inventory in Firestore
+            const userInventoryRef = doc(db, `users/${user.uid}/inventory/items`);
+            await updateDoc(userInventoryRef, {
+                items: arrayRemove(selectedItem)
+            });
+
+            // Update local state
+            setPlacedItems(prev => [...prev, newPlacedItem]);
+            setInventory(prev => prev.filter(item => item.id !== selectedItem.id));
+            
+            // Reset placement mode
+            setSelectedItem(null);
+            setIsPlacementMode(false);
+        } catch (error) {
+            console.error('Error placing item:', error);
+        }
+    };
+
+    const handleCancelPlacement = () => {
+        setIsPlacementMode(false);
+        setSelectedItem(null);
+        setIsInventoryOpen(true);
     };
 
     const filteredInventory = useMemo(() => {
@@ -88,14 +172,23 @@ export default function Yard() {
 
     return (
         <div className="fixed inset-0 overflow-hidden [orientation:portrait]">
-            <YardBackground />
+            <YardBackground
+                isPlacementMode={isPlacementMode}
+                selectedItem={selectedItem}
+                onLocationSelect={handleLocationSelect}
+                onCancelPlacement={handleCancelPlacement}
+                placedItems={placedItems}
+            />
 
             <DesktopMessage />
 
-            <ItemDetailModal
-                selectedItem={selectedItem}
-                closeModal={closeModal}
-            />
+            {selectedItem && !isPlacementMode && (
+                <ItemDetailModal
+                    selectedItem={selectedItem}
+                    closeModal={closeModal}
+                    onUseItem={handleUseItem}
+                />
+            )}
 
             <InventoryMenu
                 isInventoryOpen={isInventoryOpen}

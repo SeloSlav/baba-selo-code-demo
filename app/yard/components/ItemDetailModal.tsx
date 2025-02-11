@@ -9,10 +9,13 @@ import { capitalize } from '../utils/helpers';
 interface ItemDetailModalProps {
     selectedItem: UserInventoryItem | null;
     closeModal: () => void;
+    onUseItem: (item: UserInventoryItem) => void;
 }
 
-export default function ItemDetailModal({ selectedItem, closeModal }: ItemDetailModalProps) {
+export default function ItemDetailModal({ selectedItem, closeModal, onUseItem }: ItemDetailModalProps) {
     if (!selectedItem) return null;
+
+    const isPlaceable = selectedItem.category.toLowerCase() === 'food' || selectedItem.category.toLowerCase() === 'toy';
 
     return (
         <div 
@@ -55,15 +58,21 @@ export default function ItemDetailModal({ selectedItem, closeModal }: ItemDetail
 
                     <p className="text-gray-600 text-sm mb-6">{selectedItem.description}</p>
 
-                    <button
-                        onClick={() => {
-                            // Handle item use here
-                            closeModal();
-                        }}
-                        className="w-full px-4 py-3 bg-black text-white rounded-xl font-medium hover:bg-gray-800 transition-colors"
-                    >
-                        Use This Item
-                    </button>
+                    {isPlaceable ? (
+                        <button
+                            onClick={() => onUseItem(selectedItem)}
+                            className="w-full px-4 py-3 bg-black text-white rounded-xl font-medium hover:bg-gray-800 transition-colors"
+                        >
+                            Place {selectedItem.category}
+                        </button>
+                    ) : (
+                        <button
+                            disabled
+                            className="w-full px-4 py-3 bg-gray-100 text-gray-400 rounded-xl font-medium cursor-not-allowed"
+                        >
+                            Cannot Place Accessories
+                        </button>
+                    )}
                 </div>
             </div>
         </div>
