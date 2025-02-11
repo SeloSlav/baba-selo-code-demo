@@ -35,7 +35,7 @@ export const metadata = {
   manifest: "/site.webmanifest",
 
   openGraph: {
-    title: "Baba Selo - A Recipe Wonderland",
+    title: "Baba Selo - Your Magical Recipe Companion",
 
     description:
       "Discover and save amazing recipes with Baba Selo's magical guidance.",
@@ -60,7 +60,7 @@ export const metadata = {
   twitter: {
     card: "summary_large_image",
 
-    title: "Baba Selo - A Recipe Wonderland",
+    title: "Baba Selo - Your Magical Recipe Companion",
 
     description:
       "Discover and save amazing recipes with Baba Selo's magical guidance.",

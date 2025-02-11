@@ -402,7 +402,9 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
       });
 
       setRecipes(prev => prev.map(r => r.id === recipe.id ? updatedRecipe : r));
-      showPointsToast(0, `Updated basic details for ${recipe.recipeTitle}`);
+      if (!automation.isRunning) {
+        showPointsToast(0, `Updated basic details for ${recipe.recipeTitle}`);
+      }
     } catch (error) {
       console.error('Error generating details:', error);
       showPointsToast(0, `Failed to generate details: ${error.message}`);
@@ -416,7 +418,9 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
     try {
       // Check prerequisites
       if (!recipe.ingredients?.length || !recipe.directions?.length) {
-        showPointsToast(0, `Please generate basic details for ${recipe.recipeTitle} first`);
+        if (!automation.isRunning) {
+          showPointsToast(0, `Please generate basic details for ${recipe.recipeTitle} first`);
+        }
         return;
       }
 
@@ -481,7 +485,9 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
       });
 
       setRecipes(prev => prev.map(r => r.id === recipe.id ? updatedRecipe : r));
-      showPointsToast(0, `Generated classification for ${recipe.recipeTitle}`);
+      if (!automation.isRunning) {
+        showPointsToast(0, `Generated classification for ${recipe.recipeTitle}`);
+      }
     } catch (error) {
       console.error('Error generating classification:', error);
       showPointsToast(0, `Failed to generate classification: ${error.message}`);
@@ -522,7 +528,9 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
       });
 
       setRecipes(prev => prev.map(r => r.id === recipe.id ? updatedRecipe : r));
-      showPointsToast(0, `Generated summary for ${recipe.recipeTitle}`);
+      if (!automation.isRunning) {
+        showPointsToast(0, `Generated summary for ${recipe.recipeTitle}`);
+      }
     } catch (error) {
       console.error('Error generating summary:', error);
       showPointsToast(0, `Failed to generate summary: ${error.message}`);
@@ -557,7 +565,9 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
       });
 
       setRecipes(prev => prev.map(r => r.id === recipe.id ? updatedRecipe : r));
-      showPointsToast(0, `Generated macro info for ${recipe.recipeTitle}`);
+      if (!automation.isRunning) {
+        showPointsToast(0, `Generated macro info for ${recipe.recipeTitle}`);
+      }
     } catch (error) {
       console.error('Error generating macro info:', error);
       showPointsToast(0, `Failed to generate macro info: ${error.message}`);
@@ -592,7 +602,9 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
       });
 
       setRecipes(prev => prev.map(r => r.id === recipe.id ? updatedRecipe : r));
-      showPointsToast(0, `Generated pairings for ${recipe.recipeTitle}`);
+      if (!automation.isRunning) {
+        showPointsToast(0, `Generated pairings for ${recipe.recipeTitle}`);
+      }
     } catch (error) {
       console.error('Error generating pairings:', error);
       showPointsToast(0, `Failed to generate pairings: ${error.message}`);
@@ -692,7 +704,6 @@ const RecipeModernizer: React.FC<RecipeModernizerProps> = ({ showPointsToast }) 
           ...prev,
           isRunning: false
         }));
-        showPointsToast(0, "Automation complete! All recipes processed.");
       }
       return;
     }

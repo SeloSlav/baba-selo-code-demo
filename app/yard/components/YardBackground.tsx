@@ -1,13 +1,9 @@
 import React from 'react';
 import Image from 'next/image';
 
-interface YardBackgroundProps {
-    showInstallBanner: boolean;
-}
-
-export default function YardBackground({ showInstallBanner }: YardBackgroundProps) {
+export default function YardBackground() {
     return (
-        <div className={`relative h-screen w-screen overflow-x-auto custom-scrollbar ${showInstallBanner ? 'mt-12' : ''}`}>
+        <div className="relative h-screen w-screen overflow-x-auto custom-scrollbar">
             <div className="absolute inset-0">
                 <Image
                     src="/yard_mobile.png"

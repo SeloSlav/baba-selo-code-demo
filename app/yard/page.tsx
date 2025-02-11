@@ -8,7 +8,6 @@ import { UserInventoryItem } from '../marketplace/types';
 import { Timestamp } from 'firebase/firestore';
 
 // Components
-import PWAInstallBanner from './components/PWAInstallBanner';
 import DesktopMessage from './components/DesktopMessage';
 import YardBackground from './components/YardBackground';
 import ItemDetailModal from './components/ItemDetailModal';
@@ -64,40 +63,6 @@ export default function Yard() {
     const [isFiltersOpen, setIsFiltersOpen] = useState(false);
     const [selectedRarities, setSelectedRarities] = useState<Set<string>>(new Set());
     const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
-    const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-    const [showInstallBanner, setShowInstallBanner] = useState(false);
-
-    // Handle PWA install prompt
-    useEffect(() => {
-        const handleBeforeInstallPrompt = (e: Event) => {
-            e.preventDefault();
-            setDeferredPrompt(e);
-            setShowInstallBanner(true);
-        };
-
-        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-        // Check if app is already installed
-        if (window.matchMedia('(display-mode: standalone)').matches) {
-            setShowInstallBanner(false);
-        }
-
-        return () => {
-            window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-        };
-    }, []);
-
-    const handleInstallClick = async () => {
-        if (!deferredPrompt) return;
-
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        
-        if (outcome === 'accepted') {
-            setShowInstallBanner(false);
-        }
-        setDeferredPrompt(null);
-    };
 
     // Fetch user's inventory
     useEffect(() => {
@@ -165,13 +130,7 @@ export default function Yard() {
 
     return (
         <div className="fixed inset-0 overflow-hidden [orientation:portrait]">
-            <PWAInstallBanner
-                showInstallBanner={showInstallBanner}
-                setShowInstallBanner={setShowInstallBanner}
-                handleInstallClick={handleInstallClick}
-            />
-
-            <YardBackground showInstallBanner={showInstallBanner} />
+            <YardBackground />
 
             <DesktopMessage />
 
