@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpoon, faCheck, faCheckDouble, faStarOfLife } from "@fortawesome/free-solid-svg-icons";
+import { faSpoon, faCheck, faCheckDouble } from "@fortawesome/free-solid-svg-icons";
 import { format } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
 import Link from 'next/link';
@@ -15,14 +15,11 @@ interface PointTransaction {
   read?: boolean;
 }
 
-interface SpoonHistoryMenuProps {
-  isOpen: boolean;
-  onClose: () => void;
-  transactions: PointTransaction[];
-  totalPoints: number;
-  onTransactionRead: (transactionId: string) => void;
-  onMarkAllRead: () => void;
-  unreadCount: number;
+interface TransactionRowProps {
+  transaction: PointTransaction;
+  showDate?: 'short' | 'long';
+  onTransactionRead?: (uniqueKey: string) => void;
+  className?: string;
 }
 
 // Function to get emoji for action type
@@ -55,6 +52,103 @@ const getActionEmoji = (actionType: string): string => {
   }
 };
 
+// Shared TransactionRow component
+export const TransactionRow: React.FC<TransactionRowProps> = ({ 
+  transaction, 
+  showDate = 'short',
+  onTransactionRead,
+  className = ''
+}) => {
+  const date = transaction.timestamp.toDate();
+  const uniqueKey = `${date.getTime()}-${transaction.actionType}-${transaction.targetId || ''}`;
+  
+  const renderContent = () => {
+    if (transaction.actionType === "CAT_VISIT") {
+      return (
+        <Link 
+          href="/yard"
+          className="font-medium block truncate hover:text-blue-600 transition-colors cursor-pointer"
+          title={transaction.details || POINT_ACTIONS[transaction.actionType]?.displayName}
+        >
+          {transaction.details || POINT_ACTIONS[transaction.actionType]?.displayName}
+        </Link>
+      );
+    }
+
+    if (['GENERATE_SUMMARY', 'GENERATE_NUTRITION', 'GENERATE_PAIRINGS', 'GENERATE_IMAGE', 'UPLOAD_IMAGE', 'SAVE_RECIPE'].includes(transaction.actionType) && transaction.targetId) {
+      return (
+        <Link 
+          href={`/recipe/${transaction.targetId}`}
+          className="font-medium truncate hover:text-blue-600 transition-colors cursor-pointer"
+          title={transaction.details || POINT_ACTIONS[transaction.actionType]?.displayName}
+        >
+          {transaction.details || POINT_ACTIONS[transaction.actionType]?.displayName}
+        </Link>
+      );
+    }
+
+    return (
+      <div 
+        className="font-medium truncate"
+        title={transaction.details || POINT_ACTIONS[transaction.actionType]?.displayName}
+      >
+        {transaction.details || POINT_ACTIONS[transaction.actionType]?.displayName}
+      </div>
+    );
+  };
+
+  return (
+    <div className={`flex items-center justify-between p-3 hover:bg-gray-50 transition-colors group relative ${!transaction.read ? 'bg-yellow-50' : ''} ${className}`}>
+      <div className="flex items-center flex-1 min-w-0 overflow-hidden">
+        <div className="text-xl mr-3 flex-shrink-0" role="img" aria-label={transaction.actionType}>
+          {getActionEmoji(transaction.actionType)}
+        </div>
+        <div className="min-w-0 flex-1 overflow-hidden">
+          {renderContent()}
+          <div className="text-xs text-gray-500">
+            {format(date, showDate === 'short' ? 'MMM d, h:mm a' : 'MMM d, yyyy h:mm a')}
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <div className={`flex items-center ml-2 flex-shrink-0 ${
+          transaction.actionType === 'MARKETPLACE_PURCHASE' ? 'text-red-500' : 'text-yellow-600'
+        }`}>
+          <FontAwesomeIcon icon={faSpoon} className="mr-1" />
+          <span className="font-bold">
+            {transaction.actionType === 'MARKETPLACE_PURCHASE' 
+              ? `-${String(transaction.points).replace(/[^0-9]/g, '')}`
+              : `+${String(transaction.points).replace(/[^0-9]/g, '')}`
+            }
+          </span>
+        </div>
+        {onTransactionRead && !transaction.read && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onTransactionRead(uniqueKey);
+            }}
+            className="opacity-0 group-hover:opacity-100 transition-opacity ml-2 p-1 hover:bg-gray-100 rounded-full"
+            title="Mark as read"
+          >
+            <FontAwesomeIcon icon={faCheck} className="text-gray-500 w-4 h-4" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+interface SpoonHistoryMenuProps {
+  isOpen: boolean;
+  onClose: () => void;
+  transactions: PointTransaction[];
+  totalPoints: number;
+  onTransactionRead: (transactionId: string) => void;
+  onMarkAllRead: () => void;
+  unreadCount: number;
+}
+
 export const SpoonHistoryMenu: React.FC<SpoonHistoryMenuProps> = ({ 
   isOpen, 
   onClose, 
@@ -83,63 +177,10 @@ export const SpoonHistoryMenu: React.FC<SpoonHistoryMenuProps> = ({
 
   if (!isOpen) return null;
 
-  // Function to render a transaction row
-  const renderTransaction = (transaction: PointTransaction, index: number) => {
-    const date = transaction.timestamp.toDate();
-    const uniqueKey = `${date.getTime()}-${transaction.actionType}-${transaction.targetId || ''}`;
-    
-    return (
-      <div 
-        key={uniqueKey} 
-        className={`flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors group relative ${!transaction.read ? 'bg-yellow-50' : ''}`}
-      >
-        <div className="flex items-center flex-1 min-w-0">
-          <div className="text-xl mr-3 flex-shrink-0" role="img" aria-label={transaction.actionType}>
-            {getActionEmoji(transaction.actionType)}
-          </div>
-          <div className="min-w-0">
-            <div 
-              className="font-medium truncate"
-              title={transaction.details || POINT_ACTIONS[transaction.actionType]?.displayName}
-            >
-              {transaction.details || POINT_ACTIONS[transaction.actionType]?.displayName}
-            </div>
-            <div className="text-xs text-gray-500">{format(date, 'MMM d, h:mm a')}</div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className={`flex items-center ml-2 flex-shrink-0 ${
-            transaction.actionType === 'MARKETPLACE_PURCHASE' ? 'text-red-500' : 'text-yellow-600'
-          }`}>
-            <FontAwesomeIcon icon={faSpoon} className="mr-1" />
-            <span className="font-bold">
-              {transaction.actionType === 'MARKETPLACE_PURCHASE' 
-                ? `-${String(transaction.points).replace(/[^0-9]/g, '')}`
-                : `+${String(transaction.points).replace(/[^0-9]/g, '')}`
-              }
-            </span>
-          </div>
-          {!transaction.read && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onTransactionRead(uniqueKey);
-              }}
-              className="opacity-0 group-hover:opacity-100 transition-opacity ml-2 p-1 hover:bg-gray-100 rounded-full"
-              title="Mark as read"
-            >
-              <FontAwesomeIcon icon={faCheck} className="text-gray-500 w-4 h-4" />
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div
       ref={menuRef}
-      className="absolute top-full right-0 mt-1 z-40 bg-white rounded-3xl shadow-lg w-80 border border-gray-300 p-3 custom-scrollbar"
+      className="absolute top-full right-0 mt-1 z-40 bg-white rounded-3xl shadow-lg w-80 border border-gray-300 p-3 custom-scrollbar overflow-x-hidden"
       style={{ maxHeight: 'calc(100vh - 5rem)', overflowY: 'auto' }}
     >
       <div className="mb-3 px-3">
@@ -177,7 +218,14 @@ export const SpoonHistoryMenu: React.FC<SpoonHistoryMenuProps> = ({
           transactions
             .sort((a, b) => b.timestamp.toDate().getTime() - a.timestamp.toDate().getTime())
             .slice(0, 10) // Show only the 10 most recent transactions
-            .map((transaction, index) => renderTransaction(transaction, index))
+            .map((transaction) => (
+              <TransactionRow
+                key={`${transaction.timestamp.toDate().getTime()}-${transaction.actionType}-${transaction.targetId || ''}`}
+                transaction={transaction}
+                onTransactionRead={onTransactionRead}
+                showDate="short"
+              />
+            ))
         ) : (
           <div className="text-center text-gray-500 py-8">
             No points history yet. Start interacting with recipes to earn points!

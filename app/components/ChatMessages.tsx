@@ -242,8 +242,6 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
         try {
             const { title } = parseRecipe(msg);
             const docId = userId + "-" + Date.now();
-
-            // Create a hash of the recipe content
             const recipeHash = createRecipeHash(msg);
 
             const response = await fetch("/api/saveRecipe", {
@@ -257,6 +255,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                     cookingTime: classification?.cooking_time || "2 hours",
                     diet: classification?.diet || ["gluten-free", "paleo"],
                     docId,
+                    recipeHash,
                 }),
             });
 
@@ -265,7 +264,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                 const pointsResult = await SpoonPointSystem.awardPoints(
                     userId,
                     'SAVE_RECIPE',
-                    recipeHash // Use the recipe hash instead of docId
+                    docId // Use docId instead of recipeHash
                 );
 
                 let message = `Your <a href="/recipe/${docId}" target="_blank" rel="noopener noreferrer" class="underline text-blue-600"> ${title}</a> recipe has been tucked away in the kitchen vault, ready for use!`;

@@ -291,12 +291,14 @@ The user also prefers to use ${preferredCookingOil} as a cooking oil.
     let pointsAwarded = null;
     if (isRecipe && userId) {
         console.debug("DEBUG - Attempting to award points");
+        const docId = `${userId}-${Date.now()}`;
         const recipeHash = `${userId}-${Date.now()}-${firstLine}`;
         try {
             const pointsResult = await SpoonPointSystem.awardPoints(
                 userId,
                 'GENERATE_RECIPE',
-                recipeHash
+                docId,
+                { recipeHash }
             );
             console.debug("DEBUG - Points result:", pointsResult);
             
