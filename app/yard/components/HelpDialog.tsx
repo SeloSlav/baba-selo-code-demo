@@ -122,37 +122,37 @@ const HelpDialog: React.FC<HelpDialogProps> = ({ isOpen, onClose }) => {
                 {[
                   { 
                     rarity: "Common", 
-                    visits: "1 visit per food", 
+                    visits: "2 visits per food", 
+                    multiplier: "5x spoon multiplier",
                     color: "gray",
-                    points: "625 spoon points per visit",
                     examples: "Neighborhood cats, Strays"
                   },
                   { 
                     rarity: "Uncommon", 
-                    visits: "3 visits per food", 
+                    visits: "4 visits per food", 
+                    multiplier: "10x spoon multiplier",
                     color: "green",
-                    points: "1,225 spoon points per visit",
                     examples: "Friendly visitors, Regular guests"
                   },
                   { 
                     rarity: "Rare", 
-                    visits: "5 visits per food", 
+                    visits: "6 visits per food", 
+                    multiplier: "15x spoon multiplier",
                     color: "blue",
-                    points: "2,500 spoon points per visit",
                     examples: "Special breeds, Unique patterns"
                   },
                   { 
                     rarity: "Epic", 
-                    visits: "10 visits per food", 
+                    visits: "8 visits per food", 
+                    multiplier: "25x spoon multiplier",
                     color: "purple",
-                    points: "5,625 spoon points per visit",
                     examples: "Mystical cats, Ancient breeds"
                   },
                   { 
                     rarity: "Legendary", 
-                    visits: "20 visits per food", 
+                    visits: "12 visits per food", 
+                    multiplier: "40x spoon multiplier",
                     color: "yellow",
-                    points: "10,000 spoon points per visit",
                     examples: "Mythical cats, Divine visitors"
                   },
                 ].map((item, index) => (
@@ -166,7 +166,7 @@ const HelpDialog: React.FC<HelpDialogProps> = ({ isOpen, onClose }) => {
                     </div>
                     <div className="space-y-1">
                       <p className="text-sm text-gray-600">{item.visits}</p>
-                      <p className="text-sm text-purple-700">{item.points}</p>
+                      <p className="text-sm text-purple-700">{item.multiplier}</p>
                       <p className="text-sm text-gray-500">Examples: {item.examples}</p>
                     </div>
                   </div>

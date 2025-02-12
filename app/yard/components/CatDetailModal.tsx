@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faXmark, faPaw, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
@@ -22,6 +22,13 @@ interface CatDetailModalProps {
 }
 
 export default function CatDetailModal({ cat, visitCount, onClose, onBack }: CatDetailModalProps) {
+    const [isImageExpanded, setIsImageExpanded] = useState(false);
+
+    const toggleImage = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setIsImageExpanded(!isImageExpanded);
+    };
+
     return (
         <div 
             className="fixed inset-0 bg-black bg-opacity-50 z-[99999] flex items-center justify-center p-4"
@@ -47,14 +54,32 @@ export default function CatDetailModal({ cat, visitCount, onClose, onBack }: Cat
                     </button>
                 </div>
 
-                {/* Cat Image */}
-                <div className="relative h-48 w-full">
-                    <Image
-                        src={cat.imageUrl}
-                        alt={cat.name}
-                        fill
-                        className="object-cover"
-                    />
+                {/* Cat Image with Zoom */}
+                <div 
+                    className={`relative cursor-pointer transition-all duration-500 ease-in-out overflow-hidden ${
+                        isImageExpanded ? 'h-[80vh]' : 'h-48'
+                    }`}
+                    onClick={toggleImage}
+                >
+                    <div className={`absolute inset-0 transition-transform duration-500 ${
+                        isImageExpanded ? 'scale-100' : 'scale-110 hover:scale-105'
+                    }`}>
+                        <Image
+                            src={cat.imageUrl}
+                            alt={cat.name}
+                            fill
+                            className={`object-cover transition-all duration-500 ${
+                                isImageExpanded ? 'object-contain' : 'object-cover'
+                            }`}
+                        />
+                    </div>
+                    {/* Sliding overlays */}
+                    <div className={`absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black to-transparent opacity-50 transition-transform duration-500 ${
+                        isImageExpanded ? '-translate-y-full' : 'translate-y-0'
+                    }`} />
+                    <div className={`absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black to-transparent opacity-50 transition-transform duration-500 ${
+                        isImageExpanded ? 'translate-y-full' : 'translate-y-0'
+                    }`} />
                 </div>
 
                 {/* Cat Info */}

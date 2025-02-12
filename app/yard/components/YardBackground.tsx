@@ -6,6 +6,7 @@ import { faXmark } from '@fortawesome/free-solid-svg-icons';
 import { createPortal } from 'react-dom';
 import { doc, updateDoc, arrayRemove } from 'firebase/firestore';
 import { db } from '../../firebase/firebase';
+import SleepingAnimation from './SleepingAnimation';
 
 interface PlacementLocation {
     id: string;
@@ -28,13 +29,13 @@ interface YardBackgroundProps {
     selectedItem: UserInventoryItem | null;
     onLocationSelect: (locationId: string) => void;
     onCancelPlacement: () => void;
-    onItemReturn: (item: { id: string; locationId: string; imageUrl: string; name: string; remainingVisits: number; }) => void;
+    onItemReturn: (item: { id: string; locationId: string; imageUrl: string; name: string; remainingVisits?: number; }) => void;
     placedItems?: Array<{
         id: string;
         locationId: string;
         imageUrl: string;
         name: string;
-        remainingVisits: number;
+        remainingVisits?: number;
     }>;
     userId: string;
     setPlacedItems: React.Dispatch<React.SetStateAction<Array<{
@@ -42,7 +43,7 @@ interface YardBackgroundProps {
         locationId: string;
         imageUrl: string;
         name: string;
-        remainingVisits: number;
+        remainingVisits?: number;
     }>>>;
 }
 
@@ -62,7 +63,7 @@ export default function YardBackground({
         locationId: string;
         imageUrl: string;
         name: string;
-        remainingVisits: number;
+        remainingVisits?: number;
     } | null>(null);
 
     const [itemToReplace, setItemToReplace] = useState<{
@@ -71,10 +72,12 @@ export default function YardBackground({
             locationId: string;
             imageUrl: string;
             name: string;
-            remainingVisits: number;
+            remainingVisits?: number;
         };
         newLocationId: string;
     } | null>(null);
+
+    const [isShowingSleepAnimation, setIsShowingSleepAnimation] = useState(false);
 
     // Placement Instructions Portal
     const renderPlacementInstructions = () => {
@@ -110,7 +113,7 @@ export default function YardBackground({
         locationId: string;
         imageUrl: string;
         name: string;
-        remainingVisits: number;
+        remainingVisits?: number;
     }) => {
         if (!isPlacementMode) {
             setItemToReturn(item);
@@ -161,6 +164,16 @@ export default function YardBackground({
 
     const isFood = (locationId: string) => locationId.startsWith('food');
 
+    const handleBabaClick = () => {
+        if (!isShowingSleepAnimation) {
+            setIsShowingSleepAnimation(true);
+        }
+    };
+
+    const handleAnimationComplete = () => {
+        setIsShowingSleepAnimation(false);
+    };
+
     return (
         <div className="relative h-screen w-screen overflow-hidden bg-gray-100">
             {/* Loading State */}
@@ -203,13 +216,14 @@ export default function YardBackground({
 
             {/* Baba Sleeping */}
             <div 
-                className="absolute w-32 h-32"
+                className={`absolute w-32 h-32 cursor-pointer ${isShowingSleepAnimation ? 'pointer-events-none' : ''}`}
                 style={{
                     left: '80%',
                     top: '60%',
                     transform: 'translate(-50%, -50%)',
                     zIndex: 0
                 }}
+                onClick={handleBabaClick}
             >
                 <Image
                     src="/baba_sleeping.jpg"
@@ -227,6 +241,11 @@ export default function YardBackground({
                         }
                     }}
                 />
+                {isShowingSleepAnimation && (
+                    <div className="relative w-full h-full">
+                        <SleepingAnimation onAnimationComplete={handleAnimationComplete} />
+                    </div>
+                )}
             </div>
 
             {/* Placed Items */}
@@ -334,7 +353,7 @@ export default function YardBackground({
                         </div>
                         <p className="text-gray-600 mb-6">
                             {isFood(itemToReturn.locationId) 
-                                ? `Are you sure you want to throw away this ${itemToReturn.name}? It has ${itemToReturn.remainingVisits} visit${itemToReturn.remainingVisits !== 1 ? 's' : ''} remaining. Once placed, food cannot be returned to storage.`
+                                ? <>Are you sure you want to throw away this {itemToReturn.name}? It has <span className="font-bold">{itemToReturn.remainingVisits} visit{itemToReturn.remainingVisits !== 1 ? 's' : ''}</span> remaining. Once placed, food cannot be returned to storage.</>
                                 : `Do you want to return this ${itemToReturn.name} to your inventory?`
                             }
                         </p>
