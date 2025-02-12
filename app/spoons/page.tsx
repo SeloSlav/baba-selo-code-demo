@@ -238,7 +238,7 @@ const SpoonStats = () => {
                       { action: "Getting calorie and nutritional information", points: "20", emoji: "📊" },
                       { action: "Discovering perfect dish pairings", points: "15", emoji: "🍷" },
                       { action: "Generating AI recipe images", points: "10", emoji: "🎨" },
-                      { action: "Uploading your own recipe photos", points: "250-1000", note: "(for authentic food photos)", emoji: "📸" },
+                      { action: "Uploading your own recipe photos", points: "25-100", note: "(for authentic food photos)", emoji: "📸" },
                       { action: "Chatting with Baba about your recipe", points: "5", note: "(per meaningful interaction)", emoji: "💬" },
                       { action: "Having others like your shared recipes", points: "10", note: "(per like)", emoji: "❤️" }
                     ].map((item, index) => (

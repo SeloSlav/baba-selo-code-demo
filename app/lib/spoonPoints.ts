@@ -70,12 +70,12 @@ export const POINT_ACTIONS: Record<string, PointAction> = {
   },
   UPLOAD_IMAGE: {
     type: 'UPLOAD_IMAGE',
-    points: 250, // Base points, will be overridden by the score from analysis
+    points: 25, // Base points, will be overridden by the score from analysis
     cooldown: 60,
     requiresUnique: true,
     getPoints: (context?: Record<string, any>) => {
       // If we have a score from the analysis, use it, otherwise use base points
-      return context?.score || 250;
+      return context?.score || 25;
     },
     displayName: 'Photo Uploaded'
   },

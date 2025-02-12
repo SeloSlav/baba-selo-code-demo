@@ -15,19 +15,19 @@ export type CatRarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
 
 // Updated spoon multipliers for better rewards
 export const SPOON_MULTIPLIERS: Record<CatRarity, number> = {
-  common: 25,
-  uncommon: 35,
-  rare: 50,
-  epic: 75,
-  legendary: 100,
+  common: 5,
+  uncommon: 10,
+  rare: 15,
+  epic: 25,
+  legendary: 40,
 };
 
 export const VISIT_CAPACITY = {
-  common: 1,
-  uncommon: 3,
-  rare: 5,
-  epic: 10,
-  legendary: 20,
+  common: 2,
+  uncommon: 4,
+  rare: 6,
+  epic: 8,
+  legendary: 12,
 };
 
 export interface PlacedItem {
