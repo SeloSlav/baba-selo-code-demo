@@ -186,7 +186,7 @@ const HelpDialog: React.FC<HelpDialogProps> = ({ isOpen, onClose }) => {
                 {[
                   {
                     tip: "Strategic Food Placement", 
-                    description: "Since you can only place one food item at a time, use higher rarity food when you'll be away -s they last longer and accumulate more rewards while you're gone!",
+                    description: "Since you can only place one food item at a time, use higher rarity food when you'll be away. They last longer and accumulate more rewards while you're gone!",
                   },
                   {
                     tip: "Toy Variety",

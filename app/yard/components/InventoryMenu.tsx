@@ -57,7 +57,7 @@ export default function InventoryMenu({
     return (
         <div 
             ref={menuRef}
-            className={`fixed bottom-0 left-0 right-0 transition-transform duration-300 ease-in-out transform md:hidden ${
+            className={`fixed bottom-0 left-0 right-0 transition-transform duration-300 ease-in-out transform md:hidden z-30 ${
             isInventoryOpen ? 'translate-y-0' : 'translate-y-[calc(100%-102px)]'
         }`}>
             {/* Pull-up bar */}

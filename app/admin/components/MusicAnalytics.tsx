@@ -149,14 +149,18 @@ export const MusicAnalytics: React.FC = () => {
             });
         });
 
-        // Convert to percentages of total plays for that hour
-        const datasets = Object.entries(songHourCounts).map(([songId, counts], index) => ({
+        // Sort the songs to put Stray Cat Serenade first
+        const sortedSongs = Object.entries(songHourCounts).sort(([idA], [idB]) => {
+            return idA === 'stray_cat_serenade' ? -1 : 1;
+        });
+        
+        const datasets = sortedSongs.map(([songId, counts], index) => ({
             label: data[0]?.events.find(e => e.songId === songId)?.songTitle || songId,
             data: counts.map((count, hour) => 
                 totalPlaysByHour[hour] > 0 ? (count / totalPlaysByHour[hour]) * 100 : 0
             ),
-            backgroundColor: `hsla(${index * 137.5}, 70%, 50%, 0.5)`,
-            borderColor: `hsla(${index * 137.5}, 70%, 50%, 1)`,
+            backgroundColor: `hsla(${index === 0 ? 137.5 : 0}, 70%, 50%, 0.5)`,
+            borderColor: `hsla(${index === 0 ? 137.5 : 0}, 70%, 50%, 1)`,
             borderWidth: 1
         }));
 
@@ -184,9 +188,13 @@ export const MusicAnalytics: React.FC = () => {
                     const songTitle = analytics[0]?.events.find(e => e.songId === songId)?.songTitle || songId;
                     const metrics = calculateSongMetrics(analytics[0].events, { ...stats, songId });
                     
+                    // Calculate color based on song index (same as chart)
+                    const colorHue = songId === 'stray_cat_serenade_2' ? '0' : '137.5';
+                    const titleColor = `hsla(${colorHue}, 70%, 50%, 1)`;
+                    
                     return (
                         <div key={songId} className="bg-white rounded-2xl shadow-sm p-6">
-                            <h4 className="font-medium text-gray-900 mb-4 text-lg">{songTitle}</h4>
+                            <h4 className="font-medium mb-4 text-lg" style={{ color: titleColor }}>{songTitle}</h4>
                             
                             {/* Basic Stats */}
                             <div className="grid grid-cols-2 gap-4 text-sm">

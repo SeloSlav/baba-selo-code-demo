@@ -197,11 +197,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           /* Spoon Menu Button - only shown for authenticated users */
           <button
             onClick={toggleSpoonMenu}
-            className="relative p-2 rounded-md hover:bg-gray-200 bg-white group"
+            className="relative p-2.5 rounded-xl hover:bg-gray-100 bg-white shadow-md border border-gray-200/50 hover:shadow-lg"
           >
             <FontAwesomeIcon icon={faSpoon} className="text-[#5d5d5d] text-xl" />
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+              <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
                 {unreadCount}
               </span>
             )}
@@ -211,7 +211,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         {/* Profile Menu Button - shown for all users */}
         <button
           onClick={toggleProfileMenu}
-          className="relative p-2 rounded-md hover:bg-gray-200 bg-white"
+          className="relative p-2.5 rounded-xl hover:bg-gray-100 bg-white shadow-md border border-gray-200/50 hover:shadow-lg"
         >
           <FontAwesomeIcon icon={faUserCircle} className="text-[#5d5d5d] text-xl" />
         </button>

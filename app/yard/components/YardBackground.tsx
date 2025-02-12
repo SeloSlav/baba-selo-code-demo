@@ -221,7 +221,7 @@ export default function YardBackground({
                     left: '80%',
                     top: '60%',
                     transform: 'translate(-50%, -50%)',
-                    zIndex: 0
+                    zIndex: 10
                 }}
                 onClick={handleBabaClick}
             >

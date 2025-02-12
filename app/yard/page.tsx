@@ -571,7 +571,7 @@ export default function Yard() {
     return (
         <div className="fixed inset-0 overflow-hidden [orientation:portrait]">
             {/* Menu Icons */}
-            <div className="fixed top-4 left-8 z-30 flex items-center gap-2">
+            <div className="fixed top-4 left-8 z-30 flex items-center gap-3">
                 <button
                     onClick={() => {
                         setIsCatHistoryOpen(!isCatHistoryOpen);
@@ -579,18 +579,18 @@ export default function Yard() {
                             handleMarkVisitsRead();
                         }
                     }}
-                    className="relative p-2 rounded-md hover:bg-gray-200 bg-white"
+                    className="relative p-2.5 rounded-xl hover:bg-gray-100 bg-white shadow-md border border-gray-200/50 hover:shadow-lg"
                 >
                     <FontAwesomeIcon icon={faCat} className="text-[#5d5d5d]" />
                     {unreadCatVisits > 0 && (
-                        <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                        <div className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
                             {unreadCatVisits}
                         </div>
                     )}
                 </button>
                 <button
                     onClick={() => setIsHelpOpen(true)}
-                    className="relative p-2 rounded-md hover:bg-gray-200 bg-white"
+                    className="relative p-2.5 rounded-xl hover:bg-gray-100 bg-white shadow-md border border-gray-200/50 hover:shadow-lg"
                     title="How to Play"
                 >
                     <FontAwesomeIcon 
@@ -600,7 +600,7 @@ export default function Yard() {
                 </button>
                 <button
                     onClick={handleMusicToggle}
-                    className="relative p-2 rounded-md hover:bg-gray-200 bg-white"
+                    className="relative p-2.5 rounded-xl hover:bg-gray-100 bg-white shadow-md border border-gray-200/50 hover:shadow-lg"
                     title={isMusicPlaying ? "Turn music off" : "Turn music on"}
                 >
                     <FontAwesomeIcon 
