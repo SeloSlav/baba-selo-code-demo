@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChevronUp } from '@fortawesome/free-solid-svg-icons';
 import { UserInventoryItem } from '../../marketplace/types';
@@ -36,8 +36,28 @@ export default function InventoryMenu({
     availableRarities,
     onItemClick
 }: InventoryMenuProps) {
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (menuRef.current && 
+                !menuRef.current.contains(event.target as Node) && 
+                isInventoryOpen) {
+                setIsInventoryOpen(false);
+                setIsFiltersOpen(false);
+            }
+        }
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isInventoryOpen, setIsInventoryOpen, setIsFiltersOpen]);
+
     return (
-        <div className={`fixed bottom-0 left-0 right-0 transition-transform duration-300 ease-in-out transform md:hidden ${
+        <div 
+            ref={menuRef}
+            className={`fixed bottom-0 left-0 right-0 transition-transform duration-300 ease-in-out transform md:hidden ${
             isInventoryOpen ? 'translate-y-0' : 'translate-y-[calc(100%-102px)]'
         }`}>
             {/* Pull-up bar */}

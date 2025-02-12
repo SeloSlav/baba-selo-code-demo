@@ -28,12 +28,13 @@ interface YardBackgroundProps {
     selectedItem: UserInventoryItem | null;
     onLocationSelect: (locationId: string) => void;
     onCancelPlacement: () => void;
-    onItemReturn: (item: { id: string; locationId: string; imageUrl: string; name: string; }) => void;
+    onItemReturn: (item: { id: string; locationId: string; imageUrl: string; name: string; remainingVisits: number; }) => void;
     placedItems?: Array<{
         id: string;
         locationId: string;
         imageUrl: string;
         name: string;
+        remainingVisits: number;
     }>;
     userId: string;
     setPlacedItems: React.Dispatch<React.SetStateAction<Array<{
@@ -41,6 +42,7 @@ interface YardBackgroundProps {
         locationId: string;
         imageUrl: string;
         name: string;
+        remainingVisits: number;
     }>>>;
 }
 
@@ -60,6 +62,7 @@ export default function YardBackground({
         locationId: string;
         imageUrl: string;
         name: string;
+        remainingVisits: number;
     } | null>(null);
 
     const [itemToReplace, setItemToReplace] = useState<{
@@ -68,6 +71,7 @@ export default function YardBackground({
             locationId: string;
             imageUrl: string;
             name: string;
+            remainingVisits: number;
         };
         newLocationId: string;
     } | null>(null);
@@ -106,6 +110,7 @@ export default function YardBackground({
         locationId: string;
         imageUrl: string;
         name: string;
+        remainingVisits: number;
     }) => {
         if (!isPlacementMode) {
             setItemToReturn(item);
@@ -194,6 +199,34 @@ export default function YardBackground({
                         onLoadingComplete={() => setIsImageLoading(false)}
                     />
                 </div>
+            </div>
+
+            {/* Baba Sleeping */}
+            <div 
+                className="absolute w-32 h-32"
+                style={{
+                    left: '80%',
+                    top: '60%',
+                    transform: 'translate(-50%, -50%)',
+                    zIndex: 0
+                }}
+            >
+                <Image
+                    src="/baba_sleeping.jpg"
+                    alt="Baba Sleeping"
+                    fill
+                    className="object-contain"
+                    priority
+                    onError={(e) => {
+                        console.error('Error loading Baba image:', e);
+                        const imgElement = e.target as HTMLImageElement;
+                        imgElement.style.display = 'none';
+                        const parent = imgElement.parentElement;
+                        if (parent) {
+                            parent.innerHTML += '<div class="text-red-500 text-xs p-2">Image not found</div>';
+                        }
+                    }}
+                />
             </div>
 
             {/* Placed Items */}
@@ -291,9 +324,17 @@ export default function YardBackground({
                         <h3 className="text-lg font-semibold mb-2">
                             {isFood(itemToReturn.locationId) ? 'Remove Food' : 'Return Item'}
                         </h3>
+                        <div className="relative w-24 h-24 mx-auto mb-4">
+                            <Image
+                                src={itemToReturn.imageUrl}
+                                alt={itemToReturn.name}
+                                fill
+                                className="object-contain"
+                            />
+                        </div>
                         <p className="text-gray-600 mb-6">
                             {isFood(itemToReturn.locationId) 
-                                ? `Are you sure you want to throw away this ${itemToReturn.name}? Once placed, food cannot be returned to storage.`
+                                ? `Are you sure you want to throw away this ${itemToReturn.name}? It has ${itemToReturn.remainingVisits} visit${itemToReturn.remainingVisits !== 1 ? 's' : ''} remaining. Once placed, food cannot be returned to storage.`
                                 : `Do you want to return this ${itemToReturn.name} to your inventory?`
                             }
                         </p>
@@ -333,6 +374,25 @@ export default function YardBackground({
                         <h3 className="text-lg font-semibold mb-2">
                             {isFood(itemToReplace.existingItem.locationId) ? 'Replace Food' : 'Replace Item'}
                         </h3>
+                        <div className="flex justify-center items-center gap-4 mb-4">
+                            <div className="relative w-20 h-20">
+                                <Image
+                                    src={itemToReplace.existingItem.imageUrl}
+                                    alt={itemToReplace.existingItem.name}
+                                    fill
+                                    className="object-contain"
+                                />
+                            </div>
+                            <div className="text-2xl text-gray-400">→</div>
+                            <div className="relative w-20 h-20">
+                                <Image
+                                    src={selectedItem.imageUrl}
+                                    alt={selectedItem.name}
+                                    fill
+                                    className="object-contain"
+                                />
+                            </div>
+                        </div>
                         <p className="text-gray-600 mb-6">
                             {isFood(itemToReplace.existingItem.locationId)
                                 ? `This will remove the ${itemToReplace.existingItem.name} and place your ${selectedItem.name} here. The existing food will be thrown away.`
