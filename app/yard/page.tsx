@@ -571,7 +571,7 @@ export default function Yard() {
     return (
         <div className="fixed inset-0 overflow-hidden [orientation:portrait]">
             {/* Menu Icons */}
-            <div className="fixed top-4 left-16 z-30 flex items-center gap-2">
+            <div className="fixed top-4 left-8 z-30 flex items-center gap-2">
                 <button
                     onClick={() => {
                         setIsCatHistoryOpen(!isCatHistoryOpen);
