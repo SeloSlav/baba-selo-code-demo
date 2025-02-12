@@ -175,274 +175,276 @@ export default function YardBackground({
     };
 
     return (
-        <div className="relative h-screen w-screen overflow-hidden bg-gray-100">
-            {/* Loading State */}
-            {isImageLoading && (
-                <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
-                    <div className="text-gray-400">Loading yard...</div>
-                </div>
-            )}
-
-            {/* Background Images Container */}
-            <div className="absolute inset-0">
-                {/* Mobile Yard */}
-                <div className="relative w-full h-full flex items-center justify-center md:hidden">
-                    <Image
-                        src="/yard_mobile.png"
-                        alt="Your Yard"
-                        fill
-                        className="object-contain"
-                        priority
-                        quality={75}
-                        sizes="100vw"
-                        onLoadingComplete={() => setIsImageLoading(false)}
-                    />
-                </div>
-
-                {/* Desktop Yard */}
-                <div className="relative w-full h-full hidden md:flex items-center justify-center">
-                    <Image
-                        src="/yard.png"
-                        alt="Your Yard"
-                        fill
-                        className="object-contain"
-                        priority
-                        quality={75}
-                        sizes="100vw"
-                        onLoadingComplete={() => setIsImageLoading(false)}
-                    />
-                </div>
+        <>
+            {/* Desktop Background - Moved outside mobile container */}
+            <div className="fixed inset-0 hidden md:block">
+                <Image
+                    src="/yard_desktop.jpg"
+                    alt="Desktop Background"
+                    fill
+                    className="object-cover"
+                    priority
+                    quality={100}
+                    sizes="100vw"
+                />
             </div>
 
-            {/* Baba Sleeping */}
-            <div 
-                className={`absolute w-32 h-32 cursor-pointer ${isShowingSleepAnimation ? 'pointer-events-none' : ''}`}
-                style={{
-                    left: '80%',
-                    top: '60%',
-                    transform: 'translate(-50%, -50%)',
-                    zIndex: 10
-                }}
-                onClick={handleBabaClick}
-            >
-                <Image
-                    src="/baba_sleeping.jpg"
-                    alt="Baba Sleeping"
-                    fill
-                    className="object-contain"
-                    priority
-                    onError={(e) => {
-                        console.error('Error loading Baba image:', e);
-                        const imgElement = e.target as HTMLImageElement;
-                        imgElement.style.display = 'none';
-                        const parent = imgElement.parentElement;
-                        if (parent) {
-                            parent.innerHTML += '<div class="text-red-500 text-xs p-2">Image not found</div>';
-                        }
-                    }}
-                />
-                {isShowingSleepAnimation && (
-                    <div className="relative w-full h-full">
-                        <SleepingAnimation onAnimationComplete={handleAnimationComplete} />
+            {/* Mobile Container */}
+            <div className="relative h-screen w-screen overflow-hidden md:hidden">
+                {/* Loading State */}
+                {isImageLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="text-gray-400">Loading yard...</div>
                     </div>
                 )}
-            </div>
 
-            {/* Placed Items */}
-            <div className="absolute inset-0">
-                {placedItems.map((item, index) => {
-                    const location = PLACEMENT_LOCATIONS.find(loc => loc.id === item.locationId);
-                    if (!location) return null;
+                {/* Background Images Container */}
+                <div className="absolute inset-0">
+                    {/* Mobile Yard */}
+                    <div className="relative w-full h-full flex items-center justify-center">
+                        <Image
+                            src="/yard_mobile.png"
+                            alt="Your Yard"
+                            fill
+                            className="object-contain"
+                            priority
+                            quality={75}
+                            sizes="100vw"
+                            onLoadingComplete={() => setIsImageLoading(false)}
+                        />
+                    </div>
+                </div>
 
-                    return (
-                        <div
-                            key={`${item.id}-${index}`}
-                            onClick={() => handleItemClick(item)}
-                            style={{
-                                position: 'absolute',
-                                left: location.x,
-                                top: location.y,
-                                transform: 'translate(-50%, -50%)'
-                            }}
-                            className="w-16 h-16 relative cursor-pointer hover:scale-110 transition-transform"
+                {/* Baba Sleeping */}
+                <div 
+                    className={`absolute w-32 h-32 cursor-pointer ${isShowingSleepAnimation ? 'pointer-events-none' : ''}`}
+                    style={{
+                        left: '80%',
+                        top: '60%',
+                        transform: 'translate(-50%, -50%)',
+                        zIndex: 10
+                    }}
+                    onClick={handleBabaClick}
+                >
+                    <Image
+                        src="/baba_sleeping.jpg"
+                        alt="Baba Sleeping"
+                        fill
+                        className="object-contain"
+                        priority
+                        onError={(e) => {
+                            console.error('Error loading Baba image:', e);
+                            const imgElement = e.target as HTMLImageElement;
+                            imgElement.style.display = 'none';
+                            const parent = imgElement.parentElement;
+                            if (parent) {
+                                parent.innerHTML += '<div class="text-red-500 text-xs p-2">Image not found</div>';
+                            }
+                        }}
+                    />
+                    {isShowingSleepAnimation && (
+                        <div className="relative w-full h-full">
+                            <SleepingAnimation onAnimationComplete={handleAnimationComplete} />
+                        </div>
+                    )}
+                </div>
+
+                {/* Placed Items */}
+                <div className="absolute inset-0">
+                    {placedItems.map((item, index) => {
+                        const location = PLACEMENT_LOCATIONS.find(loc => loc.id === item.locationId);
+                        if (!location) return null;
+
+                        return (
+                            <div
+                                key={`${item.id}-${index}`}
+                                onClick={() => handleItemClick(item)}
+                                style={{
+                                    position: 'absolute',
+                                    left: location.x,
+                                    top: location.y,
+                                    transform: 'translate(-50%, -50%)'
+                                }}
+                                className="w-16 h-16 relative cursor-pointer hover:scale-110 transition-transform"
+                            >
+                                <Image
+                                    src={item.imageUrl}
+                                    alt={item.name}
+                                    fill
+                                    className="object-contain"
+                                />
+                            </div>
+                        );
+                    })}
+                </div>
+
+                {/* Placement Mode UI */}
+                {isPlacementMode && selectedItem && (
+                    <>
+                        {/* Main placement container */}
+                        <div className="absolute inset-0" style={{ zIndex: 9998 }}>
+                            {/* Semi-transparent overlay */}
+                            <div className="absolute inset-0 bg-black bg-opacity-25" />
+
+                            {/* Placement Locations */}
+                            {PLACEMENT_LOCATIONS
+                                .filter(location => {
+                                    if (selectedItem.category.toLowerCase() === 'food') {
+                                        return location.type === 'food';
+                                    }
+                                    if (selectedItem.category.toLowerCase() === 'toy') {
+                                        return location.type === 'toy';
+                                    }
+                                    return false;
+                                })
+                                .map(location => (
+                                    <button
+                                        key={location.id}
+                                        onClick={() => handleLocationClick(location.id)}
+                                        style={{
+                                            position: 'absolute',
+                                            left: location.x,
+                                            top: location.y,
+                                            transform: 'translate(-50%, -50%)'
+                                        }}
+                                        className={`w-12 h-12 rounded-full ${
+                                            location.type === 'food' 
+                                                ? 'bg-red-500 bg-opacity-40 hover:bg-opacity-60' 
+                                                : 'bg-blue-500 bg-opacity-40 hover:bg-opacity-60'
+                                        } border-4 ${
+                                            location.type === 'food'
+                                                ? 'border-red-500 border-opacity-70'
+                                                : 'border-blue-500 border-opacity-70'
+                                        } transition-all duration-200 cursor-pointer animate-pulse shadow-lg`}
+                                    />
+                                ))}
+                        </div>
+
+                        {/* Cancel Button */}
+                        <button
+                            onClick={onCancelPlacement}
+                            className="absolute bottom-8 right-8 bg-white rounded-full w-12 h-12 shadow-xl hover:bg-gray-100 transition-colors flex items-center justify-center"
+                            style={{ zIndex: 9999 }}
                         >
-                            <Image
-                                src={item.imageUrl}
-                                alt={item.name}
-                                fill
-                                className="object-contain"
-                            />
-                        </div>
-                    );
-                })}
-            </div>
+                            <FontAwesomeIcon icon={faXmark} className="text-xl text-gray-600" />
+                        </button>
+                    </>
+                )}
 
-            {/* Placement Mode UI */}
-            {isPlacementMode && selectedItem && (
-                <>
-                    {/* Main placement container */}
-                    <div className="absolute inset-0" style={{ zIndex: 9998 }}>
-                        {/* Semi-transparent overlay */}
-                        <div className="absolute inset-0 bg-black bg-opacity-25" />
-
-                        {/* Placement Locations */}
-                        {PLACEMENT_LOCATIONS
-                            .filter(location => {
-                                if (selectedItem.category.toLowerCase() === 'food') {
-                                    return location.type === 'food';
+                {/* Return/Remove Confirmation Dialog */}
+                {itemToReturn && createPortal(
+                    <div 
+                        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99999]"
+                        onClick={() => setItemToReturn(null)}
+                    >
+                        <div 
+                            className="bg-white rounded-2xl p-6 max-w-sm mx-4 shadow-xl"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <h3 className="text-lg font-semibold mb-2">
+                                {isFood(itemToReturn.locationId) ? 'Remove Food' : 'Return Item'}
+                            </h3>
+                            <div className="relative w-24 h-24 mx-auto mb-4">
+                                <Image
+                                    src={itemToReturn.imageUrl}
+                                    alt={itemToReturn.name}
+                                    fill
+                                    className="object-contain"
+                                />
+                            </div>
+                            <p className="text-gray-600 mb-6">
+                                {isFood(itemToReturn.locationId) 
+                                    ? <>Are you sure you want to throw away this {itemToReturn.name}? It has <span className="font-bold">{itemToReturn.remainingVisits} visit{itemToReturn.remainingVisits !== 1 ? 's' : ''}</span> remaining. Once placed, food cannot be returned to storage.</>
+                                    : `Do you want to return this ${itemToReturn.name} to your inventory?`
                                 }
-                                if (selectedItem.category.toLowerCase() === 'toy') {
-                                    return location.type === 'toy';
-                                }
-                                return false;
-                            })
-                            .map(location => (
+                            </p>
+                            <div className="flex gap-3">
                                 <button
-                                    key={location.id}
-                                    onClick={() => handleLocationClick(location.id)}
-                                    style={{
-                                        position: 'absolute',
-                                        left: location.x,
-                                        top: location.y,
-                                        transform: 'translate(-50%, -50%)'
-                                    }}
-                                    className={`w-12 h-12 rounded-full ${
-                                        location.type === 'food' 
-                                            ? 'bg-red-500 bg-opacity-40 hover:bg-opacity-60' 
-                                            : 'bg-blue-500 bg-opacity-40 hover:bg-opacity-60'
-                                    } border-4 ${
-                                        location.type === 'food'
-                                            ? 'border-red-500 border-opacity-70'
-                                            : 'border-blue-500 border-opacity-70'
-                                    } transition-all duration-200 cursor-pointer animate-pulse shadow-lg`}
-                                />
-                            ))}
-                    </div>
-
-                    {/* Cancel Button */}
-                    <button
-                        onClick={onCancelPlacement}
-                        className="absolute bottom-8 right-8 bg-white rounded-full w-12 h-12 shadow-xl hover:bg-gray-100 transition-colors flex items-center justify-center"
-                        style={{ zIndex: 9999 }}
-                    >
-                        <FontAwesomeIcon icon={faXmark} className="text-xl text-gray-600" />
-                    </button>
-                </>
-            )}
-
-            {/* Return/Remove Confirmation Dialog */}
-            {itemToReturn && createPortal(
-                <div 
-                    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99999]"
-                    onClick={() => setItemToReturn(null)}
-                >
-                    <div 
-                        className="bg-white rounded-2xl p-6 max-w-sm mx-4 shadow-xl"
-                        onClick={e => e.stopPropagation()}
-                    >
-                        <h3 className="text-lg font-semibold mb-2">
-                            {isFood(itemToReturn.locationId) ? 'Remove Food' : 'Return Item'}
-                        </h3>
-                        <div className="relative w-24 h-24 mx-auto mb-4">
-                            <Image
-                                src={itemToReturn.imageUrl}
-                                alt={itemToReturn.name}
-                                fill
-                                className="object-contain"
-                            />
-                        </div>
-                        <p className="text-gray-600 mb-6">
-                            {isFood(itemToReturn.locationId) 
-                                ? <>Are you sure you want to throw away this {itemToReturn.name}? It has <span className="font-bold">{itemToReturn.remainingVisits} visit{itemToReturn.remainingVisits !== 1 ? 's' : ''}</span> remaining. Once placed, food cannot be returned to storage.</>
-                                : `Do you want to return this ${itemToReturn.name} to your inventory?`
-                            }
-                        </p>
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => setItemToReturn(null)}
-                                className="flex-1 px-4 py-2 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleConfirmReturn}
-                                className={`flex-1 px-4 py-2 rounded-xl transition-colors ${
-                                    isFood(itemToReturn.locationId)
-                                        ? 'bg-red-500 hover:bg-red-600 text-white'
-                                        : 'bg-black hover:bg-gray-800 text-white'
-                                }`}
-                            >
-                                {isFood(itemToReturn.locationId) ? 'Remove Food' : 'Return to Inventory'}
-                            </button>
-                        </div>
-                    </div>
-                </div>,
-                document.body
-            )}
-
-            {/* Replace Item Confirmation Dialog */}
-            {itemToReplace && selectedItem && createPortal(
-                <div 
-                    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99999]"
-                    onClick={() => setItemToReplace(null)}
-                >
-                    <div 
-                        className="bg-white rounded-2xl p-6 max-w-sm mx-4 shadow-xl"
-                        onClick={e => e.stopPropagation()}
-                    >
-                        <h3 className="text-lg font-semibold mb-2">
-                            {isFood(itemToReplace.existingItem.locationId) ? 'Replace Food' : 'Replace Item'}
-                        </h3>
-                        <div className="flex justify-center items-center gap-4 mb-4">
-                            <div className="relative w-20 h-20">
-                                <Image
-                                    src={itemToReplace.existingItem.imageUrl}
-                                    alt={itemToReplace.existingItem.name}
-                                    fill
-                                    className="object-contain"
-                                />
-                            </div>
-                            <div className="text-2xl text-gray-400">→</div>
-                            <div className="relative w-20 h-20">
-                                <Image
-                                    src={selectedItem.imageUrl}
-                                    alt={selectedItem.name}
-                                    fill
-                                    className="object-contain"
-                                />
+                                    onClick={() => setItemToReturn(null)}
+                                    className="flex-1 px-4 py-2 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleConfirmReturn}
+                                    className={`flex-1 px-4 py-2 rounded-xl transition-colors ${
+                                        isFood(itemToReturn.locationId)
+                                            ? 'bg-red-500 hover:bg-red-600 text-white'
+                                            : 'bg-black hover:bg-gray-800 text-white'
+                                    }`}
+                                >
+                                    {isFood(itemToReturn.locationId) ? 'Remove Food' : 'Return to Inventory'}
+                                </button>
                             </div>
                         </div>
-                        <p className="text-gray-600 mb-6">
-                            {isFood(itemToReplace.existingItem.locationId)
-                                ? `This will remove the ${itemToReplace.existingItem.name} and place your ${selectedItem.name} here. The existing food will be thrown away.`
-                                : `This will return the ${itemToReplace.existingItem.name} to your inventory and place your ${selectedItem.name} here.`
-                            }
-                        </p>
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => setItemToReplace(null)}
-                                className="flex-1 px-4 py-2 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleConfirmReplace}
-                                className={`flex-1 px-4 py-2 rounded-xl transition-colors ${
-                                    isFood(itemToReplace.existingItem.locationId)
-                                        ? 'bg-red-500 hover:bg-red-600 text-white'
-                                        : 'bg-black hover:bg-gray-800 text-white'
-                                }`}
-                            >
-                                Replace
-                            </button>
-                        </div>
-                    </div>
-                </div>,
-                document.body
-            )}
+                    </div>,
+                    document.body
+                )}
 
-            {/* Render the portal for placement instructions */}
-            {renderPlacementInstructions()}
-        </div>
+                {/* Replace Item Confirmation Dialog */}
+                {itemToReplace && selectedItem && createPortal(
+                    <div 
+                        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99999]"
+                        onClick={() => setItemToReplace(null)}
+                    >
+                        <div 
+                            className="bg-white rounded-2xl p-6 max-w-sm mx-4 shadow-xl"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <h3 className="text-lg font-semibold mb-2">
+                                {isFood(itemToReplace.existingItem.locationId) ? 'Replace Food' : 'Replace Item'}
+                            </h3>
+                            <div className="flex justify-center items-center gap-4 mb-4">
+                                <div className="relative w-20 h-20">
+                                    <Image
+                                        src={itemToReplace.existingItem.imageUrl}
+                                        alt={itemToReplace.existingItem.name}
+                                        fill
+                                        className="object-contain"
+                                    />
+                                </div>
+                                <div className="text-2xl text-gray-400">→</div>
+                                <div className="relative w-20 h-20">
+                                    <Image
+                                        src={selectedItem.imageUrl}
+                                        alt={selectedItem.name}
+                                        fill
+                                        className="object-contain"
+                                    />
+                                </div>
+                            </div>
+                            <p className="text-gray-600 mb-6">
+                                {isFood(itemToReplace.existingItem.locationId)
+                                    ? `This will remove the ${itemToReplace.existingItem.name} and place your ${selectedItem.name} here. The existing food will be thrown away.`
+                                    : `This will return the ${itemToReplace.existingItem.name} to your inventory and place your ${selectedItem.name} here.`
+                                }
+                            </p>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setItemToReplace(null)}
+                                    className="flex-1 px-4 py-2 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleConfirmReplace}
+                                    className={`flex-1 px-4 py-2 rounded-xl transition-colors ${
+                                        isFood(itemToReplace.existingItem.locationId)
+                                            ? 'bg-red-500 hover:bg-red-600 text-white'
+                                            : 'bg-black hover:bg-gray-800 text-white'
+                                    }`}
+                                >
+                                    Replace
+                                </button>
+                            </div>
+                        </div>
+                    </div>,
+                    document.body
+                )}
+
+                {/* Render the portal for placement instructions */}
+                {renderPlacementInstructions()}
+            </div>
+        </>
     );
 } 
