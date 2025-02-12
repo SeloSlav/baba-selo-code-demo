@@ -210,7 +210,7 @@ async function processUser(
       actionType: "CAT_VISIT",
       points: totalSpoonReward,
       timestamp: admin.firestore.Timestamp.now(),
-      details: visitedFood.map(food => `${food.catName} enjoyed your ${food.name}!`).join(' '),
+      details: visitedFood.map((food) => `${food.catName} enjoyed your ${food.name}!`).join(" "),
       context: {
         visitCount: catVisits.length,
         totalReward: totalSpoonReward,
