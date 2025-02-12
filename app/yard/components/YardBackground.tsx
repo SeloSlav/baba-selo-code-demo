@@ -335,11 +335,16 @@ export default function YardBackground({
                 {itemToReturn && createPortal(
                     <div 
                         className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99999]"
-                        onClick={() => setItemToReturn(null)}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setItemToReturn(null);
+                        }}
+                        onMouseDown={(e) => e.stopPropagation()}
                     >
                         <div 
                             className="bg-white rounded-2xl p-6 max-w-sm mx-4 shadow-xl"
                             onClick={e => e.stopPropagation()}
+                            onMouseDown={e => e.stopPropagation()}
                         >
                             <h3 className="text-lg font-semibold mb-2">
                                 {isFood(itemToReturn.locationId) ? 'Remove Food' : 'Return Item'}
@@ -385,11 +390,16 @@ export default function YardBackground({
                 {itemToReplace && selectedItem && createPortal(
                     <div 
                         className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99999]"
-                        onClick={() => setItemToReplace(null)}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setItemToReplace(null);
+                        }}
+                        onMouseDown={(e) => e.stopPropagation()}
                     >
                         <div 
                             className="bg-white rounded-2xl p-6 max-w-sm mx-4 shadow-xl"
                             onClick={e => e.stopPropagation()}
+                            onMouseDown={e => e.stopPropagation()}
                         >
                             <h3 className="text-lg font-semibold mb-2">
                                 {isFood(itemToReplace.existingItem.locationId) ? 'Replace Food' : 'Replace Item'}

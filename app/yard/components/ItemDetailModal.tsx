@@ -17,18 +17,43 @@ export default function ItemDetailModal({ selectedItem, closeModal, onUseItem }:
 
     const isPlaceable = selectedItem.category.toLowerCase() === 'food' || selectedItem.category.toLowerCase() === 'toy';
 
+    const handleClose = (e: React.MouseEvent | React.MouseEvent<HTMLButtonElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        closeModal();
+    };
+
+    const handleContentClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
     return (
         <div 
             className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
-            onClick={closeModal}
+            onClick={handleClose}
+            onMouseDown={e => {
+                e.preventDefault();
+                e.stopPropagation();
+            }}
+            role="dialog"
+            aria-modal="true"
         >
             <div 
                 className="bg-white rounded-2xl w-full max-w-sm shadow-xl"
-                onClick={e => e.stopPropagation()}
+                onClick={handleContentClick}
+                onMouseDown={e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }}
             >
                 <div className="relative p-4">
                     <button 
-                        onClick={closeModal}
+                        onClick={handleClose}
+                        onMouseDown={e => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                        }}
                         className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 transition-colors"
                     >
                         <FontAwesomeIcon icon={faXmark} className="text-xl" />

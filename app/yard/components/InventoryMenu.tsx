@@ -40,8 +40,14 @@ export default function InventoryMenu({
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
+            // Don't close if clicking on a modal or its content
+            const target = event.target as HTMLElement;
+            if (target.closest('[role="dialog"]')) {
+                return;
+            }
+
             if (menuRef.current && 
-                !menuRef.current.contains(event.target as Node) && 
+                !menuRef.current.contains(target) && 
                 isInventoryOpen) {
                 setIsInventoryOpen(false);
                 setIsFiltersOpen(false);
