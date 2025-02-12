@@ -39,6 +39,8 @@ const getActionEmoji = (actionType: string): string => {
       return '❤️';
     case 'MARKETPLACE_PURCHASE':
       return '🛍️';
+    case 'CAT_VISIT':
+      return '🐱';
     default:
       return '🎯';
   }

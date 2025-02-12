@@ -109,6 +109,20 @@ export const POINT_ACTIONS: Record<string, PointAction> = {
       itemName: 'string',
       rarity: 'string'
     }
+  },
+  CAT_VISIT: {
+    type: 'CAT_VISIT',
+    points: 0, // Points will be determined by the cat's spoon multiplier
+    cooldown: 0, // No cooldown for cat visits
+    getPoints: (context?: Record<string, any>) => {
+      return context?.spoonReward || 0;
+    },
+    displayName: 'Cat Visit',
+    context: {
+      catName: 'string',
+      rarity: 'string',
+      spoonReward: 'number'
+    }
   }
 };
 

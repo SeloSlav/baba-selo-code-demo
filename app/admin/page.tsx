@@ -12,6 +12,7 @@ import DatabaseMigrations from './components/DatabaseMigrations';
 import { isAdmin } from '../config/admin';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChevronDown, faChevronRight } from '@fortawesome/free-solid-svg-icons';
+import CatInitializer from './components/CatInitializer';
 
 interface CollapsibleSectionProps {
     title: string;
@@ -44,6 +45,7 @@ export default function AdminPage() {
     const { user } = useAuth();
     const { showPointsToast } = usePoints();
     const router = useRouter();
+    const [isUserAdmin, setIsUserAdmin] = useState(false);
 
     // Add state for each section's collapse state
     const [isRecipeModernizerOpen, setIsRecipeModernizerOpen] = useState(false);
@@ -92,6 +94,7 @@ export default function AdminPage() {
                 
                 // Always set initializing to false after the check
                 setInitializing(false);
+                setIsUserAdmin(adminCheck);
             } catch (error) {
                 console.error('Error checking admin status:', error);
                 setInitializing(false);
@@ -149,6 +152,8 @@ export default function AdminPage() {
             >
                 <PointsManager user={user} showPointsToast={showPointsToast} />
             </CollapsibleSection>
+
+            <CatInitializer />
         </div>
     );
 } 

@@ -80,7 +80,7 @@ export default function YardBackground({
             <div 
                 style={{
                     position: 'fixed',
-                    top: '20px',
+                    top: '80px',
                     left: '50%',
                     transform: 'translateX(-50%)',
                     zIndex: 99999,
@@ -198,13 +198,13 @@ export default function YardBackground({
 
             {/* Placed Items */}
             <div className="absolute inset-0">
-                {placedItems.map(item => {
+                {placedItems.map((item, index) => {
                     const location = PLACEMENT_LOCATIONS.find(loc => loc.id === item.locationId);
                     if (!location) return null;
 
                     return (
                         <div
-                            key={item.id}
+                            key={`${item.id}-${index}`}
                             onClick={() => handleItemClick(item)}
                             style={{
                                 position: 'absolute',
