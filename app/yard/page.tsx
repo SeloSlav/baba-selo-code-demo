@@ -1,14 +1,14 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { doc, getDoc, updateDoc, setDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, Timestamp, onSnapshot, writeBatch } from 'firebase/firestore';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { doc, getDoc, updateDoc, setDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, Timestamp, onSnapshot, writeBatch, increment } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
 import { useAuth } from '../context/AuthContext';
 import { UserInventoryItem } from '../marketplace/types';
 import { PlacedItem, CatHistoryEntry, Cat, CatVisit } from './types';
 import { usePoints } from '../context/PointsContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCat, faQuestionCircle } from '@fortawesome/free-solid-svg-icons';
+import { faCat, faQuestionCircle, faMusic, faVolumeXmark } from '@fortawesome/free-solid-svg-icons';
 
 // Components
 import DesktopMessage from './components/DesktopMessage';
@@ -23,6 +23,22 @@ const FOOD_EXPIRATION_TIME = 1000 * 60 * 60; // 1 hour
 const CAT_CHECK_INTERVAL = 1000 * 30; // Check for cats every 30 seconds
 const BASE_CAT_PROBABILITY = 0.1; // 10% base chance per check
 const TOY_MULTIPLIER = 0.05; // Each toy adds 5% chance
+
+// Music configuration
+const YARD_MUSIC = {
+    STRAY_CAT_SERENADE: {
+        id: 'stray_cat_serenade',
+        path: '/stray_cat_serenade.mp3',
+        title: 'Stray Cat Serenade',
+        defaultVolume: 1.0
+    },
+    STRAY_CAT_SERENADE_2: {
+        id: 'stray_cat_serenade_2',
+        path: '/stray_cat_serenade2.mp3',
+        title: 'Stray Cat Serenade II',
+        defaultVolume: 1.0
+    }
+} as const;
 
 // Visit capacity by rarity
 const VISIT_CAPACITY = {
@@ -48,6 +64,9 @@ export default function Yard() {
     const [catHistory, setCatHistory] = useState<CatHistoryEntry[]>([]);
     const [unreadCatVisits, setUnreadCatVisits] = useState<number>(0);
     const [isHelpOpen, setIsHelpOpen] = useState(false);
+    const [isMusicPlaying, setIsMusicPlaying] = useState(true);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+    const [currentSong, setCurrentSong] = useState<keyof typeof YARD_MUSIC>('STRAY_CAT_SERENADE');
 
     // Fetch user's inventory
     useEffect(() => {
@@ -407,6 +426,148 @@ export default function Yard() {
         return Array.from(rarities);
     }, [inventory]);
 
+    // Initialize audio and fetch initial preferences
+    useEffect(() => {
+        const initializeAudio = async () => {
+            if (!user) return;
+
+            // Randomly select a song on initial load
+            if (!audioRef.current) {
+                const songs = Object.keys(YARD_MUSIC) as (keyof typeof YARD_MUSIC)[];
+                const randomSong = songs[Math.floor(Math.random() * songs.length)];
+                setCurrentSong(randomSong);
+                
+                audioRef.current = new Audio(YARD_MUSIC[randomSong].path);
+                audioRef.current.loop = true;
+                audioRef.current.volume = YARD_MUSIC[randomSong].defaultVolume;
+            }
+
+            try {
+                const soundPrefRef = doc(db, 'soundPreference', user.uid);
+                const prefDoc = await getDoc(soundPrefRef);
+                
+                // Start session tracking
+                await setDoc(soundPrefRef, {
+                    userId: user.uid,
+                    sessionStart: Timestamp.now(),
+                    sessions: increment(1)
+                }, { merge: true });
+
+                // Always try to play music immediately
+                try {
+                    await audioRef.current.play();
+                    recordMusicEvent('music_on');
+                } catch (error) {
+                    console.log('Audio autoplay prevented:', error);
+                    setIsMusicPlaying(false);
+                    recordMusicEvent('autoplay_prevented');
+                }
+            } catch (error) {
+                console.error('Error initializing audio:', error);
+            }
+        };
+
+        initializeAudio();
+
+        return () => {
+            if (audioRef.current) {
+                const playbackTime = audioRef.current.currentTime;
+                audioRef.current.pause();
+                audioRef.current = null;
+                
+                // Record session end
+                if (user) {
+                    const soundPrefRef = doc(db, 'soundPreference', user.uid);
+                    setDoc(soundPrefRef, {
+                        lastSessionEnd: Timestamp.now(),
+                        totalTimeInYard: increment(Date.now() - sessionStartTime)
+                    }, { merge: true }).catch(console.error);
+                    
+                    // Record music stop if it was playing
+                    if (isMusicPlaying) {
+                        recordMusicEvent('music_off', playbackTime);
+                    }
+                }
+            }
+        };
+    }, [user]);
+
+    // Record music-related events with enhanced tracking
+    const recordMusicEvent = async (eventType: string, duration?: number) => {
+        if (!user) return;
+
+        try {
+            const soundPrefRef = doc(db, 'musicAnalytics', user.uid);
+            const now = Timestamp.now();
+            
+            // Create event data with all required fields
+            const eventData = {
+                timestamp: now,
+                eventType,
+                songId: YARD_MUSIC[currentSong].id,
+                songTitle: YARD_MUSIC[currentSong].title,
+                duration: duration || 0,
+                context: {
+                    timeOfDay: new Date().getHours(),
+                    dayOfWeek: new Date().getDay(),
+                    hasActiveCats: catHistory.some(entry => 
+                        entry.visit.timestamp > new Date(Date.now() - 5 * 60 * 1000)
+                    ),
+                    activeFood: placedItems.filter(item => 
+                        item.locationId.startsWith('food') && 
+                        item.remainingVisits && 
+                        item.remainingVisits > 0
+                    ).length,
+                    activeToys: placedItems.filter(item => 
+                        item.locationId.startsWith('toy')
+                    ).length
+                }
+            };
+
+            // Create song stats update with all required fields
+            const songStatsUpdate = {
+                totalPlays: increment(eventType === 'music_on' ? 1 : 0),
+                totalStops: increment(eventType === 'music_off' ? 1 : 0),
+                totalPlayDuration: increment(duration || 0),
+                averagePlayDuration: duration || 0,
+                lastPlayed: eventType === 'music_on' ? now : null
+            };
+
+            await setDoc(soundPrefRef, {
+                userId: user.uid,
+                lastUpdated: now,
+                events: arrayUnion(eventData),
+                songStats: {
+                    [YARD_MUSIC[currentSong].id]: songStatsUpdate
+                }
+            }, { merge: true });
+        } catch (error) {
+            console.error('Error recording music event:', error);
+        }
+    };
+
+    // Handle music toggle with enhanced tracking
+    const handleMusicToggle = async () => {
+        if (!user) return;
+
+        const newState = !isMusicPlaying;
+        setIsMusicPlaying(newState);
+
+        if (audioRef.current) {
+            if (newState) {
+                audioRef.current.play();
+                recordMusicEvent('music_on');
+            } else {
+                const playbackTime = audioRef.current.currentTime;
+                audioRef.current.pause();
+                recordMusicEvent('music_off', playbackTime);
+            }
+        }
+    };
+
+    // Track initial page load time for session duration calculation
+    const sessionStartTime = useMemo(() => Date.now(), []);
+
     return (
         <div className="fixed inset-0 overflow-hidden [orientation:portrait]">
             {/* Menu Icons */}
@@ -434,6 +595,16 @@ export default function Yard() {
                 >
                     <FontAwesomeIcon 
                         icon={faQuestionCircle} 
+                        className="text-[#5d5d5d]" 
+                    />
+                </button>
+                <button
+                    onClick={handleMusicToggle}
+                    className="relative p-2 rounded-md hover:bg-gray-200 bg-white"
+                    title={isMusicPlaying ? "Turn music off" : "Turn music on"}
+                >
+                    <FontAwesomeIcon 
+                        icon={isMusicPlaying ? faMusic : faVolumeXmark}
                         className="text-[#5d5d5d]" 
                     />
                 </button>

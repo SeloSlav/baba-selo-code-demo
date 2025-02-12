@@ -13,6 +13,7 @@ import { isAdmin } from '../config/admin';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChevronDown, faChevronRight } from '@fortawesome/free-solid-svg-icons';
 import CatInitializer from './components/CatInitializer';
+import MusicAnalytics from './components/MusicAnalytics';
 
 interface CollapsibleSectionProps {
     title: string;
@@ -51,6 +52,8 @@ export default function AdminPage() {
     const [isRecipeModernizerOpen, setIsRecipeModernizerOpen] = useState(false);
     const [isMarketplaceOpen, setIsMarketplaceOpen] = useState(false);
     const [isPointsManagerOpen, setIsPointsManagerOpen] = useState(false);
+    const [isCatInitializerOpen, setIsCatInitializerOpen] = useState(false);
+    const [isMusicAnalyticsOpen, setIsMusicAnalyticsOpen] = useState(false);
 
     // First, wait for auth to initialize
     useEffect(() => {
@@ -92,7 +95,6 @@ export default function AdminPage() {
                     router.push('/');
                 }
                 
-                // Always set initializing to false after the check
                 setInitializing(false);
                 setIsUserAdmin(adminCheck);
             } catch (error) {
@@ -153,7 +155,21 @@ export default function AdminPage() {
                 <PointsManager user={user} showPointsToast={showPointsToast} />
             </CollapsibleSection>
 
-            <CatInitializer />
+            <CollapsibleSection 
+                title="Initialize Cats Collection" 
+                isOpen={isCatInitializerOpen}
+                onToggle={() => setIsCatInitializerOpen(!isCatInitializerOpen)}
+            >
+                <CatInitializer />
+            </CollapsibleSection>
+
+            <CollapsibleSection 
+                title="Music Analytics" 
+                isOpen={isMusicAnalyticsOpen}
+                onToggle={() => setIsMusicAnalyticsOpen(!isMusicAnalyticsOpen)}
+            >
+                <MusicAnalytics />
+            </CollapsibleSection>
         </div>
     );
 } 
