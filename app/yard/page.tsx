@@ -8,7 +8,7 @@ import { UserInventoryItem } from '../marketplace/types';
 import { PlacedItem, CatHistoryEntry, Cat, CatVisit } from './types';
 import { usePoints } from '../context/PointsContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCat } from '@fortawesome/free-solid-svg-icons';
+import { faCat, faQuestionCircle } from '@fortawesome/free-solid-svg-icons';
 
 // Components
 import DesktopMessage from './components/DesktopMessage';
@@ -16,6 +16,7 @@ import YardBackground from './components/YardBackground';
 import ItemDetailModal from './components/ItemDetailModal';
 import InventoryMenu from './components/InventoryMenu';
 import CatHistoryMenu from './components/CatHistoryMenu';
+import HelpDialog from './components/HelpDialog';
 
 // Constants
 const FOOD_EXPIRATION_TIME = 1000 * 60 * 60; // 1 hour
@@ -46,6 +47,7 @@ export default function Yard() {
     const [isCatHistoryOpen, setIsCatHistoryOpen] = useState(false);
     const [catHistory, setCatHistory] = useState<CatHistoryEntry[]>([]);
     const [unreadCatVisits, setUnreadCatVisits] = useState<number>(0);
+    const [isHelpOpen, setIsHelpOpen] = useState(false);
 
     // Fetch user's inventory
     useEffect(() => {
@@ -382,8 +384,8 @@ export default function Yard() {
 
     return (
         <div className="fixed inset-0 overflow-hidden [orientation:portrait]">
-            {/* Cat History Toggle Button - Moved to top left */}
-            <div className="fixed top-4 left-16 z-30">
+            {/* Menu Icons */}
+            <div className="fixed top-4 left-16 z-30 flex items-center gap-4">
                 <button
                     onClick={() => {
                         setIsCatHistoryOpen(!isCatHistoryOpen);
@@ -399,6 +401,16 @@ export default function Yard() {
                             {unreadCatVisits}
                         </div>
                     )}
+                </button>
+                <button
+                    onClick={() => setIsHelpOpen(true)}
+                    className="relative p-2 rounded-md hover:bg-gray-200 bg-white"
+                    title="How to Play"
+                >
+                    <FontAwesomeIcon 
+                        icon={faQuestionCircle} 
+                        className="text-[#5d5d5d]" 
+                    />
                 </button>
             </div>
 
@@ -439,6 +451,7 @@ export default function Yard() {
                 onItemClick={handleItemClick}
             />
 
+            <HelpDialog isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
             <CatHistoryMenu
                 isOpen={isCatHistoryOpen}
                 setIsOpen={setIsCatHistoryOpen}
