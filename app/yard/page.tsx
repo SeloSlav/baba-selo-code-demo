@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { doc, getDoc, updateDoc, setDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, Timestamp, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, setDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, Timestamp, onSnapshot, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
 import { useAuth } from '../context/AuthContext';
 import { UserInventoryItem } from '../marketplace/types';
@@ -251,24 +251,49 @@ export default function Yard() {
                 } : {})
             };
 
-            // Update Firestore
+            // Get current inventory
+            const userInventoryRef = doc(db, `users/${user.uid}/inventory/items`);
+            const inventoryDoc = await getDoc(userInventoryRef);
+            const currentItems = inventoryDoc.data()?.items || [];
+
+            // Find the index of the first matching item
+            const itemIndex = currentItems.findIndex(item => 
+                item.id === selectedItem.id && 
+                item.name === selectedItem.name && 
+                item.rarity === selectedItem.rarity
+            );
+
+            if (itemIndex === -1) {
+                console.error('Item not found in inventory');
+                return;
+            }
+
+            // Remove only one instance of the item
+            const updatedItems = [...currentItems];
+            updatedItems.splice(itemIndex, 1);
+
+            // Update Firestore with both changes in a batch
+            const batch = writeBatch(db);
+            
+            // Update yard with new item
             const yardRef = doc(db, `users/${user.uid}/yard/items`);
-            await updateDoc(yardRef, {
+            batch.update(yardRef, {
                 items: arrayUnion({
                     ...newPlacedItem,
                     placedAt: Timestamp.fromDate(newPlacedItem.placedAt)
                 })
             });
 
-            // Remove item from inventory in Firestore
-            const userInventoryRef = doc(db, `users/${user.uid}/inventory/items`);
-            await updateDoc(userInventoryRef, {
-                items: arrayRemove(selectedItem)
+            // Update inventory with removed item
+            batch.update(userInventoryRef, {
+                items: updatedItems
             });
+
+            await batch.commit();
 
             // Update local state
             setPlacedItems(prev => [...prev, newPlacedItem]);
-            setInventory(prev => prev.filter(item => item.id !== selectedItem.id));
+            setInventory(updatedItems);
             
             // Reset placement mode
             setSelectedItem(null);
@@ -385,7 +410,7 @@ export default function Yard() {
     return (
         <div className="fixed inset-0 overflow-hidden [orientation:portrait]">
             {/* Menu Icons */}
-            <div className="fixed top-4 left-16 z-30 flex items-center gap-4">
+            <div className="fixed top-4 left-16 z-30 flex items-center gap-2">
                 <button
                     onClick={() => {
                         setIsCatHistoryOpen(!isCatHistoryOpen);
