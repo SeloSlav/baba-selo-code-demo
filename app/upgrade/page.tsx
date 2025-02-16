@@ -104,7 +104,7 @@ export default function UpgradePlan() {
                         </li>
                         <li className="flex items-start">
                             <span className="text-lg mr-3">📅</span>
-                            <span><strong>Custom meal plans</strong> tailored to your preferences</span>
+                            <span><strong>Custom meal plans</strong> emailed daily or on your schedule</span>
                         </li>
                         <li className="flex items-start">
                             <span className="text-lg mr-3">📜</span>
@@ -156,16 +156,16 @@ export default function UpgradePlan() {
                             <span>Unlimited text-based conversations with Baba Selo</span>
                         </li>
                         <li className="flex items-start">
+                            <span className="text-lg mr-3">🤔</span>
+                            <span>Ask Baba Selo anything about life, cooking, etc.</span>
+                        </li>
+                        <li className="flex items-start">
                             <span className="text-lg mr-3">🍲</span>
                             <span>Unlimited recipe generation</span>
                         </li>
                         <li className="flex items-start">
                             <span className="text-lg mr-3">💾</span>
                             <span>Ability to save recipes</span>
-                        </li>
-                        <li className="flex items-start">
-                            <span className="text-lg mr-3">🤔</span>
-                            <span>Ask Baba Selo anything about life, cooking, etc.</span>
                         </li>
                         <li className="flex items-start">
                             <span className="text-lg mr-3">🌟</span>

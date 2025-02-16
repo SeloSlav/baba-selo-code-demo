@@ -240,6 +240,12 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
         setLoading(true);
 
         try {
+            if (!userId) {
+                onAssistantResponse(`Oh dear, I see you'd like to save this wonderful recipe! 🤗 But first, you'll need to <a href="/login" class="underline text-blue-600">create an account</a> or <a href="/login" class="underline text-blue-600">sign in</a>. That way, I can keep all your recipes safe and organized in your personal recipe vault! Plus, you'll earn special spoon points for each recipe you save. Shall we get you set up, dear? 👩‍🍳✨`);
+                setLoading(false);
+                return;
+            }
+
             const { title } = parseRecipe(msg);
             const docId = userId + "-" + Date.now();
             const recipeHash = createRecipeHash(msg);

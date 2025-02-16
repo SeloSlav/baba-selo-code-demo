@@ -90,6 +90,19 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
                     </li>
                     <hr />
                     <li className="flex items-center px-4 py-2 rounded-md hover:bg-gray-100 cursor-pointer">
+                        <Link href="/" className="flex items-center w-full">
+                            <FontAwesomeIcon icon={faHome} className="text-[#5d5d5d] mr-3" />
+                            <span>Home</span>
+                        </Link>
+                    </li>
+                    <li className="flex items-center px-4 py-2 rounded-md hover:bg-gray-100 cursor-pointer">
+                        <Link href="/explore" className="flex items-center w-full">
+                            <FontAwesomeIcon icon={faCompass} className="text-[#5d5d5d] mr-3" />
+                            <span>Explore</span>
+                        </Link>
+                    </li>
+                    <hr />
+                    <li className="flex items-center px-4 py-2 rounded-md hover:bg-gray-100 cursor-pointer">
                         <Link href="/login" className="flex items-center w-full justify-between">
                             <div className="flex items-center">
                                 <FontAwesomeIcon icon={faSignIn} className="text-[#5d5d5d] mr-3" />
