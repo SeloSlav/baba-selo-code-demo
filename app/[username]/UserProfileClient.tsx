@@ -340,14 +340,21 @@ export default function UserProfileClient({ userId, username }: UserProfileClien
     const handleBioSubmit = async () => {
         if (!user || user.uid !== userId) return;
 
+        const trimmedBio = editedBio.trim();
+        if (trimmedBio.length > 500) {
+            setError('Bio cannot exceed 500 characters');
+            return;
+        }
+
         setSavingBio(true);
         try {
             const userRef = doc(db, "users", userId);
             await updateDoc(userRef, {
-                bio: editedBio.trim()
+                bio: trimmedBio
             });
-            setUserBio(editedBio.trim());
+            setUserBio(trimmedBio);
             setIsEditingBio(false);
+            setError(null);
         } catch (error) {
             console.error('Error updating bio:', error);
             setError('Failed to update bio');
@@ -467,36 +474,46 @@ export default function UserProfileClient({ userId, username }: UserProfileClien
                             {userBio || user?.uid === userId ? (
                                 <div className="relative group">
                                     {isEditingBio ? (
-                                        <div className="flex items-center gap-2 mb-4">
+                                        <div className="flex flex-col gap-2 mb-4">
                                             <textarea
                                                 value={editedBio}
                                                 onChange={(e) => setEditedBio(e.target.value)}
                                                 placeholder="Add a bio..."
                                                 className="w-full p-2 text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
                                                 rows={2}
+                                                maxLength={500}
                                             />
-                                            <div className="flex flex-col gap-2">
-                                                <button
-                                                    onClick={handleBioSubmit}
-                                                    disabled={savingBio}
-                                                    className="px-3 py-1 text-xs bg-black text-white rounded-lg hover:bg-gray-800 transition-colors disabled:bg-gray-300"
-                                                >
-                                                    {savingBio ? (
-                                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                                    ) : (
-                                                        'Save'
-                                                    )}
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        setIsEditingBio(false);
-                                                        setEditedBio(userBio);
-                                                    }}
-                                                    className="px-3 py-1 text-xs bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
-                                                >
-                                                    Cancel
-                                                </button>
+                                            <div className="flex items-center justify-between">
+                                                <div className="text-xs text-gray-500">
+                                                    {editedBio.length}/500 characters
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={handleBioSubmit}
+                                                        disabled={savingBio}
+                                                        className="px-3 py-1 text-xs bg-black text-white rounded-lg hover:bg-gray-800 transition-colors disabled:bg-gray-300"
+                                                    >
+                                                        {savingBio ? (
+                                                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                                        ) : (
+                                                            'Save'
+                                                        )}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            setIsEditingBio(false);
+                                                            setEditedBio(userBio);
+                                                            setError(null);
+                                                        }}
+                                                        className="px-3 py-1 text-xs bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                </div>
                                             </div>
+                                            {error && (
+                                                <div className="text-xs text-red-500">{error}</div>
+                                            )}
                                         </div>
                                     ) : (
                                         <div className="relative">
