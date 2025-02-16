@@ -9,8 +9,7 @@ export default function DesktopMessage() {
                 <p className="text-gray-600 mb-6">
                     The Yard is optimized for mobile play. Visit{' '}
                     <a 
-                        href="https://babaselo.com/yard" 
-                        target="_blank" 
+                        href="/yard" 
                         rel="noopener noreferrer"
                         className="text-blue-600 hover:text-blue-800 transition-colors underline"
                     >

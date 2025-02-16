@@ -85,12 +85,12 @@ export const RecipeCard = ({
             {showUsername && (
               <p className="text-sm text-gray-600 mb-2">
                 by{' '}
-                {recipe.username ? (
+                {recipe.username && recipe.username !== 'Anonymous Chef' ? (
                   <Link href={`/${recipe.username}`} className="hover:underline">
                     {recipe.username}
                   </Link>
                 ) : (
-                  'Anonymous'
+                  'Anonymous Chef'
                 )}
               </p>
             )}
