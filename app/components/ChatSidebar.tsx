@@ -176,10 +176,10 @@ export const ChatSidebar = ({
                         {/* View All Recipes Link */}
                         <div className="pt-4 border-t border-gray-200 space-y-2">
                             <Link 
-                                href={username ? `/${username}` : "/recipes"}
+                                href={user ? (username ? `/${username}` : "/recipes") : "/explore"}
                                 className="flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-100"
                             >
-                                <span>View All Recipes</span>
+                                <span>{user ? "View All Recipes" : "Explore All Recipes"}</span>
                                 <span className="text-gray-400">→</span>
                             </Link>
 

@@ -171,111 +171,139 @@ export const RecipeList = () => {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-gray-600 text-sm font-semibold pb-2 border-b">
-          Pinned Recipes
-        </h2>
-        {pinnedRecipes.map((recipe) => (
-          <div
-            key={recipe.id}
-            className={`relative group p-3 mt-2 rounded-md bg-cover bg-center ${!recipe.imageURL ? "bg-yellow-200 hover:bg-yellow-300" : ""}`}
-            style={{
-              backgroundImage: recipe.imageURL ? `url(${recipe.imageURL})` : "none",
-            }}
-            onMouseLeave={() => setMenuOpen(null)}
-          >
-            {/* Conditional Overlay */}
-            {recipe.imageURL && (
-              <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-50 rounded-md transition-opacity"></div>
-            )}
+      {user ? (
+        <>
+          <div>
+            <h2 className="text-gray-600 text-sm font-semibold pb-2 border-b">
+              Pinned Recipes
+            </h2>
+            {pinnedRecipes.map((recipe) => (
+              <div
+                key={recipe.id}
+                className={`relative group p-3 mt-2 rounded-md bg-cover bg-center ${!recipe.imageURL ? "bg-yellow-200 hover:bg-yellow-300" : ""}`}
+                style={{
+                  backgroundImage: recipe.imageURL ? `url(${recipe.imageURL})` : "none",
+                }}
+                onMouseLeave={() => setMenuOpen(null)}
+              >
+                {/* Conditional Overlay */}
+                {recipe.imageURL && (
+                  <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-50 rounded-md transition-opacity"></div>
+                )}
 
-            {/* Content block */}
-            <Link href={`/recipe/${recipe.id}`} passHref>
-              <div className="relative z-10">
-                <div
-                  className={`flex justify-between items-center ${recipe.imageURL
-                    ? "text-white font-bold text-shadow [text-shadow:_0_2px_4px_rgb(0_0_0_/_0.8)]"
-                    : "text-black"
-                  }`}
-                >
-                  {recipe.recipeTitle}
-                  <FontAwesomeIcon
-                    icon={faEllipsisH}
-                    className="ml-4 group-hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleMenuToggle(recipe.id);
-                    }}
-                  />
-                </div>
+                {/* Content block */}
+                <Link href={`/recipe/${recipe.id}`} passHref>
+                  <div className="relative z-10">
+                    <div
+                      className={`flex justify-between items-center ${recipe.imageURL
+                        ? "text-white font-bold text-shadow [text-shadow:_0_2px_4px_rgb(0_0_0_/_0.8)]"
+                        : "text-black"
+                      }`}
+                    >
+                      {recipe.recipeTitle}
+                      <FontAwesomeIcon
+                        icon={faEllipsisH}
+                        className="ml-4 group-hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleMenuToggle(recipe.id);
+                        }}
+                      />
+                    </div>
+                  </div>
+                </Link>
+
+                {/* Menu rendering */}
+                {menuOpen === recipe.id && renderMenu(recipe.id, recipe.pinned, recipe.recipeTitle)}
               </div>
-            </Link>
-
-            {/* Menu rendering */}
-            {menuOpen === recipe.id && renderMenu(recipe.id, recipe.pinned, recipe.recipeTitle)}
-          </div>
-        ))}
-        {pinnedRecipes.length === 0 && (
-          <div className="text-center py-3 text-gray-500 text-sm">
-            <p>No pinned recipes yet</p>
-            <p className="text-xs mt-1">Pin your favorite recipes to access them quickly</p>
-          </div>
-        )}
-      </div>
-
-      <div>
-        <h2 className="text-gray-600 text-sm font-semibold pb-2 border-b">
-          Recently Saved Recipes
-        </h2>
-        {recipes.map((recipe) => (
-          <div
-            key={recipe.id}
-            className={`relative group p-3 mt-2 rounded-md bg-cover bg-center ${!recipe.imageURL ? "bg-pink-200 hover:bg-pink-300" : ""}`}
-            style={{
-              backgroundImage: recipe.imageURL ? `url(${recipe.imageURL})` : "none",
-            }}
-            onMouseLeave={() => setMenuOpen(null)}
-          >
-            {/* Conditional Overlay */}
-            {recipe.imageURL && (
-              <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-50 rounded-md transition-opacity"></div>
-            )}
-
-            {/* Content block */}
-            <Link href={`/recipe/${recipe.id}`} passHref>
-              <div className="relative z-10">
-                <div
-                  className={`flex justify-between items-center ${recipe.imageURL
-                    ? "text-white font-bold text-shadow [text-shadow:_0_2px_4px_rgb(0_0_0_/_0.8)]"
-                    : "text-black"
-                  }`}
-                >
-                  {recipe.recipeTitle}
-                  <FontAwesomeIcon
-                    icon={faEllipsisH}
-                    className="ml-4 group-hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleMenuToggle(recipe.id);
-                    }}
-                  />
-                </div>
+            ))}
+            {pinnedRecipes.length === 0 && (
+              <div className="text-center px-6 py-5 bg-gray-50/50 rounded-xl border border-gray-200/80 mt-3 backdrop-blur-sm">
+                <div className="text-xl mb-1.5">📌</div>
+                <p className="font-medium text-gray-700">No pinned recipes yet</p>
+                <p className="text-gray-500 text-sm mt-0.5">Pin your favorites for quick access</p>
               </div>
-            </Link>
+            )}
+          </div>
 
-            {/* Menu rendering */}
-            {menuOpen === recipe.id && renderMenu(recipe.id, recipe.pinned, recipe.recipeTitle)}
+          <div>
+            <h2 className="text-gray-600 text-sm font-semibold pb-2 border-b">
+              Recently Saved Recipes
+            </h2>
+            {recipes.map((recipe) => (
+              <div
+                key={recipe.id}
+                className={`relative group p-3 mt-2 rounded-md bg-cover bg-center ${!recipe.imageURL ? "bg-pink-200 hover:bg-pink-300" : ""}`}
+                style={{
+                  backgroundImage: recipe.imageURL ? `url(${recipe.imageURL})` : "none",
+                }}
+                onMouseLeave={() => setMenuOpen(null)}
+              >
+                {/* Conditional Overlay */}
+                {recipe.imageURL && (
+                  <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-50 rounded-md transition-opacity"></div>
+                )}
+
+                {/* Content block */}
+                <Link href={`/recipe/${recipe.id}`} passHref>
+                  <div className="relative z-10">
+                    <div
+                      className={`flex justify-between items-center ${recipe.imageURL
+                        ? "text-white font-bold text-shadow [text-shadow:_0_2px_4px_rgb(0_0_0_/_0.8)]"
+                        : "text-black"
+                      }`}
+                    >
+                      {recipe.recipeTitle}
+                      <FontAwesomeIcon
+                        icon={faEllipsisH}
+                        className="ml-4 group-hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleMenuToggle(recipe.id);
+                        }}
+                      />
+                    </div>
+                  </div>
+                </Link>
+
+                {/* Menu rendering */}
+                {menuOpen === recipe.id && renderMenu(recipe.id, recipe.pinned, recipe.recipeTitle)}
+              </div>
+            ))}
+            {recipes.length === 0 && (
+              <div className="text-center px-6 py-5 bg-gray-50/50 rounded-xl border border-gray-200/80 mt-3 backdrop-blur-sm">
+                <div className="text-xl mb-1.5">📝</div>
+                <p className="font-medium text-gray-700">No recipes saved yet</p>
+                <p className="text-gray-500 text-sm mt-0.5">Your culinary journey starts here</p>
+              </div>
+            )}
           </div>
-        ))}
-        {recipes.length === 0 && (
-          <div className="text-center py-3 text-gray-500 text-sm">
-            <p>No recipes saved yet</p>
-            <p className="text-xs mt-1">Your recently saved recipes will appear here</p>
+        </>
+      ) : (
+        <div className="bg-gradient-to-b from-purple-50 to-white rounded-xl border border-purple-100 p-5">
+          <div className="text-center space-y-3">
+            <div className="text-lg mb-1.5">👩‍🍳</div>
+            <h3 className="font-semibold text-gray-900">Create Your Free Recipe Collection</h3>
+            <div className="text-sm text-gray-600 space-y-2">
+              <p>Join Baba Selo and unlock these features:</p>
+              <ul className="space-y-1.5">
+                <li>• Save unlimited recipes</li>
+                <li>• Pin your favorites for quick access</li>
+                <li>• Share your culinary creations</li>
+                <li>• Earn spoon points and rewards</li>
+              </ul>
+            </div>
+            <Link 
+              href="/login" 
+              className="inline-block mt-2 px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+            >
+              Get Started Free
+            </Link>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
