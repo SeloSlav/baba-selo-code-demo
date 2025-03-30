@@ -224,7 +224,8 @@ const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ user, showPoint
                                 cost: 0,
                                 rarity: 'common',
                                 category: 'food',
-                                imageUrl: ''
+                                imageUrl: '',
+                                hidden: false
                             } as EditableGoodie)}
                             className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
                         >
@@ -352,6 +353,23 @@ const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ user, showPoint
                             />
                         </div>
 
+                        {/* Hidden field */}
+                        <div className="flex items-center">
+                            <input
+                                type="checkbox"
+                                id="hiddenCheckbox"
+                                checked={editingGoodie.hidden || false}
+                                onChange={e => setEditingGoodie({
+                                    ...editingGoodie,
+                                    hidden: e.target.checked
+                                })}
+                                className="mr-2 h-4 w-4"
+                            />
+                            <label htmlFor="hiddenCheckbox" className="text-sm font-medium text-gray-700">
+                                Hidden (not visible in marketplace)
+                            </label>
+                        </div>
+
                         {/* Action Buttons */}
                         <div className="flex justify-end gap-2 pt-2">
                             <button
@@ -377,7 +395,7 @@ const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ user, showPoint
                 <h3 className="text-lg font-medium mb-4">Current Items</h3>
                 
                 {/* Filters Section */}
-                <div className="bg-white rounded-3xl shadow-lg border border-gray-300 mb-6">
+                <div className="bg-white rounded-3xl shadow-lg border border-gray-300 mb-6" style={{ display: 'none' }}>
                     <button
                         onClick={() => setIsFiltersOpen(prev => !prev)}
                         className="w-full p-4 flex items-center justify-between rounded-t-3xl"
@@ -516,6 +534,11 @@ const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ user, showPoint
                                                 <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getCategoryColor(goodie.category)}`}>
                                                     {goodie.category.charAt(0).toUpperCase() + goodie.category.slice(1)}
                                                 </span>
+                                                {goodie.hidden && (
+                                                    <span className="inline-block px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-600">
+                                                        Hidden
+                                                    </span>
+                                                )}
                                             </div>
                                             <p className="text-sm text-gray-600 mb-2">{goodie.description}</p>
                                             <div className="flex items-center text-yellow-600">
@@ -646,6 +669,23 @@ const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ user, showPoint
                                     placeholder="0"
                                     min="0"
                                 />
+                            </div>
+                            
+                            {/* Hidden field */}
+                            <div className="flex items-center">
+                                <input
+                                    type="checkbox"
+                                    id="editHiddenCheckbox"
+                                    checked={editingGoodie.hidden || false}
+                                    onChange={e => setEditingGoodie({
+                                        ...editingGoodie,
+                                        hidden: e.target.checked
+                                    })}
+                                    className="mr-2 h-4 w-4"
+                                />
+                                <label htmlFor="editHiddenCheckbox" className="text-sm font-medium text-gray-700">
+                                    Hidden (not visible in marketplace)
+                                </label>
                             </div>
 
                             {/* Action Buttons */}

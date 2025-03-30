@@ -194,14 +194,16 @@ export default function Marketplace() {
                 <div className="flex flex-col items-center mb-12">
                     <img src="/baba-removebg.png" alt="Baba" className="w-32 h-32 mb-4" />
                     <h1 className="text-center text-2xl font-semibold mb-4">Spend your hard-earned spoons on special goodies!</h1>
-                    <p className="text-gray-600 text-center">Collect spoons to unlock special vouchers for premium <a href="https://seloolive.com/products/authentic-croatian-olive-oil?variant=40790542549035" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 transition-colors underline">SELO Olive Oil</a>. Visit <a href="/yard" className="text-blue-600 hover:text-blue-800 transition-colors underline">Baba's Yard</a> where you can use your rare items to befriend stray cats and multiply your spoon earnings!</p>
+                    <p className="text-gray-600 text-center">Collect spoons to unlock special vouchers for premium <a href="https://seloolive.com/products/authentic-croatian-olive-oil?variant=40790542549035" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 transition-colors underline">SELO Olive Oil</a>.
+                    {/* Visit <a href="/yard" className="text-blue-600 hover:text-blue-800 transition-colors underline">Baba's Yard</a> where you can use your rare items to befriend stray cats and multiply your spoon earnings! */}
+                    </p>
                 </div>
 
                 {/* Stack inventory above marketplace */}
                 <div className="flex flex-col gap-8">
                     {/* Your Inventory */}
                     <div className="w-full">
-                        <h2 className="text-2xl font-semibold mb-4">Your Inventory</h2>
+                        <h2 className="text-2xl font-semibold mb-4">Your Coupons</h2>
                         <div className="overflow-y-auto pr-2 custom-scrollbar">
                             <UserInventory items={state.userInventory.sort((a, b) => {
                                 const dateA = a.purchasedAt instanceof Timestamp ? 

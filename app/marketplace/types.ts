@@ -10,6 +10,7 @@ export interface Goodie {
     rarity: Rarity;
     imageUrl: string;
     category: Category;
+    hidden?: boolean;
 }
 
 export interface UserInventoryItem extends Goodie {

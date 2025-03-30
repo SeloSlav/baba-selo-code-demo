@@ -41,6 +41,9 @@ export const MarketplaceList: React.FC<MarketplaceListProps> = ({ goodies, onPur
     // Filter and sort goodies
     const filteredGoodies = useMemo(() => {
         let filtered = [...goodies];
+        
+        // Filter out hidden goodies
+        filtered = filtered.filter(goodie => !goodie.hidden);
 
         // Apply rarity filter if any rarities are selected
         if (selectedRarities.size > 0) {
@@ -124,7 +127,7 @@ export const MarketplaceList: React.FC<MarketplaceListProps> = ({ goodies, onPur
     return (
         <div className="flex flex-col h-full">
             {/* Filters Section */}
-            <div className="sticky top-0 bg-white z-10 mb-6">
+            <div className="sticky top-0 bg-white z-10 mb-6" style={{ display: 'none' }}>
                 <div className="bg-white rounded-3xl shadow-lg border border-gray-300">
                     <button
                         onClick={() => setIsFiltersOpen(prev => !prev)}

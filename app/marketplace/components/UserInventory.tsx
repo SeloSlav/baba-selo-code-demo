@@ -142,7 +142,7 @@ export const UserInventory: React.FC<UserInventoryProps> = ({ items }) => {
     return (
         <div className="flex flex-col h-full">
             {/* Filters Section */}
-            <div className="sticky top-0 bg-white z-10 mb-6">
+            <div className="sticky top-0 bg-white z-10 mb-6" style={{ display: 'none' }}>
                 <div className="bg-white rounded-3xl shadow-lg border border-gray-300">
                     <button
                         onClick={() => setIsFiltersOpen(prev => !prev)}

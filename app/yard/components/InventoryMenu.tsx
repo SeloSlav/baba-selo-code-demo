@@ -91,6 +91,7 @@ export default function InventoryMenu({
                                         ? 'bg-black text-white' 
                                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
+                                style={{ display: 'none' }}
                             >
                                 <span>Filter</span>
                                 {(selectedRarities.size + selectedCategories.size) > 0 && (
@@ -115,14 +116,16 @@ export default function InventoryMenu({
 
                 {/* Filters Section */}
                 {isInventoryOpen && isFiltersOpen && (
-                    <InventoryFilters
-                        availableCategories={availableCategories}
-                        availableRarities={availableRarities}
-                        selectedCategories={selectedCategories}
-                        selectedRarities={selectedRarities}
-                        setSelectedCategories={setSelectedCategories}
-                        setSelectedRarities={setSelectedRarities}
-                    />
+                    <div style={{ display: 'none' }}>
+                        <InventoryFilters
+                            availableCategories={availableCategories}
+                            availableRarities={availableRarities}
+                            selectedCategories={selectedCategories}
+                            selectedRarities={selectedRarities}
+                            setSelectedCategories={setSelectedCategories}
+                            setSelectedRarities={setSelectedRarities}
+                        />
+                    </div>
                 )}
             </div>
 
