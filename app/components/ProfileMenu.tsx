@@ -197,7 +197,7 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
                         </span>
                     </Link>
                 </li>
-                <li className="flex items-center px-4 py-2 rounded-md hover:bg-gray-100 cursor-pointer">
+                {/* <li className="flex items-center px-4 py-2 rounded-md hover:bg-gray-100 cursor-pointer">
                     <Link href="/yard" className="flex items-center w-full justify-between">
                         <div className="flex items-center">
                             <FontAwesomeIcon icon={faSeedling} className="text-[#5d5d5d] mr-3" />
@@ -207,7 +207,7 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
                             Play! 🌱
                         </span>
                     </Link>
-                </li>
+                </li> */}
                 <li className="flex items-center px-4 py-2 rounded-md hover:bg-gray-100 cursor-pointer">
                     <Link href="/settings" className="flex items-center w-full">
                         <FontAwesomeIcon icon={faGear} className="text-[#5d5d5d] mr-3" />
