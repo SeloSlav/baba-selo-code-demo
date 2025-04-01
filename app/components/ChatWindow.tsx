@@ -260,7 +260,7 @@ export const ChatWindow = forwardRef(
             ...prev,
             { 
               role: 'user', 
-              content: 'I uploaded an image for analysis.',
+              content: 'Baba, look at this picture I took! What do you think?',
               imageUrl: imagePreview // Add the image URL to the message
             }
           ]);

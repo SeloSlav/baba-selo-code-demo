@@ -38,15 +38,18 @@ const isCalorieInfo = (data: any) => {
     );
 };
 
-const isRecipe = (text: string) => {
+const isRecipe = (text: string | any): boolean => {
+    if (typeof text !== 'string') return false;
     return text.toLowerCase().includes("ingredients") && text.toLowerCase().includes("directions");
 };
 
-const isAboutSeloOliveOil = (text: string): boolean => {
+const isAboutSeloOliveOil = (text: string | any): boolean => {
+    if (typeof text !== 'string') return false;
     return text.toLowerCase().includes("selo olive oil");
 };
 
-const isSelo = (text: string): boolean => {
+const isSelo = (text: string | any): boolean => {
+    if (typeof text !== 'string') return false;
     return text.toLowerCase().includes("selo olive oil");
 };
 
@@ -171,7 +174,12 @@ const Timer: React.FC<{ initialSeconds: number }> = ({ initialSeconds }) => {
 };
 
 // Update the isTimerRequest function
-const isTimerRequest = (text: string): { isTimer: boolean; seconds: number } => {
+const isTimerRequest = (text: string | any): { isTimer: boolean; seconds: number } => {
+    // Safety check: if text is not a string, return false
+    if (typeof text !== 'string') {
+        return { isTimer: false, seconds: 0 };
+    }
+    
     // Check for special timer response format
     const timerMatch = text.match(/^TIMER_REQUEST_(\d+)$/);
     if (timerMatch) {

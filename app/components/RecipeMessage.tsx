@@ -167,7 +167,7 @@ export const RecipeMessage: React.FC<RecipeMessageProps> = ({
                             }
                         }}
                     >
-                        🍎 Get Nutritional Info
+                        🍎 Get Calorie Info
                     </button>
                 </div>
             </div>
