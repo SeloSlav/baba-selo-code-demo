@@ -1,21 +1,45 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
+import { db } from '../../firebase/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Helper function to store user prompts in Firebase
+const storeUserPrompt = async (userId: string | undefined, message: string, conversationHistory: any[], recipeContext: string) => {
+  try {
+    await addDoc(collection(db, 'prompts'), {
+      userId: userId || 'anonymous',
+      message: message,
+      conversationHistory: conversationHistory,
+      recipeContext: recipeContext,
+      type: 'recipe_chat',
+      timestamp: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error('Error storing user prompt:', error);
+    // Don't throw error to prevent disrupting the main flow
+  }
+};
+
 export async function POST(request: Request) {
     try {
-        const { messages, recipeContent } = await request.json();
-
-        // Debug log to verify recipe content
-        console.log("Received recipe content:", recipeContent);
+        const { messages, recipeContent, userId } = await request.json();
 
         if (!recipeContent) {
             return NextResponse.json({
                 assistantMessage: "I'm sorry dear, but I can't seem to find the recipe details. Please try refreshing the page."
             });
+        }
+
+        // Store the last user message if it exists
+        if (messages.length > 0) {
+            const lastMessage = messages[messages.length - 1];
+            if (lastMessage.role === "user") {
+                storeUserPrompt(userId, lastMessage.content, messages.slice(0, -1), recipeContent);
+            }
         }
 
         // Create system message with recipe context
@@ -55,9 +79,6 @@ ${recipeContent}
             contextMessage,
             ...messages.slice(1) // Skip the first generic greeting message
         ];
-
-        // Debug log to verify messages being sent to OpenAI
-        console.log("Sending messages to OpenAI:", JSON.stringify(apiMessages, null, 2));
 
         const completion = await openai.chat.completions.create({
             model: "gpt-4",

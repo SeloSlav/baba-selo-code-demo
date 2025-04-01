@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { SpoonPointSystem } from '../../lib/spoonPoints';
+import { db } from '../../firebase/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 // Add timer detection helper
 const isTimerRequest = (text) => {
@@ -81,6 +83,21 @@ const isTimerRequest = (text) => {
     return { isTimer: false, seconds: 0 };
 };
 
+// Helper function to store user prompts in Firebase
+const storeUserPrompt = async (userId, message, conversationHistory) => {
+  try {
+    await addDoc(collection(db, 'prompts'), {
+      userId: userId || 'anonymous',
+      message: message,
+      conversationHistory: conversationHistory,
+      timestamp: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error('Error storing user prompt:', error);
+    // Don't throw error to prevent disrupting the main flow
+  }
+};
+
 export async function POST(req) {
   const { messages, dietaryPreferences, preferredCookingOil, userId } = await req.json();
 
@@ -90,6 +107,11 @@ export async function POST(req) {
 
   // Get the last user message
   const lastMessage = messages[messages.length - 1];
+  
+  // Store user message in Firebase if it's from a user
+  if (lastMessage.role === "user") {
+    storeUserPrompt(userId, lastMessage.content, messages.slice(0, -1));
+  }
   
   // Check if it's a timer request from the user
   if (lastMessage.role === "user") {
@@ -223,7 +245,7 @@ Note: The user has these dietary preferences: ${dietaryPreferences.join(", ")}.
 The user also prefers to use ${preferredCookingOil} as a cooking oil.
 `
 
-// Log system prompt
+// Remove logging of system prompt
 // console.log(originalSystemPrompt);
 
   try {
@@ -256,17 +278,9 @@ The user also prefers to use ${preferredCookingOil} as a cooking oil.
 
     const assistantMessage = data.choices?.[0]?.message?.content || "I'm sorry, I couldn't respond.";
 
-    // Force log the full response to make sure logging is working
-    console.debug("DEBUG - Full response:", assistantMessage);
-    console.debug("DEBUG - Response split by newlines:", assistantMessage.split('\n'));
-    console.debug("DEBUG - First line only:", assistantMessage.split('\n')[0]);
-
     // Parse the response to detect recipe
     const lines = assistantMessage.split('\n');
     const firstLine = lines[0]?.trim() || '';
-    
-    // Log the first line for debugging
-    console.debug("DEBUG - First line:", firstLine);
     
     // Check recipe components with more lenient conditions
     const hasRecipeName = firstLine.length > 0 && 
@@ -276,21 +290,10 @@ The user also prefers to use ${preferredCookingOil} as a cooking oil.
     const hasIngredients = assistantMessage.toLowerCase().includes("ingredients");
     const hasDirections = assistantMessage.toLowerCase().includes("directions");
     
-    // Log all detection conditions
-    console.debug("DEBUG - Recipe detection:", {
-        firstLine,
-        hasRecipeName,
-        hasIngredients,
-        hasDirections,
-        userId
-    });
-
     const isRecipe = hasRecipeName && hasIngredients && hasDirections;
-    console.debug("DEBUG - Is recipe:", isRecipe);
 
     let pointsAwarded = null;
     if (isRecipe && userId) {
-        console.debug("DEBUG - Attempting to award points");
         const docId = `${userId}-${Date.now()}`;
         const recipeHash = `${userId}-${Date.now()}-${firstLine}`;
         try {
@@ -300,7 +303,6 @@ The user also prefers to use ${preferredCookingOil} as a cooking oil.
                 docId,
                 { recipeHash }
             );
-            console.debug("DEBUG - Points result:", pointsResult);
             
             if (pointsResult.success) {
                 pointsAwarded = {
@@ -327,7 +329,6 @@ The user also prefers to use ${preferredCookingOil} as a cooking oil.
                     message: errorMessage
                 };
             }
-            console.debug("DEBUG - Points awarded:", pointsAwarded);
         } catch (error) {
             console.error("Error awarding points:", error);
             pointsAwarded = {
@@ -335,12 +336,6 @@ The user also prefers to use ${preferredCookingOil} as a cooking oil.
                 message: 'Something went wrong while awarding points'
             };
         }
-    } else {
-        console.debug("DEBUG - Not awarding points because:", {
-            isRecipe,
-            hasUserId: !!userId,
-            userId
-        });
     }
 
     return NextResponse.json({ 

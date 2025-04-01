@@ -161,7 +161,7 @@ export const ChatWindow = forwardRef(
       try {
         const auth = getAuth();
         const userId = auth.currentUser?.uid;
-        console.log("Current user ID:", userId); // Log the user ID
+        // console.log("Current user ID:", userId); // Log the user ID
 
         const requestBody = {
           messages: updatedMessages,
@@ -169,7 +169,7 @@ export const ChatWindow = forwardRef(
           dietaryPreferences,
           userId
         };
-        console.log("Sending request with body:", requestBody); // Log the request body
+        // console.log("Sending request with body:", requestBody); // Log the request body
 
         const response = await fetch("/api/chat", {
           method: "POST",
@@ -178,7 +178,7 @@ export const ChatWindow = forwardRef(
         });
 
         const data = await response.json();
-        console.log("Chat API response:", data);
+        // console.log("Chat API response:", data);
         
         if (data.assistantMessage) {
           setMessages((prev) => [
@@ -188,13 +188,13 @@ export const ChatWindow = forwardRef(
 
           // Show points toast if points information is available
           if (data.pointsAwarded) {
-            console.log("Showing points toast:", data.pointsAwarded);
+            // console.log("Showing points toast:", data.pointsAwarded);
             showPointsToast(
               data.pointsAwarded.points,
               data.pointsAwarded.message
             );
           } else {
-            console.log("No points information in response");
+            // console.log("No points information in response");
           }
         } else {
           setMessages((prev) => [
