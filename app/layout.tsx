@@ -19,13 +19,13 @@ export const metadata = {
 
   icons: {
     icon: [
+      { rel: "icon", url: "/favicon.ico" },
       {
         rel: "icon",
         type: "image/png",
         sizes: "96x96",
         url: "/favicon-96x96.png",
       },
-
       { rel: "icon", type: "image/svg+xml", url: "/favicon.svg" },
     ],
 
