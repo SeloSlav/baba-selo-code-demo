@@ -1,11 +1,29 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     images: {
-      domains: [
-        'firebasestorage.googleapis.com',
-        'oaidalleapiprodscus.blob.core.windows.net',
-        'storage.googleapis.com'
+      remotePatterns: [
+        {
+          protocol: 'https',
+          hostname: 'firebasestorage.googleapis.com',
+        },
+        {
+          protocol: 'https',
+          hostname: 'oaidalleapiprodscus.blob.core.windows.net',
+        },
+        {
+          protocol: 'https',
+          hostname: 'storage.googleapis.com',
+        },
       ],
+    },
+    async redirects() {
+      return [
+        {
+          source: '/favicon.ico',
+          destination: '/api/favicon',
+          permanent: true,
+        },
+      ];
     },
   };
   
