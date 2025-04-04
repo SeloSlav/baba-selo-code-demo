@@ -13,52 +13,33 @@ export const viewport = {
 
 export const metadata = {
   title: "Baba Selo - Your Magical Recipe Companion",
-
   description:
     "Discover and save amazing recipes with Baba Selo's magical guidance.",
-
   icons: {
-    icon: [
-      { rel: "icon", url: "/favicon-96x96.png", sizes: "96x96", type: "image/png" },
-      { rel: "icon", url: "/favicon.svg", type: "image/svg+xml" },
-    ],
-
-    apple: "/apple-touch-icon.png",
+    icon: '/apple-touch-icon.png',
+    apple: '/apple-touch-icon.png',
   },
-
   manifest: "/site.webmanifest",
-
   openGraph: {
     title: "Baba Selo - Your Magical Recipe Companion",
-
     description:
       "Discover and save amazing recipes with Baba Selo's magical guidance.",
-
     url: "https://babaselo.com",
-
     type: "website",
-
     images: [
       {
         url: "https://babaselo.com/og-image.jpg",
-
         width: 1200,
-
         height: 630,
-
         alt: "Baba Selo Recipe Preview",
       },
     ],
   },
-
   twitter: {
     card: "summary_large_image",
-
     title: "Baba Selo - Your Magical Recipe Companion",
-
     description:
       "Discover and save amazing recipes with Baba Selo's magical guidance.",
-
     images: ["https://babaselo.com/twitter-image.jpg"],
   },
 };
