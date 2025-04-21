@@ -106,14 +106,18 @@ export const renderNutritionInfo = (macros: any) => {
 };
 
 export const renderDiscountButton = () => (
-    <div className="mt-3">
+    <div className="mt-4">
         <a
             href="https://seloolive.com/discount/BABASELO10?redirect=/products/authentic-croatian-olive-oil?variant=40790542549035"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-block px-4 py-2 bg-green-500 text-white font-semibold rounded-md hover:bg-green-600"
+            className="group inline-flex items-center px-5 py-3 bg-gradient-to-r from-teal-600 to-teal-500 text-white font-medium rounded-xl shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]"
         >
-            🌿 Click for a 10% Discount on Selo Olive Oil
+            <span className="relative z-10 flex flex-col items-start">
+                <span className="font-semibold">Get 10% Off Selo Olive Oil</span>
+                <span className="text-xs text-teal-100 mt-0.5">Authentic Croatian • Cold-Pressed</span>
+            </span>
+            <span className="ml-3 group-hover:translate-x-1 transition-transform duration-300">→</span>
         </a>
     </div>
 );
