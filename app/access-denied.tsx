@@ -20,20 +20,20 @@ export default function AccessDenied() {
             priority
           />
         </div>
-        <h1 className="text-3xl font-bold mb-4">Access Denied</h1>
+        <h1 className="text-3xl font-bold mb-4">Oi Oi! Not So Fast</h1>
         <p className="text-gray-600 mb-4">
-          Oh no, my friend! Baba Selo's magical recipes are not available in your country yet. 
-          Baba is still preparing her special ingredients for your region. 
-          Please check back later when Baba's cooking pot has reached your shores!
+          My dearest friend, Baba Selo must deliver some sad news. My magical recipes haven't yet crossed the sea to your beautiful country! 
+          
+          In my little <i>selo</i> on the Dalmatian coast, we're still preparing our special blend of spices and wisdom for your region. The olive oil must settle, the spoons must be blessed!
         </p>
         <div className="text-sm text-gray-500 mb-8">
-          Available only in US, Canada, UK, and Europe.
+          Currently stirring pots in the United States, Canada, United Kingdom, European countries, and the United Arab Emirates. <i>Živili!</i>
         </div>
         <Link 
           href="/" 
           className="inline-block px-6 py-2 bg-black text-white font-medium rounded-xl hover:bg-gray-900 transition-colors"
         >
-          Return Home
+          Back to Kitchen
         </Link>
       </div>
     </div>

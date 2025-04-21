@@ -20,16 +20,17 @@ export default function NotFound() {
             priority
           />
         </div>
-        <h1 className="text-3xl font-bold mb-4">Oops! Page Not Found</h1>
+        <h1 className="text-3xl font-bold mb-4">Oi! Page Not Found</h1>
         <p className="text-gray-600 mb-8">
-          Ah, my friend! Baba Selo cannot find this page in her recipe book. 
-          Perhaps we should return to the kitchen and try another dish?
+          Ay, my dear friend! Baba Selo cannot find this page in her recipe book. 
+          Like my grandmother always said, "When the road ends, turn around and find a better one!"
+          Let's go back to the kitchen where all the magic happens, hmm?
         </p>
         <Link 
           href="/" 
           className="inline-block px-6 py-2 bg-black text-white font-medium rounded-xl hover:bg-gray-900 transition-colors"
         >
-          Return Home
+          Return to Kitchen
         </Link>
       </div>
     </div>
