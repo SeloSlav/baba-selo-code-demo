@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { geolocation } from '@vercel/functions' // Import the Vercel helper
 
 // Minimal middleware function to allow all requests through for testing
 // export function middleware(request: NextRequest) {
@@ -13,7 +14,8 @@ import type { NextRequest } from 'next/server'
 
 // --- Original Middleware Code (Restored with Logging) ---
 
-// Extend NextRequest to include Vercel-specific geo information
+// NOTE: The declare module block for NextRequest is no longer strictly needed
+// as we are using the geolocation helper, but it doesn't hurt to keep it.
 declare module 'next/server' {
   interface NextRequest {
     geo?: {
@@ -28,50 +30,46 @@ declare module 'next/server' {
 const ALLOWED_COUNTRIES = ['US', 'CA', 'GB', 'FR', 'DE', 'IT', 'ES', 'NL', 'SE', 'PL', 'RO', 'BE', 'CZ', 'GR', 'PT', 'HU', 'IE', 'DK', 'FI', 'SK', 'BG', 'HR', 'LT', 'SI', 'LV', 'EE', 'LU', 'MT', 'CY', 'AE']
 
 export function middleware(request: NextRequest) {
-  console.log(`[Middleware V2] Request URL: ${request.url}`);
+  // Skip static files and internal Next.js paths
+  const pathname = request.nextUrl.pathname;
+  if (pathname.startsWith('/_next') || 
+      pathname.startsWith('/api') || 
+      pathname.match(/\.(js|css|png|jpg|jpeg|svg|ico|webmanifest|json|woff2|woff|ttf)$/i)) {
+    return NextResponse.next();
+  }
+
+  // Skip in development environment
+  if (process.env.NODE_ENV === 'development') {
+      // console.log("[Middleware] Skipping geo-check in development.");
+      return NextResponse.next();
+  }
   
-  // Skip geo-restriction for static files and in development environment
-  const url = new URL(request.url)
-  const isDev = process.env.NODE_ENV === 'development'
-  const isStaticFile = /\.(js|css|png|jpg|jpeg|svg|ico|webmanifest|json|woff2|woff|ttf)$/i.test(url.pathname)
+  // Use the Vercel geolocation helper
+  const { country } = geolocation(request); // country can be string | undefined
+  console.log(`[Middleware] Request for ${pathname}, Country from helper: ${country}`);
+
+  // Default Deny: Allow ONLY if country is determined AND is in the allowed list.
+  if (country && ALLOWED_COUNTRIES.includes(country)) {
+    console.log(`[Middleware] Access Allowed for country: ${country}.`);
+    return NextResponse.next();
+  }
   
-  // Skip geo-check for static files or in development mode
-  if (isStaticFile || isDev) {
-    console.log(`[Middleware V2] Skipping: Static file or Dev environment.`);
-    return NextResponse.next()
-  }
-
-  console.log("[Middleware V2] Attempting to access geo data...");
-  let geo;
-  let country = 'XX'; // Default
-  try {
-      geo = request.geo;
-      country = geo?.country || 'XX';
-      console.log(`[Middleware V2] Geo data accessed: ${JSON.stringify(geo)}, Determined Country: ${country}`);
-  } catch (e) {
-      console.error(`[Middleware V2] Error accessing geo data: ${e}`);
-      // If accessing geo fails, maybe deny access? Or allow? For now, let's deny.
-      country = 'XX_ERROR'; 
-      console.log(`[Middleware V2] Country set to XX_ERROR due to exception.`);
-  }
-
-  if (!ALLOWED_COUNTRIES.includes(country)) {
-    console.log(`[Middleware V2] Access Denied for country: ${country}. Returning 403.`);
-    // TEST: Return direct 403 instead of rewrite
-    return new NextResponse(`Access Denied via Middleware for country: ${country}`, { 
-        status: 403,
-        headers: { 'Content-Type': 'text/plain' } 
-    });
-  }
-
-  console.log(`[Middleware V2] Access Allowed for country: ${country}. Proceeding.`);
-  return NextResponse.next()
+  // Otherwise, block the request
+  console.log(`[Middleware] Access Denied for country: ${country || 'Unknown'}. Rewriting to /access-denied`);
+  return NextResponse.rewrite(new URL('/access-denied', request.url));
 }
 
-// Original config
+// Config can be simplified now as filtering is done inside the middleware
 export const config = {
   matcher: [
-    // Match all paths
-    '/((?!_next/static|_next/image|favicon.ico|site.webmanifest|apple-touch-icon.png).*)',
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * Match all paths that contain a dot (likely static files)
+     */
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.).*)',
   ],
-} 
+}; 
