@@ -28,7 +28,7 @@ declare module 'next/server' {
 const ALLOWED_COUNTRIES = ['US', 'CA', 'GB', 'FR', 'DE', 'IT', 'ES', 'NL', 'SE', 'PL', 'RO', 'BE', 'CZ', 'GR', 'PT', 'HU', 'IE', 'DK', 'FI', 'SK', 'BG', 'HR', 'LT', 'SI', 'LV', 'EE', 'LU', 'MT', 'CY', 'AE']
 
 export function middleware(request: NextRequest) {
-  console.log(`[Middleware] Request URL: ${request.url}`);
+  console.log(`[Middleware V2] Request URL: ${request.url}`);
   
   // Skip geo-restriction for static files and in development environment
   const url = new URL(request.url)
@@ -37,29 +37,34 @@ export function middleware(request: NextRequest) {
   
   // Skip geo-check for static files or in development mode
   if (isStaticFile || isDev) {
-    console.log(`[Middleware] Skipping: Static file or Dev environment.`);
+    console.log(`[Middleware V2] Skipping: Static file or Dev environment.`);
     return NextResponse.next()
   }
 
-  // Access geo information which is provided by Vercel at the edge
-  const geo = request.geo;
-  const country = geo?.country || 'XX'
-  console.log(`[Middleware] Geo data: ${JSON.stringify(geo)}, Determined Country: ${country}`);
-
-  if (!ALLOWED_COUNTRIES.includes(country)) {
-    console.log(`[Middleware] Access Denied for country: ${country}. Rewriting to /access-denied`);
-    try {
-      const rewriteUrl = new URL('/access-denied', request.url);
-      console.log(`[Middleware] Rewrite URL constructed: ${rewriteUrl.toString()}`);
-      return NextResponse.rewrite(rewriteUrl);
-    } catch (e) {
-      console.error(`[Middleware] Error during rewrite: ${e}`);
-      // Fallback or re-throw, though ideally we want to see the error
-      return new NextResponse('Internal Server Error during rewrite', { status: 500 });
-    }
+  console.log("[Middleware V2] Attempting to access geo data...");
+  let geo;
+  let country = 'XX'; // Default
+  try {
+      geo = request.geo;
+      country = geo?.country || 'XX';
+      console.log(`[Middleware V2] Geo data accessed: ${JSON.stringify(geo)}, Determined Country: ${country}`);
+  } catch (e) {
+      console.error(`[Middleware V2] Error accessing geo data: ${e}`);
+      // If accessing geo fails, maybe deny access? Or allow? For now, let's deny.
+      country = 'XX_ERROR'; 
+      console.log(`[Middleware V2] Country set to XX_ERROR due to exception.`);
   }
 
-  console.log(`[Middleware] Access Allowed for country: ${country}. Proceeding.`);
+  if (!ALLOWED_COUNTRIES.includes(country)) {
+    console.log(`[Middleware V2] Access Denied for country: ${country}. Returning 403.`);
+    // TEST: Return direct 403 instead of rewrite
+    return new NextResponse(`Access Denied via Middleware for country: ${country}`, { 
+        status: 403,
+        headers: { 'Content-Type': 'text/plain' } 
+    });
+  }
+
+  console.log(`[Middleware V2] Access Allowed for country: ${country}. Proceeding.`);
   return NextResponse.next()
 }
 
