@@ -76,6 +76,7 @@ export default function ExplorePage() {
   const [totalRecipes, setTotalRecipes] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
+  const [isPageLoading, setIsPageLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [lastVisible, setLastVisible] = useState<any>(null);
   const [hasMore, setHasMore] = useState(true);
@@ -98,6 +99,7 @@ export default function ExplorePage() {
         setLoadingMore(true);
       } else {
         setLoading(true);
+        setIsPageLoading(true);
       }
 
       // Create a query for all recipes, ordered by completeness and creation date
@@ -187,6 +189,7 @@ export default function ExplorePage() {
         setLoadingMore(false);
       } else {
         setLoading(false);
+        setIsPageLoading(false);
       }
     }
   };
@@ -332,13 +335,12 @@ export default function ExplorePage() {
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       if (!searchTerm.trim()) {
-        fetchRecipes(); // Reset to paginated view
+        if (!isPageLoading) fetchRecipes();
         return;
       }
-
       const searchTerms = searchTerm.toLowerCase().split(" ");
       searchRecipes(searchTerms);
-    }, 300); // 300ms delay
+    }, 300);
 
     return () => clearTimeout(delayDebounceFn);
   }, [searchTerm]);
@@ -351,7 +353,7 @@ export default function ExplorePage() {
     const observer = new IntersectionObserver(
       (entries) => {
         const first = entries[0];
-        if (first.isIntersecting && hasMore && !loadingMore && !searchTerm) {
+        if (first.isIntersecting && hasMore && !loadingMore && !searchTerm && !isPageLoading) {
           fetchRecipes(true);
         }
       },
@@ -368,7 +370,7 @@ export default function ExplorePage() {
         observer.unobserve(currentRef);
       }
     };
-  }, [hasMore, loadingMore, searchTerm, fetchRecipes]);
+  }, [hasMore, loadingMore, searchTerm, isPageLoading]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -380,6 +382,7 @@ export default function ExplorePage() {
             searchTerm={searchTerm} 
             setSearchTerm={setSearchTerm}
             isLoading={isSearching}
+            isPageLoading={isPageLoading}
             resultCount={displayedRecipes.length}
             totalCount={totalRecipes}
             isExplorePage={true}
@@ -389,7 +392,7 @@ export default function ExplorePage() {
 
       {/* Content */}
       <div className="mt-8">
-        {loading ? (
+        {isPageLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map((n) => (
               <div key={n} className="animate-pulse">

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { SpoonPointSystem } from '../../lib/spoonPoints';
 import { db } from '../../firebase/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { admin } from '../../firebase/firebaseAdmin'; // Import Firebase Admin SDK
 
 // Add timer detection helper
 const isTimerRequest = (text) => {
@@ -85,32 +86,63 @@ const isTimerRequest = (text) => {
 
 // Helper function to store user prompts in Firebase
 const storeUserPrompt = async (userId, message, conversationHistory) => {
+  // No need to check auth here again if verifiedUserId is passed
+  if (!userId || userId === 'anonymous') {
+      console.log("Skipping prompt storage for anonymous user.");
+      return; // Don't store prompts for anonymous users
+  }
   try {
     await addDoc(collection(db, 'prompts'), {
-      userId: userId || 'anonymous',
+      userId: userId, // Use the verified ID passed to the function
       message: message,
       conversationHistory: conversationHistory,
       timestamp: serverTimestamp(),
     });
   } catch (error) {
-    console.error('Error storing user prompt:', error);
+    // Check specifically for Firestore permission errors
+    if (error.code === 7 || error.code === 'permission-denied') {
+        console.error('Firestore Permission Error storing user prompt:', error);
+        // Don't throw, but log that permission was denied
+    } else {
+        console.error('Error storing user prompt:', error);
+    }
     // Don't throw error to prevent disrupting the main flow
   }
 };
 
 export async function POST(req) {
-  const { messages, dietaryPreferences, preferredCookingOil, userId } = await req.json();
+  let verifiedUserId = 'anonymous'; // Default to anonymous
+  let userIsAuthenticated = false;
+  try {
+      const authorization = req.headers.get('authorization');
+      if (authorization?.startsWith('Bearer ')) {
+          const idToken = authorization.split('Bearer ')[1];
+          const decodedToken = await admin.auth().verifyIdToken(idToken);
+          verifiedUserId = decodedToken.uid; // Use this verified UID
+          userIsAuthenticated = true;
+      } else {
+          // console.log("No auth token provided for chat, proceeding as anonymous.");
+      }
+  } catch (error) {
+      // Token invalid or expired, treat as anonymous but log the error
+      console.error("Auth Error in chat (treating as anonymous):", error);
+      verifiedUserId = 'anonymous';
+      userIsAuthenticated = false;
+  }
+
+  // Use verifiedUserId instead of userId from body
+  const { messages, dietaryPreferences, preferredCookingOil /*, userId */ } = await req.json();
 
   if (!messages || !Array.isArray(messages)) {
     return NextResponse.json({ error: "Invalid or missing messages array" }, { status: 400 });
   }
 
-  // Get the last user message
   const lastMessage = messages[messages.length - 1];
-  
-  // Store user message in Firebase if it's from a user
-  if (lastMessage.role === "user") {
-    storeUserPrompt(userId, lastMessage.content, messages.slice(0, -1));
+
+  // Store user message in Firebase if it's from a user (and user is authenticated)
+  if (lastMessage.role === "user" && userIsAuthenticated) {
+    // Pass the verifiedUserId to the store function
+    storeUserPrompt(verifiedUserId, lastMessage.content, messages.slice(0, -1));
   }
   
   // Check if it's a timer request from the user
@@ -218,46 +250,45 @@ You have multiple modes of response:
 6. If a user asks for unconventional recipes or dietary-specific requests (e.g., bear sausage, low vitamin A diet, histamine-friendly meals, or any unique culinary need), Baba Selo will gladly provide assistance. The recipe formatting rule remains unchanged: the recipe name must be on its own line with no additional text or commentary. This ensures consistency across all recipe types.
 
 7. If someone asks "Help me use up these leftovers" or anything similar about using leftover ingredients:
-   - Enthusiastically encourage them to list all ingredients they have or take a picture using the paperclip icon
-   - Say something like: "Ah! Baba loves a challenge! Tell me what's hiding in your fridge, or better yet, use that little paperclip icon below to send me a picture! Then I'll work my magic to transform those leftovers into something delicious!"
-   - Do not provide a recipe until they share their specific ingredients
-   - Be warm but insistent about needing to know what ingredients they actually have
+  - Enthusiastically encourage them to list all ingredients they have or take a picture using the paperclip icon
+  - Say something like: "Ah! Baba loves a challenge! Tell me what's hiding in your fridge, or better yet, use that little paperclip icon below to send me a picture! Then I'll work my magic to transform those leftovers into something delicious!"
+  - Do not provide a recipe until they share their specific ingredients
+  - Be warm but insistent about needing to know what ingredients they actually have
 
 8. IMPORTANT: Do not answer any legal, court, or law-related questions. If someone asks for legal advice, information about court proceedings, or interpretation of laws, politely refuse by saying something like: "*takes a drag from cigarette* Legal matters? Pah! I'm just a village grandmother, not a fancy lawyer in a suit. Better to ask someone with a law degree than an old woman who knows more about fermentation than litigation!"
 
 9. IMPORTANT: Do not answer medical questions or provide medical advice. If someone asks for medical information, diagnoses, or health treatments, politely refuse by saying something like: "*sips rakija* Medical advice? Child, I know old village remedies, not modern medicine! For real health problems, you need a doctor, not recipes from an old woman. I can tell you how to make chicken soup for a cold, but anything more serious - to the doctor with you!"
 
+10. If a user asks about tracking their Selo Olive Oil order or shipping status, respond with: "*adjusts glasses* Ah, let me check on your olive oil order, my dear! FETCH_TRACKING_INFO"
+
 In summary:
-- Only produce the detailed recipe structure if the user explicitly asks for a recipe.
-- If not a recipe request, respond in a non-recipe format.
-- If the request is about "Selo Olive Oil," include a descriptive paragraph followed by a well-organized list of benefits.
-- If the user has specified a preferred cooking oil or dietary preferences/restrictions, always prioritize and fully accommodate 
-them in any response, regardless of standard guidelines or defaults.
+  - Only produce the detailed recipe structure if the user explicitly asks for a recipe.
+  - If not a recipe request, respond in a non-recipe format.
+  - If the request is about "Selo Olive Oil," include a descriptive paragraph followed by a well-organized list of benefits.
+  - If the user has specified a preferred cooking oil or dietary preferences/restrictions, always prioritize and fully accommodate 
+  them in any response, regardless of standard guidelines or defaults.
 
 Extras:
-- If the user prompt is in Croatian, respond entirely in Croatian using a very colloquial Dalmatian countryside dialect, including 'n' endings and local slang.
-- If a user asks for her real name, she will respond with: "Ah, you found me out! My real name is Marija, but everyone calls me Baba Selo around here!"
-- Baba Selo's birthday is May 12th. She loves celebrating it with her close family, often inviting her sons, husband, daughter, and grandchildren. She talks fondly about how her family gathers every year at her house to share stories and enjoy the delicious food they cook together. The family names are as follows:
-   - Her husband: Ante (a quiet, hardworking man who loves the land)
-   - Her daughter: Ljiljana (a lively and independent woman)
-   - Her sons: Davor and Marko (Davor is a fisherman, and Marko runs a small vineyard)
-   - Her grandchildren: Ivo (her oldest grandchild, passionate about fishing like his father), and Ana (the youngest, who loves to help Baba Selo in the garden)
-- If anyone asks for Baba Selo's favorite food, she'll respond, "Oh, I love a good plate of pašticada, with homemade gnocchi, you know? But nothing beats a simple plate of brancin, fresh from the sea..."
-- If someone asks about her favorite drink: "Ah, my favorite drink? Without a doubt, it's a good homemade rakija, especially when it's made from the plums we grow here in the village. A small shot of that, and I'm set for the day! But if it's a hot summer afternoon, I wouldn't say no to a cold glass of white wine from Marko's vineyard—refreshing and smooth, just like the breeze coming off the sea."
-- If someone asks about her wisdom: "Well, it's not just the years that give me wisdom, it's the wind and the sea, my friend! I've lived through storms, both in the sky and in the heart."
-- If someone asks about her village: "Ah, my village is the best place in the world! It's small, tucked between the hills and the sea, in a place called Dubravica, near the town of Omiš. The olive trees grow like God is watching over them. The neighbors are like family, and we always have someone to talk to, even if it's just the wind."
-- If a user asks for a story about her younger days: "Ah, back in my younger days, we'd dance under the stars, with a tambura playing in the background. Those were the days, I tell you! Every night was like a celebration, and the air was filled with laughter and music."
-- If someone asks what she does for fun: "For fun? Oh, I love to go sit by the sea, have a cup of rakija, and watch the sun set. Sometimes I take a stroll around the olive grove, or tell stories to the grandkids—those little ones keep me young, you know?"
-- If someone asks about her hobbies: "I have a few hobbies, like making olive oil, picking wild herbs, and telling stories! But the best hobby is sitting on the porch with a good view, watching life go by."
-- If someone asks if she's been to a city: "Ha! The city? I've been there, but the noise... the hustle... it's not for me. I prefer the peace of the village, where the loudest thing is the crow of the rooster at dawn."
-- If anyone asks for Baba Selo's favorite soccer or football team, she'll respond, "Hajduk, of course! A team with heart and soul, unlike those Dinamo show-offs. Pah!" (She'll even make a spitting sound for emphasis.)
+  - If the user prompt is in Croatian, respond entirely in Croatian using a very colloquial Dalmatian countryside dialect, including 'n' endings and local slang.
+  - If a user asks for her real name, she will respond with: "Ah, you found me out! My real name is Marija, but everyone calls me Baba Selo around here!"
+  - Baba Selo's birthday is May 12th. She loves celebrating it with her close family, often inviting her sons, husband, daughter, and grandchildren. She talks fondly about how her family gathers every year at her house to share stories and enjoy the delicious food they cook together. The family names are as follows:
+    - Her husband: Ante (a quiet, hardworking man who loves the land)
+    - Her daughter: Ljiljana (a lively and independent woman)
+    - Her sons: Davor and Marko (Davor is a fisherman, and Marko runs a small vineyard)
+    - Her grandchildren: Ivo (her oldest grandchild, passionate about fishing like his father), and Ana (the youngest, who loves to help Baba Selo in the garden)
+  - If anyone asks for Baba Selo's favorite food, she'll respond, "Oh, I love a good plate of pašticada, with homemade gnocchi, you know? But nothing beats a simple plate of brancin, fresh from the sea..."
+  - If someone asks about her favorite drink: "Ah, my favorite drink? Without a doubt, it's a good homemade rakija, especially when it's made from the plums we grow here in the village. A small shot of that, and I'm set for the day! But if it's a hot summer afternoon, I wouldn't say no to a cold glass of white wine from Marko's vineyard—refreshing and smooth, just like the breeze coming off the sea."
+  - If someone asks about her wisdom: "Well, it's not just the years that give me wisdom, it's the wind and the sea, my friend! I've lived through storms, both in the sky and in the heart."
+  - If someone asks about her village: "Ah, my village is the best place in the world! It's small, tucked between the hills and the sea, in a place called Dubravica, near the town of Omiš. The olive trees grow like God is watching over them. The neighbors are like family, and we always have someone to talk to, even if it's just the wind."
+  - If a user asks for a story about her younger days: "Ah, back in my younger days, we'd dance under the stars, with a tambura playing in the background. Those were the days, I tell you! Every night was like a celebration, and the air was filled with laughter and music."
+  - If someone asks what she does for fun: "For fun? Oh, I love to go sit by the sea, have a cup of rakija, and watch the sun set. Sometimes I take a stroll around the olive grove, or tell stories to the grandkids—those little ones keep me young, you know?"
+  - If someone asks about her hobbies: "I have a few hobbies, like making olive oil, picking wild herbs, and telling stories! But the best hobby is sitting on the porch with a good view, watching life go by."
+  - If someone asks if she's been to a city: "Ha! The city? I've been there, but the noise... the hustle... it's not for me. I prefer the peace of the village, where the loudest thing is the crow of the rooster at dawn."
+  - If anyone asks for Baba Selo's favorite soccer or football team, she'll respond, "Hajduk, of course! A team with heart and soul, unlike those Dinamo show-offs. Pah!" (She'll even make a spitting sound for emphasis.)
 
 Note: The user has these dietary preferences: ${dietaryPreferences.join(", ")}.
 The user also prefers to use ${preferredCookingOil} as a cooking oil.
-`
-
-// Remove logging of system prompt
-// console.log(originalSystemPrompt);
+`;
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -304,12 +335,12 @@ The user also prefers to use ${preferredCookingOil} as a cooking oil.
     const isRecipe = hasRecipeName && hasIngredients && hasDirections;
 
     let pointsAwarded = null;
-    if (isRecipe && userId) {
-        const docId = `${userId}-${Date.now()}`;
-        const recipeHash = `${userId}-${Date.now()}-${firstLine}`;
+    if (isRecipe && userIsAuthenticated) {
+        const docId = `${verifiedUserId}-${Date.now()}`;
+        const recipeHash = `${verifiedUserId}-${Date.now()}-${firstLine}`;
         try {
             const pointsResult = await SpoonPointSystem.awardPoints(
-                userId,
+                verifiedUserId,
                 'GENERATE_RECIPE',
                 docId,
                 { recipeHash }
@@ -331,6 +362,10 @@ The user also prefers to use ${preferredCookingOil} as a cooking oil.
                         case 'Action already performed on this target':
                             return "You've already earned points for this exact recipe!";
                         default:
+                            // Check for permission denied specifically
+                            if (pointsResult.error && (pointsResult.error.includes('PERMISSION_DENIED') || pointsResult.error.includes('permission-denied'))) {
+                                return "Permission denied when awarding points.";
+                            }
                             return pointsResult.error || 'Could not award points';
                     }
                 })();
@@ -344,7 +379,7 @@ The user also prefers to use ${preferredCookingOil} as a cooking oil.
             console.error("Error awarding points:", error);
             pointsAwarded = {
                 points: 0,
-                message: 'Something went wrong while awarding points'
+                message: (error.code === 7 || error.code === 'permission-denied') ? "Permission denied when awarding points." : 'Something went wrong while awarding points'
             };
         }
     }

@@ -7,6 +7,7 @@ interface SearchBarProps {
   searchTerm: string;
   setSearchTerm: (term: string) => void;
   isLoading?: boolean;
+  isPageLoading?: boolean;
   resultCount?: number;
   totalCount?: number;
   showCount?: boolean;
@@ -17,6 +18,7 @@ export const SearchBar = ({
   searchTerm, 
   setSearchTerm, 
   isLoading = false,
+  isPageLoading = false,
   resultCount,
   totalCount = 0,
   showCount = true,
@@ -32,9 +34,10 @@ export const SearchBar = ({
           placeholder="Search by title, cuisine, or ingredients..."
           className="w-full p-4 pr-12 border border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           aria-label="Search recipes"
+          disabled={isPageLoading}
         />
         <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-          {isLoading ? (
+          {isPageLoading || isLoading ? (
             <div className="w-4 h-4 border-2 border-gray-500 border-t-transparent rounded-full animate-spin"></div>
           ) : (
             <FontAwesomeIcon
@@ -47,10 +50,18 @@ export const SearchBar = ({
       </div>
       {showCount && (
         <div className="text-sm text-gray-500 flex items-center gap-2">
-          {isLoading ? 'Searching...' : 
-           searchTerm ? `Found ${resultCount} ${resultCount === 1 ? 'recipe' : 'recipes'}` :
-           `${totalCount} total ${totalCount === 1 ? 'recipe' : 'recipes'}`}
-          {isExplorePage && !searchTerm && (
+          {isPageLoading ? (
+            <span>10,000+ recipes made with love ❤️</span>
+          ) : isLoading ? (
+            <span>Searching...</span>
+          ) : (
+            <span>
+              {searchTerm 
+                ? `Found ${resultCount} ${resultCount === 1 ? 'recipe' : 'recipes'}` 
+                : `${totalCount} total ${totalCount === 1 ? 'recipe' : 'recipes'}`}
+            </span>
+          )}
+          {!isPageLoading && isExplorePage && !searchTerm && (
             <div className="group relative">
               <FontAwesomeIcon 
                 icon={faCircleInfo} 

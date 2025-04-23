@@ -26,12 +26,22 @@ const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
 });
 
-// Initialize Firebase Admin if not already initialized
+// Define storageBucketName from env var
+const storageBucketName = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+
+// Ensure Firebase Admin is initialized (this might be redundant if already done globally)
 if (!getApps().length) {
-    initializeApp({
-        credential: cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY!)),
-        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-    });
+    try {
+        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY!)
+        initializeApp({
+            credential: cert(serviceAccount),
+            storageBucket: storageBucketName // Keep config here for clarity or potential direct use
+        });
+         console.log("Firebase Admin SDK initialized locally in generateImage route.");
+    } catch (error) {
+        console.error("Local Firebase Admin SDK initialization error in generateImage:", error);
+        // Handle error appropriately, maybe return 500
+    }
 }
 
 export async function POST(req: Request) {
@@ -109,8 +119,12 @@ export async function POST(req: Request) {
         const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
 
         // Upload to Firebase Storage
-        const bucket = getStorage().bucket();
-        const file = bucket.file(`recipe-images/${recipeId}`);
+        if (!storageBucketName) {
+             console.error("Storage Bucket Name is not configured in environment variables.");
+             return NextResponse.json({ error: "Server configuration error for storage.", message: "Image generated but failed to save."}, { status: 500 });
+        }
+        const bucket = getStorage().bucket(storageBucketName);
+        const file = bucket.file(`recipe-images/${recipeId}.png`);
         
         await file.save(imageBuffer, {
             metadata: {
@@ -131,6 +145,13 @@ export async function POST(req: Request) {
         });
     } catch (error) {
         console.error('Error generating image:', error);
+        // Check if it's the bucket error
+        if (error.message && error.message.includes("Bucket name not specified")) {
+             return NextResponse.json({
+                error: "Storage configuration error",
+                message: "Image generated but could not be saved due to server configuration."
+            }, { status: 500 });
+        }
         return NextResponse.json({
             error: "Failed to generate image",
             message: "Something went wrong while generating the image. Please try again later."

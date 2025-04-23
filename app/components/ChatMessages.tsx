@@ -17,148 +17,6 @@ interface ChatMessagesProps {
     onAssistantResponse: (assistantMsg: string) => void; // To add assistant messages
 }
 
-function linkifyOliveOil(text: string): React.ReactNode {
-    const target = "olive oil";
-    const lower = text.toLowerCase();
-    const index = lower.indexOf(target);
-    if (index === -1) return text;
-
-    return (
-        <>
-            {text.substring(0, index)}
-            <a
-                href="https://seloolive.com/products/authentic-croatian-olive-oil?variant=40790542549035"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 underline"
-            >
-                {text.substring(index, index + target.length)}
-            </a>
-            {text.substring(index + target.length)}
-        </>
-    );
-}
-
-// Function to linkify only the last instance of "Selo olive oil"
-function linkifyLastSelo(text: string): React.ReactNode {
-    const target = "selo olive oil";
-    const lower = text.toLowerCase();
-    const lastIndex = lower.lastIndexOf(target);
-
-    if (lastIndex === -1) return text;
-
-    return (
-        <>
-            {text.substring(0, lastIndex)}
-            <a
-                href="https://seloolive.com/products/authentic-croatian-olive-oil?variant=40790542549035"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 underline"
-            >
-                {text.substring(lastIndex, lastIndex + target.length)}
-            </a>
-            {text.substring(lastIndex + target.length)}
-        </>
-    );
-}
-
-// Add the renderNutritionInfo helper function here
-const renderNutritionInfo = (macros: any) => {
-    if (!macros || !macros.total || !macros.per_serving) {
-        return <div>No macro information available.</div>;
-    }
-
-    return (
-        <div className="p-4 bg-gray-50 rounded-lg shadow border border-gray-300">
-            <h3 className="text-lg font-bold text-gray-800 mb-3">Nutritional Breakdown</h3>
-
-            {/* Total Recipe */}
-            <div className="mb-4">
-                <h4 className="text-md font-semibold text-gray-700 mb-2">Total Recipe</h4>
-                <div className="space-y-1 text-sm text-gray-600">
-                    <p className="flex justify-between">
-                        <span>Calories:</span>
-                        <span className="font-medium">{macros.total.calories} kcal</span>
-                    </p>
-                    <p className="flex justify-between">
-                        <span>Proteins:</span>
-                        <span className="font-medium">{macros.total.proteins} g</span>
-                    </p>
-                    <p className="flex justify-between">
-                        <span>Carbohydrates:</span>
-                        <span className="font-medium">{macros.total.carbs} g</span>
-                    </p>
-                    <p className="flex justify-between">
-                        <span>Fats:</span>
-                        <span className="font-medium">{macros.total.fats} g</span>
-                    </p>
-                </div>
-            </div>
-
-            {/* Per Serving */}
-            <div>
-                <h4 className="text-md font-semibold text-gray-700 mb-2">Per Serving</h4>
-                <div className="space-y-1 text-sm text-gray-600">
-                    <p className="flex justify-between">
-                        <span>Calories:</span>
-                        <span className="font-medium">{macros.per_serving.calories} kcal</span>
-                    </p>
-                    <p className="flex justify-between">
-                        <span>Proteins:</span>
-                        <span className="font-medium">{macros.per_serving.proteins} g</span>
-                    </p>
-                    <p className="flex justify-between">
-                        <span>Carbohydrates:</span>
-                        <span className="font-medium">{macros.per_serving.carbs} g</span>
-                    </p>
-                    <p className="flex justify-between">
-                        <span>Fats:</span>
-                        <span className="font-medium">{macros.per_serving.fats} g</span>
-                    </p>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// Add this helper function to handle dish pairing links
-const renderDishPairingLinks = (text: string, onSuggestionClick: (suggestion: string) => void): React.ReactNode => {
-    // Regular expression to match text between ** or __
-    const boldRegex = /[*_]{2}(.*?)[*_]{2}/g;
-    const parts = [];
-    let lastIndex = 0;
-    let match;
-
-    while ((match = boldRegex.exec(text)) !== null) {
-        // Add text before the match
-        if (match.index > lastIndex) {
-            parts.push(text.slice(lastIndex, match.index));
-        }
-
-        // Add the linked bold text
-        const boldText = match[1];
-        parts.push(
-            <button
-                key={match.index}
-                onClick={() => onSuggestionClick(`Give me a recipe for ${boldText}`)}
-                className="font-bold text-blue-600 hover:underline cursor-pointer"
-            >
-                {boldText}
-            </button>
-        );
-
-        lastIndex = match.index + match[0].length;
-    }
-
-    // Add any remaining text
-    if (lastIndex < text.length) {
-        parts.push(text.slice(lastIndex));
-    }
-
-    return <>{parts}</>;
-};
-
 // Function to extract and format food items
 const formatDishPairings = async (text: string): Promise<string> => {
     try {
@@ -224,10 +82,14 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
 
     useEffect(() => {
         const auth = getAuth();
-        const user = auth.currentUser;
-        if (user) {
-            setUserId(user.uid);
-        }
+        const unsubscribe = auth.onAuthStateChanged(user => {
+             if (user) {
+                setUserId(user.uid);
+             } else {
+                setUserId("");
+             }
+        });
+        return () => unsubscribe(); // Clean up listener on unmount
     }, []);
 
     useEffect(() => {
@@ -238,39 +100,56 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
 
     const handleSaveRecipe = async (msg: string, classification: RecipeClassification | null) => {
         setLoading(true);
+        const auth = getAuth();
+        const currentUser = auth.currentUser;
+
+        if (!currentUser) { // Check currentUser directly
+            onAssistantResponse(`Oh dear, I see you'd like to save this wonderful recipe! 🤗 But first, you'll need to <a href="/login" class="underline text-blue-600">create an account</a> or <a href="/login" class="underline text-blue-600">sign in</a>. That way, I can keep all your recipes safe and organized in your personal recipe vault! Plus, you'll earn special spoon points for each recipe you save. Shall we get you set up, dear? 👩‍🍳✨`);
+            setLoading(false);
+            return;
+        }
+
+        let idToken;
+        try {
+            idToken = await currentUser.getIdToken(true);
+        } catch (error) {
+            console.error("Error getting ID token:", error);
+            onAssistantResponse("Sorry, couldn't verify your session. Please try logging in again.");
+            setLoading(false);
+            return;
+        }
 
         try {
-            if (!userId) {
-                onAssistantResponse(`Oh dear, I see you'd like to save this wonderful recipe! 🤗 But first, you'll need to <a href="/login" class="underline text-blue-600">create an account</a> or <a href="/login" class="underline text-blue-600">sign in</a>. That way, I can keep all your recipes safe and organized in your personal recipe vault! Plus, you'll earn special spoon points for each recipe you save. Shall we get you set up, dear? 👩‍🍳✨`);
-                setLoading(false);
-                return;
-            }
-
             const { title } = parseRecipe(msg);
-            const docId = userId + "-" + Date.now();
-            const recipeHash = createRecipeHash(msg);
+            // Use the verified UID from currentUser
+            const docId = currentUser.uid + "-" + Date.now(); 
+            const recipeHash = createRecipeHash(msg); // Keep using msg for hash if needed
 
             const response = await fetch("/api/saveRecipe", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { 
+                    "Content-Type": "application/json",
+                    // Add the Authorization header
+                    "Authorization": `Bearer ${idToken}`
+                },
                 body: JSON.stringify({
                     recipeContent: msg,
-                    userId,
+                    // No need to send userId in body anymore, backend uses token
                     cuisineType: classification?.cuisine || "Croatian",
                     cookingDifficulty: classification?.difficulty || "Medium",
                     cookingTime: classification?.cooking_time || "2 hours",
                     diet: classification?.diet || ["gluten-free", "paleo"],
-                    docId,
-                    recipeHash,
+                    docId, // Send the generated docId
+                    // recipeHash, // Decide if backend still needs this
                 }),
             });
 
             if (response.ok) {
-                // Award spoon points for saving the recipe
+                // Award spoon points for saving the recipe (Ensure currentUser.uid is used)
                 const pointsResult = await SpoonPointSystem.awardPoints(
-                    userId,
+                    currentUser.uid, // Use verified UID
                     'SAVE_RECIPE',
-                    docId // Use docId instead of recipeHash
+                    docId 
                 );
 
                 let message = `Your <a href="/recipe/${docId}" target="_blank" rel="noopener noreferrer" class="underline text-blue-600"> ${title}</a> recipe has been tucked away in the kitchen vault, ready for use!`;
@@ -279,19 +158,25 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                     showPointsToast(pointsResult.points!, 'Recipe saved successfully!');
                     message += ` You earned ${pointsResult.points} spoons! 🥄✨ Click your recipe to add mouthwatering photos, discover perfect pairings, and unlock more rewards!`;
                 } else if (pointsResult.error) {
-                    // Optionally show why points weren't awarded
-                    console.log('Points not awarded:', pointsResult.error);
+                    console.log('Points not awarded for save:', pointsResult.error);
                 }
 
                 onAssistantResponse(message);
             } else {
                 const errorData = await response.json();
                 console.error("Failed to save recipe:", errorData.error);
-                onAssistantResponse("Sorry, something went wrong saving the recipe.");
+                 // Provide specific feedback based on status code if possible
+                if (response.status === 401) {
+                     onAssistantResponse("Sorry, your session seems invalid. Please log in again.");
+                } else if (response.status === 403) {
+                     onAssistantResponse("Sorry, permission denied saving the recipe. You might not own it if it already exists.");
+                } else {
+                     onAssistantResponse("Sorry, something went wrong saving the recipe.");
+                }
             }
         } catch (error) {
-            console.error("Error saving recipe:", error);
-            onAssistantResponse("Sorry, something went wrong saving the recipe.");
+            console.error("Error in handleSaveRecipe fetch/processing:", error);
+            onAssistantResponse("Sorry, an unexpected error occurred while saving the recipe.");
         } finally {
             setLoading(false);
         }
@@ -331,7 +216,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                 handleNewRecipe(msg, lastAssistantIndex);
             }
         }
-    }, [messages, userId, showPointsToast, createRecipeHash]);
+    }, [messages, showPointsToast]); // Removed userId, createRecipeHash dependencies as they are stable
 
     useEffect(() => {
         messages.forEach((msg, index) => {
@@ -356,7 +241,9 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
         "Tell me a funny cooking disaster story",
         "Give me a recipe for my date",
         "Tell me about SELO olive oil", 
-        "Set a timer for 15 minutes"
+        "Where is my SELO order?",
+        "Set a timer for 15 minutes",
+        
     ].map(s => s.trim()); // Ensure no extra whitespace that could affect alignment
 
     const [firstMessage, ...restMessages] = messages;
@@ -373,6 +260,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                         else if (suggestion.toLowerCase().includes("disaster")) emoji = "😅";
                         else if (suggestion.toLowerCase().includes("date")) emoji = "❤️";
                         else if (suggestion.toLowerCase().includes("olive")) emoji = "🌿";
+                        else if (suggestion.toLowerCase().includes("order")) emoji = "📦";
                         else if (suggestion.toLowerCase().includes("timer")) emoji = "⏲️";
 
                         return (
