@@ -15,8 +15,8 @@ const WINDOW_MS = 60 * 1000;
 
 // ---- TEST FLAG ----
 // Set to true to use the hardcoded test email below
-const USE_TEST_EMAIL = true; 
-const TEST_EMAIL = 'charles.hofner@gmail.com';
+const USE_TEST_EMAIL = false; 
+const TEST_EMAIL = 'martin@selooils.com';
 // -----------------
 
 // Log environment variables to verify they are loaded
