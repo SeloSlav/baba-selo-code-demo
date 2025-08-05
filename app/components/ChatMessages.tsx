@@ -241,7 +241,6 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
         "Tell me a funny cooking disaster story",
         "Give me a recipe for my date",
         "Tell me about SELO olive oil", 
-        "Where is my SELO order?",
         "Set a timer for 15 minutes",
         
     ].map(s => s.trim()); // Ensure no extra whitespace that could affect alignment
@@ -260,7 +259,6 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                         else if (suggestion.toLowerCase().includes("disaster")) emoji = "😅";
                         else if (suggestion.toLowerCase().includes("date")) emoji = "❤️";
                         else if (suggestion.toLowerCase().includes("olive")) emoji = "🌿";
-                        else if (suggestion.toLowerCase().includes("order")) emoji = "📦";
                         else if (suggestion.toLowerCase().includes("timer")) emoji = "⏲️";
 
                         return (
