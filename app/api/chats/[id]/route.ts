@@ -28,7 +28,9 @@ export async function GET(
     }
 
     const userDoc = await admin.firestore().collection('users').doc(userId).get();
-    if (userDoc.data()?.plan !== 'pro') {
+    const adminDoc = await admin.firestore().collection('admins').doc(userId).get();
+    const isAdmin = adminDoc.exists && adminDoc.data()?.active === true;
+    if (userDoc.data()?.plan !== 'pro' && !isAdmin) {
       return NextResponse.json({ error: 'Pro subscription required' }, { status: 403 });
     }
 
@@ -74,7 +76,9 @@ export async function PATCH(
     }
 
     const userDoc = await admin.firestore().collection('users').doc(userId).get();
-    if (userDoc.data()?.plan !== 'pro') {
+    const adminDoc = await admin.firestore().collection('admins').doc(userId).get();
+    const isAdmin = adminDoc.exists && adminDoc.data()?.active === true;
+    if (userDoc.data()?.plan !== 'pro' && !isAdmin) {
       return NextResponse.json({ error: 'Pro subscription required' }, { status: 403 });
     }
 
@@ -121,7 +125,9 @@ export async function DELETE(
     }
 
     const userDoc = await admin.firestore().collection('users').doc(userId).get();
-    if (userDoc.data()?.plan !== 'pro') {
+    const adminDoc = await admin.firestore().collection('admins').doc(userId).get();
+    const isAdmin = adminDoc.exists && adminDoc.data()?.active === true;
+    if (userDoc.data()?.plan !== 'pro' && !isAdmin) {
       return NextResponse.json({ error: 'Pro subscription required' }, { status: 403 });
     }
 

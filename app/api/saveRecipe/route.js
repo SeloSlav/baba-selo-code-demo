@@ -46,30 +46,48 @@ export async function POST(req) {
     }
 
     try {
-        // Function to parse the recipe text
+        // Robust parser: handles "Ingredients:", commentary before recipe, mixed formats
         const parseRecipe = (text) => {
-            const lines = text.split("\n").map(line => line.trim()).filter(line => line !== "");
+            const raw = (text || "").trim();
+            const lower = raw.toLowerCase();
+            const ingPos = lower.indexOf("ingredients");
+            const dirPos = lower.indexOf("directions");
 
-            // The title is assumed to be the first line of the recipe text
-            const recipeTitle = lines[0] || 'Untitled Recipe'; // Handle empty title
+            if (ingPos === -1 || dirPos === -1 || dirPos <= ingPos) {
+                return { recipeTitle: raw.split("\n")[0]?.trim() || "Untitled Recipe", ingredients: [], directions: [] };
+            }
 
-            // Ingredients and directions
-            const ingredientsIndex = lines.findIndex(line => line.toLowerCase() === "ingredients");
-            const directionsIndex = lines.findIndex(line => line.toLowerCase() === "directions");
+            const ingredientsBlock = raw.slice(ingPos + 11, dirPos).trim();
+            const directionsBlock = raw.slice(dirPos + 10).trim();
 
-            const ingredients = ingredientsIndex !== -1
-                ? lines.slice(ingredientsIndex + 1, directionsIndex !== -1 ? directionsIndex : undefined).map(ing => ing.replace(/^-+\s*/, ''))
-                : [];
+            const ingredients = [];
+            for (const line of ingredientsBlock.split("\n")) {
+                const parts = line.split(/(?=\s*[-•*]\s+)/);
+                for (const p of parts) {
+                    const cleaned = p.replace(/^[\s\-•*]+\s*/, "").trim();
+                    if (cleaned && !cleaned.toLowerCase().startsWith("equipment") && cleaned.length > 2) {
+                        ingredients.push(cleaned);
+                    }
+                }
+            }
 
-            const directions = directionsIndex !== -1
-                ? lines.slice(directionsIndex + 1).map(dir => dir.replace(/^([0-9]+\.\s*)+/, '').replace(/^-+\s*/, ''))
-                : [];
+            const directions = [];
+            for (const line of directionsBlock.split("\n")) {
+                const trimmed = line.trim();
+                if (!trimmed) continue;
+                const cleaned = trimmed.replace(/^\d+[\.\)]\s*/, "").replace(/^[\-•*]\s*/, "").trim();
+                if (cleaned && !cleaned.toLowerCase().startsWith("ah,") && !cleaned.toLowerCase().startsWith("na zdravlje")) {
+                    directions.push(cleaned);
+                }
+            }
 
-            return {
-                recipeTitle,
-                ingredients,
-                directions
-            };
+            const beforeIng = raw.slice(0, ingPos);
+            const titleMatch = beforeIng.match(/([A-Za-z][^:\n]+(?:\([^)]+\))?)\s*Ingredients?/i)
+                || beforeIng.match(/(?:^|[:.\n])\s*([^\n:]+?)\s*$/);
+            let recipeTitle = (titleMatch ? titleMatch[1].trim() : beforeIng.split("\n").pop()?.trim() || raw.split("\n")[0]?.trim() || "Untitled Recipe");
+            recipeTitle = recipeTitle.replace(/^Ah,?\s+[\w\s!.,]+:\s*/i, "").replace(/\s+Ingredients?\s*:?\s*$/i, "").trim();
+
+            return { recipeTitle: recipeTitle || "Untitled Recipe", ingredients, directions };
         };
 
         // Parse the recipe content

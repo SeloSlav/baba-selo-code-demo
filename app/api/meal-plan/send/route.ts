@@ -158,6 +158,16 @@ ${preferenceContext}${ingredientsContext}${calorieContext}`;
       const directions = details?.directions?.length ? details.directions : [description];
       const recipeContentFull = `${recipeName}\n\nIngredients:\n${ingredients.map((i) => `- ${i}`).join('\n')}\n\nDirections:\n${directions.map((d, i) => `${i + 1}. ${d}`).join('\n')}`;
 
+      let macroInfo: unknown = details?.macroInfo ?? null;
+      const macros = macroInfo as { total?: Record<string, unknown>; per_serving?: unknown } | null;
+      if (macros?.total && macros?.per_serving) {
+        macroInfo = {
+          servings: 1,
+          total: macros.total,
+          per_serving: { ...macros.total },
+        };
+      }
+
       const recipeRef = await recipesCol.add({
         recipeTitle: recipeName,
         recipeContent: recipeContentFull,
@@ -171,7 +181,7 @@ ${preferenceContext}${ingredientsContext}${calorieContext}`;
         source: 'mealPlan',
         mealPlanDescription: description,
         recipeSummary: details?.recipeSummary || '',
-        macroInfo: details?.macroInfo ?? null,
+        macroInfo,
         dishPairings: details?.dishPairings || '',
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
@@ -204,6 +214,7 @@ ${preferenceContext}${ingredientsContext}${calorieContext}`;
 
     const subject = isWeekly ? "Baba Selo's Weekly Meal Plan" : "Baba Selo's Daily Meal Plan";
 
+    let planId: string | undefined;
     try {
       const historyDoc: Record<string, unknown> = {
         type: isWeekly ? 'weekly' : 'daily',
@@ -215,13 +226,14 @@ ${preferenceContext}${ingredientsContext}${calorieContext}`;
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       };
       if (parsed.shoppingList != null) historyDoc.shoppingList = parsed.shoppingList;
-      await historyCol.add(historyDoc);
+      const historyRef = await historyCol.add(historyDoc);
+      planId = historyRef.id;
     } catch (e) {
       console.error('Failed to save meal plan to history:', e);
     }
 
     if (!resend) {
-      return NextResponse.json({ mealPlan: plainContent, emailSent: false, message: 'Email not configured' });
+      return NextResponse.json({ mealPlan: plainContent, emailSent: false, message: 'Email not configured', planId });
     }
     const { error } = await resend.emails.send({
       from: FROM_EMAIL,
@@ -239,10 +251,10 @@ ${preferenceContext}${ingredientsContext}${calorieContext}`;
 
     if (error) {
       console.error('Resend error:', error);
-      return NextResponse.json({ mealPlan: plainContent, emailSent: false, message: 'Email not sent (API key invalid or not configured)' });
+      return NextResponse.json({ mealPlan: plainContent, emailSent: false, message: 'Email not sent (API key invalid or not configured)', planId });
     }
 
-    return NextResponse.json({ mealPlan: plainContent, emailSent: true });
+    return NextResponse.json({ mealPlan: plainContent, emailSent: true, planId });
   } catch (error) {
     console.error('Send meal plan error:', error);
     return NextResponse.json({ error: 'Failed to send meal plan' }, { status: 500 });

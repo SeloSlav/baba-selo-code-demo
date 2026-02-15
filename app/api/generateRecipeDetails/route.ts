@@ -21,99 +21,71 @@ export async function POST(request: Request) {
       ? `\n\nDescription/context: ${recipeContent.trim().slice(0, 500)}`
       : '';
 
-    // Step 1: Always generate basic recipe details first
-    const basicPrompt = `Given a recipe title${descriptionHint ? ' and description' : ''}, generate a COMPLETE recipe with a proper ingredients list and step-by-step directions.
+    // Step 1: Generate recipe using JSON mode for guaranteed structure (like saveRecipe/chat format)
+    const jsonPrompt = `Generate a complete recipe with proper ingredients and directions. Return ONLY valid JSON.
 
-Recipe Title: ${recipeTitle}${descriptionHint}
+Recipe: ${recipeTitle}${descriptionHint}
 
-You MUST provide:
-
-INGREDIENTS:
-- 1 cup flour (or similar with quantities)
-- 2 tbsp olive oil
-- etc. (each ingredient on its own line with a dash, include quantities)
-
-DIRECTIONS:
-1. First step with clear instructions
-2. Second step
-3. etc. (numbered steps, each on its own line)
+Return this exact JSON structure (no other text):
+{
+  "ingredients": [
+    "2 cups canned white beans, drained and rinsed",
+    "3 stalks celery, thinly sliced",
+    "1 small red onion, finely chopped"
+  ],
+  "directions": [
+    "In a large bowl, combine the white beans, celery, red onion, and parsley.",
+    "In another small bowl, whisk together the vinegar, olive oil, salt, and pepper.",
+    "Pour the dressing over the salad and toss gently to combine."
+  ]
+}
 
 Rules:
-1. Ingredients MUST be a proper list with quantities (e.g. "2 cups rice", "1/2 tsp salt")
-2. Directions MUST be numbered steps, not a single paragraph
-3. Generate at least 5-8 ingredients and 4-8 direction steps
-4. Be specific and detailed`;
+- ingredients: array of strings, each with quantity (e.g. "2 cups rice", "1/2 tsp salt")
+- directions: array of strings, each a complete step (e.g. "In a large bowl, combine...")
+- Minimum 5 ingredients, 4 directions
+- Match the format from the example above`;
 
     try {
       const completion = await openai.chat.completions.create({
         messages: [
           {
             role: "system",
-            content: "You are a professional chef. Generate a complete, detailed recipe with a proper ingredients list (with quantities) and numbered step-by-step directions. Never return a single sentence—always return structured lists."
+            content: "You are a professional chef. Return ONLY valid JSON with ingredients and directions arrays. Each ingredient must include quantity. Each direction must be a full step."
           },
           {
             role: "user",
-            content: basicPrompt
+            content: jsonPrompt
           }
         ],
         model: "gpt-4o-mini",
-        temperature: 0.6,
+        temperature: 0.5,
         max_tokens: 1500,
+        response_format: { type: "json_object" },
       });
 
-      if (!completion.choices?.[0]?.message?.content) {
+      const response = completion.choices?.[0]?.message?.content || '';
+      let parsed: { ingredients?: string[]; directions?: string[] } = {};
+      try {
+        parsed = JSON.parse(response);
+      } catch {
         return NextResponse.json({
           error: "Failed to generate recipe details",
-          message: "OpenAI API did not return a valid response"
+          message: "Invalid JSON response from AI"
         }, { status: 500 });
       }
 
-      const response = completion.choices[0].message.content;
-
-      // Parse ingredients - support "- item" or "• item" or "* item"
-      const ingredientsSection = response.match(/INGREDIENTS?:\s*\n([\s\S]*?)(?=DIRECTIONS?:\s*\n|$)/i);
-      result.ingredients = [];
-      if (ingredientsSection) {
-        result.ingredients = ingredientsSection[1]
-          .split('\n')
-          .map(line => line.replace(/^[\s\-•*]\s*/, '').trim())
-          .filter(line => line.length > 2);
-      }
-
-      // Parse directions - support "1. step" or "1) step"
-      const directionsSection = response.match(/DIRECTIONS?:\s*\n([\s\S]*?)(?=INGREDIENTS?:\s*\n|$)/i);
-      result.directions = [];
-      if (directionsSection) {
-        result.directions = directionsSection[1]
-          .split('\n')
-          .map(line => line.replace(/^\s*\d+[\.\)]\s*/, '').trim())
-          .filter(line => line.length > 2);
-      }
-
-      // Fallback: if parsing failed, try splitting by common patterns
-      if (!result.ingredients.length && response.includes('-')) {
-        const afterIng = response.split(/INGREDIENTS?:\s*\n/i)[1];
-        if (afterIng) {
-          result.ingredients = afterIng.split(/DIRECTIONS?:\s*\n/i)[0]
-            .split('\n')
-            .map(line => line.replace(/^[\s\-•*]\s*/, '').trim())
-            .filter(line => line.length > 2);
-        }
-      }
-      if (!result.directions.length && /\d+\./.test(response)) {
-        const afterDir = response.split(/DIRECTIONS?:\s*\n/i)[1];
-        if (afterDir) {
-          result.directions = afterDir
-            .split('\n')
-            .map(line => line.replace(/^\s*\d+[\.\)]\s*/, '').trim())
-            .filter(line => line.length > 2);
-        }
-      }
+      result.ingredients = Array.isArray(parsed.ingredients)
+        ? parsed.ingredients.filter((i): i is string => typeof i === 'string' && i.trim().length > 0)
+        : [];
+      result.directions = Array.isArray(parsed.directions)
+        ? parsed.directions.filter((d): d is string => typeof d === 'string' && d.trim().length > 0)
+        : [];
 
       if (!result.ingredients.length || !result.directions.length) {
         return NextResponse.json({
           error: "Failed to generate recipe details",
-          message: "Could not extract ingredients and directions from the generated response"
+          message: "AI did not return valid ingredients or directions arrays"
         }, { status: 500 });
       }
     } catch (error: any) {

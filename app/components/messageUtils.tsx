@@ -200,19 +200,47 @@ export const linkifyOliveOil = (text: string): React.ReactNode => {
 };
 
 export const parseRecipe = (text: string) => {
-    const lines = text.split("\n").map(line => line.trim()).filter(line => line !== "");
-    const ingredientsIndex = lines.findIndex(line => line.toLowerCase() === "ingredients");
-    const directionsIndex = lines.findIndex(line => line.toLowerCase() === "directions");
+    const raw = text.trim();
+    const lower = raw.toLowerCase();
+    const ingPos = lower.indexOf("ingredients");
+    const dirPos = lower.indexOf("directions");
 
-    if (ingredientsIndex === -1 || directionsIndex === -1) {
-        return { title: text, ingredients: [], directions: [] };
+    if (ingPos === -1 || dirPos === -1 || dirPos <= ingPos) {
+        return { title: raw.split("\n")[0]?.trim() || "Recipe", ingredients: [], directions: [] };
     }
 
-    const title = lines[0];
-    const ingredients = lines.slice(ingredientsIndex + 1, directionsIndex).map(ing => ing.replace(/^-+\s*/, ''));
-    const directions = lines.slice(directionsIndex + 1).map(dir => dir.replace(/^([0-9]+\.\s*)+/, '').replace(/^-+\s*/, ''));
+    const ingredientsBlock = raw.slice(ingPos + 11, dirPos).trim();
+    const directionsBlock = raw.slice(dirPos + 10).trim();
 
-    return { title, ingredients, directions };
+    const ingredients: string[] = [];
+    const ingLines = ingredientsBlock.split("\n");
+    for (const line of ingLines) {
+        const parts = line.split(/(?=\s*[-•*]\s+)/);
+        for (const p of parts) {
+            const cleaned = p.replace(/^[\s\-•*]+\s*/, "").trim();
+            if (cleaned && !cleaned.toLowerCase().startsWith("equipment") && cleaned.length > 2) {
+                ingredients.push(cleaned);
+            }
+        }
+    }
+
+    const directions: string[] = [];
+    for (const line of directionsBlock.split("\n")) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        const cleaned = trimmed.replace(/^\d+[\.\)]\s*/, "").replace(/^[\-•*]\s*/, "").trim();
+        if (cleaned && !cleaned.toLowerCase().startsWith("ah,") && !cleaned.toLowerCase().startsWith("na zdravlje")) {
+            directions.push(cleaned);
+        }
+    }
+
+    const beforeIng = raw.slice(0, ingPos);
+    const titleMatch = beforeIng.match(/([A-Za-z][^:\n]+(?:\([^)]+\))?)\s*Ingredients?/i)
+        || beforeIng.match(/(?:^|[:.\n])\s*([^\n:]+?)\s*$/);
+    let title = (titleMatch ? titleMatch[1].trim() : beforeIng.split("\n").pop()?.trim() || raw.split("\n")[0]?.trim() || "Recipe");
+    title = title.replace(/^Ah,?\s+[\w\s!.,]+:\s*/i, "").replace(/\s+Ingredients?\s*:?\s*$/i, "").trim();
+
+    return { title: title || "Recipe", ingredients, directions };
 };
 
 export const isRecipe = (text: string) => {

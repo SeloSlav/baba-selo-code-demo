@@ -31,8 +31,10 @@ export async function GET(req: Request) {
 
     const userDoc = await admin.firestore().collection('users').doc(userId).get();
     const plan = userDoc.data()?.plan ?? 'free';
+    const adminDoc = await admin.firestore().collection('admins').doc(userId).get();
+    const isAdmin = adminDoc.exists && adminDoc.data()?.active === true;
 
-    if (plan !== 'pro') {
+    if (plan !== 'pro' && !isAdmin) {
       return NextResponse.json({ chats: [], plan });
     }
 
@@ -77,7 +79,9 @@ export async function POST(req: Request) {
     const userId = decoded.uid;
 
     const userDoc = await admin.firestore().collection('users').doc(userId).get();
-    if (userDoc.data()?.plan !== 'pro') {
+    const adminDoc = await admin.firestore().collection('admins').doc(userId).get();
+    const isAdmin = adminDoc.exists && adminDoc.data()?.active === true;
+    if (userDoc.data()?.plan !== 'pro' && !isAdmin) {
       return NextResponse.json({ error: 'Pro subscription required to save chats' }, { status: 403 });
     }
 

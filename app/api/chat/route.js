@@ -138,6 +138,53 @@ export async function POST(req) {
   }
 
   const lastMessage = messages[messages.length - 1];
+  const userText = (lastMessage?.content || '').toLowerCase();
+
+  // Explicit randomization for recipe requests that tend to repeat
+  const BALKAN_DISHES = [
+    'Sarma (Stuffed cabbage rolls)',
+    'Burek (Phyllo pastry with meat, cheese, or spinach)',
+    'Ćevapi (Grilled minced meat sausages)',
+    'Ajvar (Roasted red pepper spread)',
+    'Kajmak (Creamy dairy spread)',
+    'Rakija (Traditional fruit brandy)',
+    'Punjene Paprike (Stuffed peppers)',
+    'Pljeskavica (Balkan burger)',
+    'Pita (Phyllo pie with various fillings)',
+    'Shopska Salata (Cucumber and tomato salad with feta)',
+    'Grah (Balkan bean stew)',
+    'Pasulj (Hearty bean soup with smoked meat)',
+    'Krofne (Balkan-style donuts)',
+    'Baklava (Sweet layered pastry with nuts and honey)',
+    'Tavče Gravče (Macedonian baked beans)',
+    'Uštipci (Savory fried dough balls)',
+    'Riblja Čorba (Fish stew)',
+    'Musaka (Layered potato and meat dish)',
+    'Paprenjak (Spiced cookies)',
+    'Gibanica (Cheese-filled phyllo pastry)',
+  ];
+  const GENERIC_RECIPE_HINTS = [
+    { cuisine: 'Italian', examples: 'risotto, osso buco, or carbonara' },
+    { cuisine: 'French', examples: 'coq au vin, ratatouille, or crepes' },
+    { cuisine: 'Thai', examples: 'pad thai, green curry, or tom yum' },
+    { cuisine: 'Japanese', examples: 'teriyaki salmon, ramen, or gyudon' },
+    { cuisine: 'Spanish', examples: 'paella, gambas al ajillo, or tortilla española' },
+    { cuisine: 'Greek', examples: 'moussaka, souvlaki, or spanakopita' },
+    { cuisine: 'Indian', examples: 'chicken tikka masala, biryani, or dal' },
+    { cuisine: 'Mexican', examples: 'enchiladas, mole, or ceviche' },
+    { cuisine: 'Mediterranean', examples: 'grilled fish with herbs, stuffed grape leaves, or tabbouleh' },
+  ];
+  const isBalkanRequest = /\b(random\s+)?balkan\b|\btraditional\s+(croatian|serbian|balkan)\b|\bcroatian\s+recipe\b|\bserbian\s+recipe\b|\btraditional\s+recipe\b/i.test(userText);
+  const isGenericRecipeRequest = /\b(recipe\s+for\s+my\s+date|date\s+night\s+recipe|recipe\s+for\s+a\s+date|comfort\s+food|recipe\s+idea|suggest\s+a\s+recipe|what\s+should\s+I\s+cook|give\s+me\s+a\s+recipe\b)/i.test(userText);
+
+  let randomizationHint = '';
+  if (isBalkanRequest) {
+    const pick = BALKAN_DISHES[Math.floor(Math.random() * BALKAN_DISHES.length)];
+    randomizationHint = `\n\nRANDOMIZATION (MUST FOLLOW): For this specific request, you MUST pick and provide the full recipe for: ${pick}. Do not pick any other dish.`;
+  } else if (isGenericRecipeRequest) {
+    const { cuisine, examples } = GENERIC_RECIPE_HINTS[Math.floor(Math.random() * GENERIC_RECIPE_HINTS.length)];
+    randomizationHint = `\n\nRANDOMIZATION (MUST FOLLOW): For this specific request, pick a recipe from ${cuisine} cuisine—e.g. ${examples}. Do not default to Garlic Spaghetti or similar; vary your suggestions.`;
+  }
 
   // Store user message in Firebase if it's from a user (and user is authenticated)
   if (lastMessage.role === "user" && userIsAuthenticated) {
@@ -173,8 +220,8 @@ You have multiple modes of response:
 1. If the user's request is for a recipe:
    Follow these formatting guidelines strictly:
    - CRITICAL: The VERY FIRST LINE of the response must be ONLY the recipe name, with no commentary, conversation, or advice before it.
-   - The recipe name must be descriptive of the actual dish (e.g., "Garlic Spaghetti Aglio-Olio", "Classic Beef Bourguignon", "Spicy Thai Basil Chicken").
-   - Even if the request is conversational (e.g., "What should I cook for my date?", "I need comfort food"), still start with ONLY the recipe name.
+   - The recipe name must be descriptive of the actual dish (e.g., "Classic Beef Bourguignon", "Spicy Thai Basil Chicken", "Coq au Vin").
+   - Even if the request is conversational (e.g., "What should I cook for my date?", "I need comfort food"), still start with ONLY the recipe name—and pick something that fits the context, varying your suggestions.
    - After the recipe name, on a new line write "Ingredients".
    - Under "Ingredients", list each ingredient on its own line, each preceded by "- " (e.g., "- 1 cup flour"). 
    - On a new line after all the ingredients, write "Directions".
@@ -194,7 +241,7 @@ You have multiple modes of response:
    - Keep formatting clean, simple, and strictly follow these instructions
    - Include no extra commentary or formatting beyond the defined structure
 
-2. If someone asks about rakija or how to make rakija, give a homemade rakija recipe from scratch and include the equipment in the ingredients.
+2. If someone asks about rakija or how to make rakija, give a homemade rakija recipe from scratch. CRITICAL: Follow the EXACT same format as all other recipes—first line ONLY the recipe name (e.g. "Rakija (Traditional Fruit Brandy)"), then a new line with "Ingredients", then each ingredient on its own line with "- " prefix (include equipment in the ingredients list), then a new line "Directions", then numbered steps. No commentary before the recipe name. Add grandmotherly advice only after the Directions section.
 
 3. If the user's request is NOT for a recipe (for example, if they ask for a story, advice, or something else not related to making a dish):
    - Do not produce a recipe. Baba Selo has no time for unnecessary kitchen talk when there are other matters to address.
@@ -286,7 +333,7 @@ Extras:
 
 Note: The user has these dietary preferences: ${dietaryPreferences.join(", ")}.
 The user also prefers to use ${preferredCookingOil} as a cooking oil.
-`;
+${randomizationHint}`;
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {

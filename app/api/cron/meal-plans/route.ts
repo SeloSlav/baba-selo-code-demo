@@ -165,6 +165,16 @@ ${preferenceContext}${ingredientsContext}${calorieContext}`;
         const directions = details?.directions?.length ? details.directions : [description];
         const recipeContentFull = `${recipeName}\n\nIngredients:\n${ingredients.map((i) => `- ${i}`).join('\n')}\n\nDirections:\n${directions.map((d, i) => `${i + 1}. ${d}`).join('\n')}`;
 
+        let macroInfo: unknown = details?.macroInfo ?? null;
+        const macros = macroInfo as { total?: Record<string, unknown>; per_serving?: unknown } | null;
+        if (macros?.total && macros?.per_serving) {
+          macroInfo = {
+            servings: 1,
+            total: macros.total,
+            per_serving: { ...macros.total },
+          };
+        }
+
         const recipeRef = await recipesCol.add({
           recipeTitle: recipeName,
           recipeContent: recipeContentFull,
@@ -178,7 +188,7 @@ ${preferenceContext}${ingredientsContext}${calorieContext}`;
           source: 'mealPlan',
           mealPlanDescription: description,
           recipeSummary: details?.recipeSummary || '',
-          macroInfo: details?.macroInfo ?? null,
+          macroInfo,
           dishPairings: details?.dishPairings || '',
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });

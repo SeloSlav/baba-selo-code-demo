@@ -1,6 +1,6 @@
 import React from 'react';
 import { RecipeClassification } from './types';
-import { linkifyOliveOil } from './messageUtils';
+import { linkifyOliveOil, parseRecipe } from './messageUtils';
 import { FilterTag } from './FilterTag';
 
 interface RecipeMessageProps {
@@ -12,22 +12,6 @@ interface RecipeMessageProps {
     setLoading: (loading: boolean) => void;
     handleSaveRecipe: (content: string, classification: RecipeClassification | null) => void;
 }
-
-const parseRecipe = (text: string) => {
-    const lines = text.split("\n").map(line => line.trim()).filter(line => line !== "");
-    const ingredientsIndex = lines.findIndex(line => line.toLowerCase() === "ingredients");
-    const directionsIndex = lines.findIndex(line => line.toLowerCase() === "directions");
-
-    if (ingredientsIndex === -1 || directionsIndex === -1) {
-        return { title: text, ingredients: [], directions: [] };
-    }
-
-    const title = lines[0];
-    const ingredients = lines.slice(ingredientsIndex + 1, directionsIndex).map(ing => ing.replace(/^-+\s*/, ''));
-    const directions = lines.slice(directionsIndex + 1).map(dir => dir.replace(/^([0-9]+\.\s*)+/, '').replace(/^-+\s*/, ''));
-
-    return { title, ingredients, directions };
-};
 
 export const RecipeMessage: React.FC<RecipeMessageProps> = ({
     content,

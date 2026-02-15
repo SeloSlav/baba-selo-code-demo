@@ -57,6 +57,15 @@ const WEEKDAYS = [
   { value: 6, label: "Saturday" },
 ];
 
+const FALLBACK_FUN_FACTS = [
+  "Olive oil was used in ancient Olympic games—athletes rubbed it on their skin before competing.",
+  "The Mediterranean diet is one of the most studied eating patterns in the world.",
+  "Meal prepping can save you up to 3 hours per week in the kitchen.",
+  "Herbs like basil and oregano release more flavor when torn by hand than when cut with a knife.",
+  "Eating the same breakfast every day can actually help with weight management—fewer decisions, fewer temptations.",
+  "A well-stocked pantry is half the battle. Baba always says: good ingredients make good food.",
+];
+
 async function fetchPlan(): Promise<"free" | "pro"> {
   const user = auth?.currentUser;
   if (!user) return "free";
@@ -92,6 +101,8 @@ export default function MealPlansPage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [sendingNow, setSendingNow] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [funFacts, setFunFacts] = useState<string[]>([]);
+  const [funFactIndex, setFunFactIndex] = useState(0);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<"configure" | "plans">("configure");
   const [planHistory, setPlanHistory] = useState<{
@@ -138,8 +149,8 @@ export default function MealPlansPage() {
     load();
   }, [user, effectivePlan]);
 
-  const fetchPlanHistory = useCallback(async () => {
-    if (!user) return;
+  const fetchPlanHistory = useCallback(async (): Promise<typeof planHistory> => {
+    if (!user) return [];
     setLoadingHistory(true);
     setHistoryError(null);
     try {
@@ -166,7 +177,9 @@ export default function MealPlansPage() {
         const bT = b.createdAt?.toDate?.()?.getTime?.() ?? 0;
         return bT - aT;
       });
-      setPlanHistory(plans.slice(0, 50));
+      const result = plans.slice(0, 50);
+      setPlanHistory(result);
+      return result;
     } catch (e: unknown) {
       const err = e as { code?: string; message?: string };
       const msg = err?.message || String(e);
@@ -174,6 +187,7 @@ export default function MealPlansPage() {
       if (err?.code === "permission-denied") {
         setHistoryError("Permission denied. Make sure Firestore rules for mealPlanHistory are deployed (firebase deploy --only firestore:rules).");
       }
+      return [];
     } finally {
       setLoadingHistory(false);
     }
@@ -253,27 +267,65 @@ export default function MealPlansPage() {
     }
   };
 
+  // Cycle through fun facts while meal plan is generating
+  useEffect(() => {
+    if (!sendingNow) return;
+    const facts = funFacts.length > 0 ? funFacts : FALLBACK_FUN_FACTS;
+    if (facts.length === 0) return;
+    const interval = setInterval(() => {
+      setFunFactIndex((i) => (i + 1) % facts.length);
+    }, 3500);
+    return () => clearInterval(interval);
+  }, [sendingNow, funFacts.length]);
+
   const handleSendNow = async () => {
     if (!user) return;
     setSendingNow(true);
     setSendError(null);
+    setFunFactIndex(0);
+    setFunFacts([]);
+
+    // Start both requests in parallel
+    const funFactsPromise = fetch("/api/meal-plan/fun-facts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        preferences: mealPlanPrompt.trim() || undefined,
+        type: mealPlanType,
+      }),
+    })
+      .then((r) => r.json())
+      .then((d) => (d.facts?.length ? d.facts : []))
+      .catch(() => []);
+
+    const token = await user.getIdToken();
+    const mealPlanPromise = fetch("/api/meal-plan/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        type: mealPlanType,
+        includeShoppingList,
+        ingredientsOnHand: ingredientsOnHand.trim() || undefined,
+        calorieTarget: calorieTarget !== "" && calorieTarget > 0 ? calorieTarget : undefined,
+      }),
+    });
+
+    // Wait for fun facts first (max 4s) so we have them before/during the meal plan wait
+    const facts = await Promise.race([
+      funFactsPromise,
+      new Promise<string[]>((r) => setTimeout(() => r([]), 4000)),
+    ]);
+    if (facts.length > 0) setFunFacts(facts);
+
     try {
-      const token = await user.getIdToken();
-      const res = await fetch("/api/meal-plan/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          type: mealPlanType,
-          includeShoppingList,
-          ingredientsOnHand: ingredientsOnHand.trim() || undefined,
-          calorieTarget: calorieTarget !== "" && calorieTarget > 0 ? calorieTarget : undefined,
-        }),
-      });
+      const res = await mealPlanPromise;
       const data = await res.json();
       if (res.ok) {
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 2000);
-        fetchPlanHistory(); // Refresh history (plan is saved even if email failed)
+        const plans = await fetchPlanHistory();
+        setActiveTab("plans");
+        setExpandedPlanId(data.planId || plans[0]?.id || null);
         if (!data.emailSent) {
           setSendError(data.message || "Email not configured");
         }
@@ -285,6 +337,9 @@ export default function MealPlansPage() {
     } finally {
       setSendingNow(false);
     }
+
+    // If fun facts arrived after our 4s wait, use them for next time (or if overlay still showing)
+    funFactsPromise.then((f) => f.length > 0 && setFunFacts(f));
   };
 
   // Not logged in
@@ -364,8 +419,30 @@ export default function MealPlansPage() {
 
   // Pro user
   if (effectivePlan === "pro") {
+    const displayFacts = funFacts.length > 0 ? funFacts : FALLBACK_FUN_FACTS;
+    const currentFact = displayFacts[funFactIndex % displayFacts.length] || displayFacts[0];
+
     return (
       <SidebarLayout>
+        {/* Loading overlay with cycling fun facts */}
+        {sendingNow && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-amber-50/95 backdrop-blur-sm">
+            <div className="max-w-lg mx-auto px-6 py-12 text-center">
+              <Image src="/baba-removebg.png" alt="Baba Selo" width={120} height={120} className="mx-auto mb-6 object-contain" />
+              <div className="mb-6">
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-100 rounded-full text-amber-800 font-medium animate-pulse">
+                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                  Generating your meal plan...
+                </div>
+              </div>
+              <p key={funFactIndex} className="text-gray-700 text-lg leading-relaxed italic">
+                &ldquo;{currentFact}&rdquo;
+              </p>
+              <p className="mt-4 text-amber-600 text-sm font-medium">— Baba Selo</p>
+            </div>
+          </div>
+        )}
+
         <div className="min-h-screen bg-gradient-to-b from-amber-50/50 to-white">
           <div className="max-w-5xl mx-auto px-4 py-12">
             {/* Header with Baba */}
