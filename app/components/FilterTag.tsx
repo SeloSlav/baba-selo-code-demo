@@ -13,9 +13,19 @@ interface FilterTagProps {
 }
 
 /** Build explore URL with filter param. Used for linking from tags. */
-export function getExploreFilterUrl(type: FilterType, value: string): string {
-  const params = new URLSearchParams();
-  params.set(type, value);
+/** When currentParams provided, merges: adds/replaces filter, or toggles off if same value. */
+export function getExploreFilterUrl(
+  type: FilterType,
+  value: string,
+  currentParams?: URLSearchParams
+): string {
+  const params = currentParams ? new URLSearchParams(currentParams) : new URLSearchParams();
+  const current = params.get(type);
+  if (current === value) {
+    params.delete(type);
+  } else {
+    params.set(type, value);
+  }
   return `/explore?${params.toString()}`;
 }
 

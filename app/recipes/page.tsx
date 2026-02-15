@@ -64,7 +64,7 @@ interface RecipeDocument {
 }
 
 const QUICK_FILTERS = {
-  cuisine: ['Italian', 'Mexican', 'Japanese', 'Indian', 'Mediterranean', 'Bulgarian', 'Croatian', 'Eastern European', 'Middle Eastern', 'Costa Rican'],
+  cuisine: ['Italian', 'Mexican', 'Japanese', 'Indian', 'Mediterranean', 'Balkan', 'Bulgarian', 'Croatian', 'Eastern European', 'Middle Eastern', 'Costa Rican'],
   time: ['15 min', '30 min', '45 min', '1 hour'],
   diet: ['Vegetarian', 'Vegan', 'Pescetarian', 'Omnivore', 'Gluten-free', 'Keto'],
   difficulty: ['Easy', 'Medium', 'Hard'],

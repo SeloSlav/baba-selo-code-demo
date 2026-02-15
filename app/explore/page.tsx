@@ -53,11 +53,20 @@ interface RecipeDocument {
 }
 
 const QUICK_FILTERS = {
-  cuisine: ['Italian', 'Mexican', 'Japanese', 'Indian', 'Mediterranean', 'American', 'Thai', 'Chinese', 'Bulgarian', 'Croatian', 'Eastern European', 'Middle Eastern', 'Costa Rican'],
+  cuisine: ['Italian', 'Mexican', 'Japanese', 'Indian', 'Mediterranean', 'American', 'Thai', 'Chinese', 'Balkan', 'Bulgarian', 'Croatian', 'Eastern European', 'Middle Eastern', 'Costa Rican'],
   time: ['15 min', '30 min', '45 min', '1 hour', '1.5 hours'],
   diet: ['Vegetarian', 'Vegan', 'Pescetarian', 'Omnivore', 'Gluten-free', 'Dairy-free', 'Keto', 'Paleo'],
   difficulty: ['Easy', 'Medium', 'Hard'],
 } as const;
+
+type FilterCategory = keyof typeof QUICK_FILTERS;
+
+const FILTER_LABELS: Record<FilterCategory, string> = {
+  cuisine: 'Cuisine',
+  time: 'Time',
+  diet: 'Diet',
+  difficulty: 'Difficulty',
+};
 
 export default function ExplorePage() {
   const searchParams = useSearchParams();
@@ -77,6 +86,28 @@ export default function ExplorePage() {
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const lastVisibleRef = useRef<any>(null);
   const prevSearchTermRef = useRef(searchTerm);
+  const [filterCounts, setFilterCounts] = useState<Record<FilterCategory, Record<string, number>>>({
+    cuisine: {},
+    time: {},
+    diet: {},
+    difficulty: {},
+  });
+  const [filtersPopoverOpen, setFiltersPopoverOpen] = useState(false);
+  const filtersPopoverRef = useRef<HTMLDivElement>(null);
+
+  // Close popover when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (filtersPopoverRef.current && !filtersPopoverRef.current.contains(e.target as Node)) {
+        setFiltersPopoverOpen(false);
+      }
+    };
+    if (filtersPopoverOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [filtersPopoverOpen]);
+
   lastVisibleRef.current = lastVisible;
 
   const RECIPES_PER_PAGE = 12;
@@ -256,6 +287,46 @@ export default function ExplorePage() {
     if (user) fetchCurrentUsername();
   }, [user]);
 
+  // Fetch counts per filter value (no composite indexes needed - single-field queries)
+  useEffect(() => {
+    async function fetchFilterCounts() {
+      const counts: Record<FilterCategory, Record<string, number>> = {
+        cuisine: {},
+        time: {},
+        diet: {},
+        difficulty: {},
+      };
+      try {
+        await Promise.all([
+          ...QUICK_FILTERS.cuisine.map(async (v) => {
+            const q = query(collection(db, "recipes"), where("cuisineType", "==", v));
+            const snap = await getCountFromServer(q);
+            counts.cuisine[v] = snap.data().count;
+          }),
+          ...QUICK_FILTERS.time.map(async (v) => {
+            const q = query(collection(db, "recipes"), where("cookingTime", "==", v));
+            const snap = await getCountFromServer(q);
+            counts.time[v] = snap.data().count;
+          }),
+          ...QUICK_FILTERS.diet.map(async (v) => {
+            const q = query(collection(db, "recipes"), where("diet", "array-contains", v));
+            const snap = await getCountFromServer(q);
+            counts.diet[v] = snap.data().count;
+          }),
+          ...QUICK_FILTERS.difficulty.map(async (v) => {
+            const q = query(collection(db, "recipes"), where("cookingDifficulty", "==", v));
+            const snap = await getCountFromServer(q);
+            counts.difficulty[v] = snap.data().count;
+          }),
+        ]);
+        setFilterCounts(counts);
+      } catch (err) {
+        console.error("Failed to fetch filter counts:", err);
+      }
+    }
+    fetchFilterCounts();
+  }, []);
+
   const handleLike = async (recipe: Recipe) => {
     if (!user) return;
 
@@ -305,6 +376,64 @@ export default function ExplorePage() {
     }
   };
 
+  /** Fetch recipes using Firestore where clauses - matches filter counts, no 150 limit */
+  const fetchFilteredRecipes = useCallback(async (filters: typeof activeFilters) => {
+    setIsSearching(true);
+    try {
+      const constraints: any[] = [];
+      if (filters.cuisine) constraints.push(where("cuisineType", "==", filters.cuisine));
+      if (filters.time) constraints.push(where("cookingTime", "==", filters.time));
+      if (filters.difficulty) constraints.push(where("cookingDifficulty", "==", filters.difficulty));
+      if (filters.diet) constraints.push(where("diet", "array-contains", filters.diet));
+
+      const recipesQuery = query(
+        collection(db, "recipes"),
+        ...constraints,
+        orderBy("createdAt", "desc"),
+        limit(500)
+      );
+      const querySnapshot = await getDocs(recipesQuery);
+
+      const allRecipes = querySnapshot.docs
+        .map(d => {
+          const data = d.data() as RecipeDocument;
+          return {
+            id: d.id,
+            ...data,
+            username: 'Anonymous Chef',
+            likes: data.likes || []
+          };
+        })
+        .filter(recipe => recipe.imageURL);
+
+      const userIds = [...new Set(allRecipes.map(r => r.userId).filter(Boolean))];
+      const userMap = new Map<string, string>();
+      for (let i = 0; i < userIds.length; i += 30) {
+        const batch = userIds.slice(i, i + 30);
+        const usersQuery = query(
+          collection(db, "users"),
+          where("__name__", "in", batch)
+        );
+        const userDocs = await getDocs(usersQuery);
+        userDocs.docs.forEach(d => userMap.set(d.id, d.data().username || ""));
+      }
+
+      const withUsernames = allRecipes.map(recipe => ({
+        ...recipe,
+        username: userMap.get(recipe.userId) || 'Anonymous Chef'
+      }));
+
+      setRecipes(withUsernames);
+      setHasMore(false);
+    } catch (error) {
+      console.error("Error fetching filtered recipes:", error);
+      setRecipes([]);
+    } finally {
+      setIsSearching(false);
+    }
+  }, []);
+
+  /** Text search - fetches 150 then filters client-side (for search bar input) */
   const searchRecipes = useCallback(async (searchTerms: string[]) => {
     setIsSearching(true);
     try {
@@ -372,7 +501,7 @@ export default function ExplorePage() {
     }
   }, []);
 
-  // Debounced search effect
+  // Debounced search effect - use Firestore query for URL filters (matches counts), text search otherwise
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!searchTerm.trim()) {
@@ -382,11 +511,15 @@ export default function ExplorePage() {
         return;
       }
       prevSearchTermRef.current = searchTerm;
-      const terms = searchTerm.toLowerCase().split(" ").filter(Boolean);
-      if (terms.length > 0) searchRecipes(terms);
+      if (hasUrlFilters) {
+        fetchFilteredRecipes(activeFilters);
+      } else {
+        const terms = searchTerm.toLowerCase().split(" ").filter(Boolean);
+        if (terms.length > 0) searchRecipes(terms);
+      }
     }, 150);
     return () => clearTimeout(timer);
-  }, [searchTerm, fetchRecipes, searchRecipes]);
+  }, [searchTerm, fetchRecipes, searchRecipes, fetchFilteredRecipes, hasUrlFilters, urlParamsKey]);
 
   // Remove the old searchRecipes function and filteredRecipes constant
   const displayedRecipes = searchTerm ? recipes : recipes;
@@ -427,64 +560,104 @@ export default function ExplorePage() {
             isExplorePage={true}
           />
 
-          {/* Active filter chips */}
-          {hasUrlFilters && (
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span className="text-sm text-amber-900/70">Filters:</span>
-              {activeFilters.cuisine && (
-                <span className="inline-flex items-center gap-1.5 bg-amber-100 border border-amber-200 rounded-full px-3 py-1 text-sm">
-                  🍽️ {activeFilters.cuisine}
-                  <button onClick={() => removeFilter('cuisine')} className="hover:text-amber-800" aria-label="Remove cuisine filter">×</button>
-                </span>
-              )}
-              {activeFilters.time && (
-                <span className="inline-flex items-center gap-1.5 bg-amber-100 border border-amber-200 rounded-full px-3 py-1 text-sm">
-                  ⏲️ {activeFilters.time}
-                  <button onClick={() => removeFilter('time')} className="hover:text-amber-800" aria-label="Remove time filter">×</button>
-                </span>
-              )}
-              {activeFilters.diet && (
-                <span className="inline-flex items-center gap-1.5 bg-amber-100 border border-amber-200 rounded-full px-3 py-1 text-sm">
-                  🍲 {activeFilters.diet}
-                  <button onClick={() => removeFilter('diet')} className="hover:text-amber-800" aria-label="Remove diet filter">×</button>
-                </span>
-              )}
-              {activeFilters.difficulty && (
-                <span className="inline-flex items-center gap-1.5 bg-amber-100 border border-amber-200 rounded-full px-3 py-1 text-sm">
-                  🧩 {activeFilters.difficulty}
-                  <button onClick={() => removeFilter('difficulty')} className="hover:text-amber-800" aria-label="Remove difficulty filter">×</button>
-                </span>
-              )}
-              <button onClick={clearAllFilters} className="text-sm text-amber-700 hover:text-amber-900 underline">
-                Clear all
+          {/* Filters row: active chips (click to remove) + Filters button */}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {hasUrlFilters && (
+              <>
+                {activeFilters.cuisine && (
+                  <button
+                    type="button"
+                    onClick={() => removeFilter('cuisine')}
+                    className="inline-flex items-center gap-1.5 bg-amber-100 border border-amber-200 rounded-full px-3 py-1 text-sm hover:bg-amber-200 transition-colors"
+                    title="Click to remove"
+                  >
+                    🍽️ {activeFilters.cuisine} ×
+                  </button>
+                )}
+                {activeFilters.time && (
+                  <button
+                    type="button"
+                    onClick={() => removeFilter('time')}
+                    className="inline-flex items-center gap-1.5 bg-amber-100 border border-amber-200 rounded-full px-3 py-1 text-sm hover:bg-amber-200 transition-colors"
+                    title="Click to remove"
+                  >
+                    ⏲️ {activeFilters.time} ×
+                  </button>
+                )}
+                {activeFilters.diet && (
+                  <button
+                    type="button"
+                    onClick={() => removeFilter('diet')}
+                    className="inline-flex items-center gap-1.5 bg-amber-100 border border-amber-200 rounded-full px-3 py-1 text-sm hover:bg-amber-200 transition-colors"
+                    title="Click to remove"
+                  >
+                    🍲 {activeFilters.diet} ×
+                  </button>
+                )}
+                {activeFilters.difficulty && (
+                  <button
+                    type="button"
+                    onClick={() => removeFilter('difficulty')}
+                    className="inline-flex items-center gap-1.5 bg-amber-100 border border-amber-200 rounded-full px-3 py-1 text-sm hover:bg-amber-200 transition-colors"
+                    title="Click to remove"
+                  >
+                    🧩 {activeFilters.difficulty} ×
+                  </button>
+                )}
+                <button onClick={clearAllFilters} className="text-sm text-amber-700 hover:text-amber-900 underline">
+                  Clear all
+                </button>
+                <span className="text-amber-400">|</span>
+              </>
+            )}
+            {/* Filters popover trigger */}
+            <div className="relative" ref={filtersPopoverRef}>
+              <button
+                type="button"
+                onClick={() => setFiltersPopoverOpen((prev) => !prev)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm font-medium transition-colors ${
+                  filtersPopoverOpen
+                    ? 'border-amber-500 bg-amber-100 text-amber-900'
+                    : 'border-amber-200 bg-white hover:bg-amber-50 text-amber-900/80'
+                }`}
+                aria-expanded={filtersPopoverOpen}
+              >
+                {hasUrlFilters ? 'Change filters' : 'Filters'}
+                <span className="text-amber-600">{filtersPopoverOpen ? '▲' : '▼'}</span>
               </button>
-            </div>
-          )}
-
-          {/* Quick filter list */}
-          <div className="mt-4 space-y-2">
-            <p className="text-sm font-medium text-amber-900/80">Quick filters</p>
-            <div className="flex flex-wrap gap-2">
-              {QUICK_FILTERS.cuisine.map((v) => (
-                <Link key={v} href={getExploreFilterUrl('cuisine', v)} className="text-sm px-3 py-1.5 rounded-full border border-amber-200 bg-white hover:bg-amber-50 text-amber-900/80 transition-colors">
-                  {v}
-                </Link>
-              ))}
-              {QUICK_FILTERS.time.map((v) => (
-                <Link key={v} href={getExploreFilterUrl('time', v)} className="text-sm px-3 py-1.5 rounded-full border border-amber-200 bg-white hover:bg-amber-50 text-amber-900/80 transition-colors">
-                  {v}
-                </Link>
-              ))}
-              {QUICK_FILTERS.diet.map((v) => (
-                <Link key={v} href={getExploreFilterUrl('diet', v)} className="text-sm px-3 py-1.5 rounded-full border border-amber-200 bg-white hover:bg-amber-50 text-amber-900/80 transition-colors">
-                  {v}
-                </Link>
-              ))}
-              {QUICK_FILTERS.difficulty.map((v) => (
-                <Link key={v} href={getExploreFilterUrl('difficulty', v)} className="text-sm px-3 py-1.5 rounded-full border border-amber-200 bg-white hover:bg-amber-50 text-amber-900/80 transition-colors">
-                  {v}
-                </Link>
-              ))}
+              {filtersPopoverOpen && (
+                <div className="absolute left-0 top-full mt-1 z-50 w-[min(90vw,420px)] max-h-[70vh] overflow-y-auto rounded-xl border border-amber-200 bg-white shadow-lg p-4">
+                  <p className="text-xs font-medium text-amber-700/80 uppercase tracking-wide mb-3">Pick one from each category</p>
+                  <div className="space-y-3">
+                    {(['cuisine', 'time', 'diet', 'difficulty'] as FilterCategory[]).map((category) => (
+                      <div key={category}>
+                        <p className="text-xs font-medium text-amber-700/80 mb-1.5">{FILTER_LABELS[category]}</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {QUICK_FILTERS[category].map((v) => {
+                            const isActive = activeFilters[category] === v;
+                            const count = filterCounts[category]?.[v] ?? null;
+                            return (
+                              <Link
+                                key={v}
+                                href={getExploreFilterUrl(category, v, searchParams)}
+                                onClick={() => setFiltersPopoverOpen(false)}
+                                className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                                  isActive
+                                    ? 'border-amber-500 bg-amber-100 text-amber-900 font-medium'
+                                    : 'border-amber-200 bg-white hover:bg-amber-50 text-amber-900/80'
+                                }`}
+                              >
+                                {v}
+                                {count !== null && <span className="text-amber-600/80"> ({count})</span>}
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

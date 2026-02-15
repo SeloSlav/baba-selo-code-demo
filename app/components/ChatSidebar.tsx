@@ -1,7 +1,7 @@
 // app/components/ChatSidebar.tsx
 import React, { useState, useEffect, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faHamburger, faPersonRifle, faPencilRuler, faClose, faThumbtack, faTrashAlt, faStarOfLife } from "@fortawesome/free-solid-svg-icons";
+import { faHamburger, faPersonRifle, faPencilRuler, faClose, faThumbtack, faTrashAlt, faStarOfLife, faNewspaper } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "../context/AuthContext";
 import { RecipeList } from "./RecipeList";
 import { ChatList } from "./ChatList";
@@ -199,6 +199,13 @@ export const ChatSidebar = ({
 
                         {/* View All Recipes Link */}
                         <div className="pt-4 border-t border-amber-100 space-y-2">
+                            <Link 
+                                href="/blog"
+                                className="flex items-center justify-center gap-2 text-sm text-amber-900/80 hover:text-amber-900 transition-colors p-2 rounded-lg hover:bg-amber-50"
+                            >
+                                <FontAwesomeIcon icon={faNewspaper} className="text-amber-600" />
+                                <span>Blog</span>
+                            </Link>
                             <Link 
                                 href={user ? (username ? `/${username}` : "/recipes") : "/explore"}
                                 className="flex items-center justify-center gap-2 text-sm text-amber-900/80 hover:text-amber-900 transition-colors p-2 rounded-lg hover:bg-amber-50"
