@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import { useAuth } from "../context/AuthContext"; // Adjust if your AuthContext is in a different path
+import { useAuth } from "../context/AuthContext";
 import { db } from "../firebase/firebase";        // Adjust if firebase config is in a different path
 import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
 import { LoadingSpinner } from '../components/LoadingSpinner';
@@ -83,8 +83,6 @@ export default function SettingsPage() {
   const [preferredCookingOil, setPreferredCookingOil] = useState<string>("");
   const [preferredImageStyle, setPreferredImageStyle] = useState<ImageStyle>("photorealistic-recipe");
   const [plan, setPlan] = useState<"free" | "pro">("free");
-  const [mealPlanEnabled, setMealPlanEnabled] = useState(false);
-  const [mealPlanTime, setMealPlanTime] = useState("08:00");
 
   // For handling the auto-complete filters
   const [dietarySearch, setDietarySearch] = useState("");
@@ -146,7 +144,6 @@ export default function SettingsPage() {
     dietaryPreferences: string[];
     preferredCookingOil: string;
     preferredImageStyle: ImageStyle;
-    mealPlanSchedule?: { enabled: boolean; time: string };
   }>) => {
     if (!user) return;
 
@@ -271,9 +268,6 @@ export default function SettingsPage() {
           );
           setOilSearch(userData.preferredCookingOil || "");
           setPlan(userData.plan || "free");
-          const s = userData.mealPlanSchedule;
-          setMealPlanEnabled(!!s?.enabled);
-          setMealPlanTime(s?.time || "08:00");
         }
       } catch (error) {
         console.error("Error fetching user settings:", error);
@@ -609,88 +603,7 @@ export default function SettingsPage() {
           )}
         </div>
 
-        {/* Pro: Custom Meal Plans */}
-        {plan === "pro" && (
-          <div className="p-8 border-2 border-amber-200 rounded-2xl shadow-sm bg-amber-50/30 flex flex-col">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-amber-100 rounded-xl">
-                <span className="text-xl">📅</span>
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold">Custom Meal Plans</h3>
-                <p className="text-sm text-amber-800/70">
-                  Get personalized meal plans emailed daily on your schedule.
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={mealPlanEnabled}
-                  onChange={(e) => {
-                    setMealPlanEnabled(e.target.checked);
-                    autoSave({
-                      mealPlanSchedule: {
-                        enabled: e.target.checked,
-                        time: mealPlanTime,
-                      },
-                    });
-                  }}
-                  className="w-4 h-4 rounded"
-                />
-                <span>Email me daily meal plans</span>
-              </label>
-              {mealPlanEnabled && (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-amber-800/70">at</span>
-                  <input
-                    type="time"
-                    value={mealPlanTime}
-                    onChange={(e) => {
-                      const t = e.target.value;
-                      setMealPlanTime(t);
-                      autoSave({
-                        mealPlanSchedule: { enabled: mealPlanEnabled, time: t },
-                      });
-                    }}
-                    className="p-2 border border-amber-200 rounded-lg focus:outline-none focus:border-amber-500"
-                  />
-                  <span className="text-xs text-amber-800/60">(UTC)</span>
-                </div>
-              )}
-            </div>
-            <p className="mt-3 text-xs text-amber-800/60">
-              A cron job should hit /api/cron/meal-plans every minute. Configure CRON_SECRET in env.
-            </p>
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  const token = await user?.getIdToken();
-                  const res = await fetch("/api/meal-plan/send", {
-                    method: "POST",
-                    headers: { Authorization: `Bearer ${token}` },
-                  });
-                  const data = await res.json();
-                  if (res.ok && data.emailSent) {
-                    setSaveSuccess(true);
-                    setTimeout(() => setSaveSuccess(false), 2000);
-                  } else if (res.ok) {
-                    setError(data.message || "Email not configured");
-                  } else {
-                    setError(data.error || "Failed to send");
-                  }
-                } catch {
-                  setError("Failed to send meal plan");
-                }
-              }}
-              className="mt-4 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 text-sm"
-            >
-              Send meal plan now
-            </button>
-          </div>
-        )}
+        {/* Pro: Meal plans config moved to /meal-plans */}
       </div>
     </div>
     </SidebarLayout>

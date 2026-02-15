@@ -2,7 +2,9 @@ import "./globals.css";
 import { AuthProvider } from "./context/AuthContext";
 import { DeleteRecipeProvider } from "./context/DeleteRecipeContext";
 import { PointsProvider } from "./context/PointsContext";
+import { PlanDebugProvider } from "./context/PlanDebugContext";
 import PWABanner from "./components/PWABanner";
+import { PlanDebugToggle } from "./components/PlanDebugToggle";
 
 export const viewport = {
   width: "device-width",
@@ -63,12 +65,15 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <AuthProvider>
-          <DeleteRecipeProvider>
-            <PointsProvider>
-              <PWABanner />
-              {children}
-            </PointsProvider>
-          </DeleteRecipeProvider>
+          <PlanDebugProvider>
+            <DeleteRecipeProvider>
+              <PointsProvider>
+                <PWABanner />
+                {children}
+                <PlanDebugToggle />
+              </PointsProvider>
+            </DeleteRecipeProvider>
+          </PlanDebugProvider>
         </AuthProvider>
       </body>
     </html>

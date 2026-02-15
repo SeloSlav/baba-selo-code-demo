@@ -19,16 +19,28 @@ export async function POST(req: Request) {
     const userData = userDoc.data();
     const plan = userData?.plan ?? 'free';
 
-    if (plan !== 'pro') {
+    // Admin bypass for Plan Debug toggle (admins can test Pro features)
+    const adminDoc = await admin.firestore().collection('admins').doc(userId).get();
+    const isAdmin = adminDoc.exists && adminDoc.data()?.active === true;
+
+    if (plan !== 'pro' && !isAdmin) {
       return NextResponse.json({ error: 'Pro subscription required for custom meal plans' }, { status: 403 });
     }
 
     const body = await req.json().catch(() => ({}));
-    const { dietaryPreferences = [], preferredCookingOil = 'olive oil', days = 1 } = body;
+    const { mealPlanPrompt: bodyPrompt, dietaryPreferences = [], preferredCookingOil = 'olive oil', days = 1 } = body;
+
+    const promptFromBody = (bodyPrompt || '').trim();
+    const promptFromUser = (userData?.mealPlanPrompt || '').trim();
+    const mealPlanPrompt = promptFromBody || promptFromUser;
 
     const prefs = Array.isArray(dietaryPreferences) ? dietaryPreferences : [];
     const oil = String(preferredCookingOil || 'olive oil');
     const numDays = Math.min(Math.max(1, Number(days) || 1), 7);
+
+    const preferenceContext = mealPlanPrompt
+      ? `The user's preferences (in their own words): ${mealPlanPrompt}`
+      : `Use ${oil} as the primary cooking oil. Respect dietary preferences: ${prefs.join(', ') || 'none specified'}.`;
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
@@ -46,7 +58,7 @@ Format your response as:
   Dinner: [dish name] - [brief description]
   Snack (optional): [suggestion]
 
-Repeat for each day. Use ${oil} as the primary cooking oil. Respect dietary preferences: ${prefs.join(', ') || 'none specified'}. Keep each meal description to 1-2 sentences. Add a short Baba-style tip at the end.`,
+Repeat for each day. ${preferenceContext} Keep each meal description to 1-2 sentences. Add a short Baba-style tip at the end.`,
         },
         {
           role: 'user',

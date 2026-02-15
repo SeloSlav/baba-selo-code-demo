@@ -20,7 +20,7 @@ const FAQ_ITEMS = [
     },
     {
         q: "How do custom meal plans work?",
-        a: "Once you're on Pro, you can enable daily meal plans in Settings. Baba Selo will generate personalized meal plans based on your dietary preferences and cooking oil choices, and email them to you on the schedule you choose.",
+        a: "Go to Meal Plans, tell Baba your preferences in plain language, and choose daily or weekly plans. You can include a shopping list for weekly plans. Plans are emailed on the schedule you pick—e.g., Saturday morning so you can shop for the week.",
     },
     {
         q: "What payment methods do you accept?",

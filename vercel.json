@@ -1,6 +1,7 @@
 {
   "functions": {
-    "app/api/generateImage/route.ts": { "maxDuration": 60 }
+    "app/api/generateImage/route.ts": { "maxDuration": 60 },
+    "app/api/meal-plan/send/route.ts": { "maxDuration": 120 }
   },
   "regions": ["iad1"],
   "crons": [{ "path": "/api/cron/meal-plans", "schedule": "* * * * *" }]

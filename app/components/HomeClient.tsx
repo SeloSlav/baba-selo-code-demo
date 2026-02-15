@@ -3,6 +3,7 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { useAuth } from "../context/AuthContext";
+import { useEffectivePlan } from "../context/PlanDebugContext";
 import { auth } from "../firebase/firebase";
 
 const ChatWindow = dynamic(() => import("./ChatWindow").then((m) => m.ChatWindow), { ssr: false });
@@ -71,6 +72,8 @@ export const HomeClient = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
+  const effectivePlan = useEffectivePlan(plan);
+
   const isMobileOverlay = windowWidth !== null && windowWidth < 768;
   const sidebarClass =
     isSidebarOpen && windowWidth !== null && windowWidth >= 768
@@ -84,12 +87,12 @@ export const HomeClient = () => {
         isSidebarOpen={isSidebarOpen}
         toggleSidebar={toggleSidebar}
         chatWindowRef={chatWindowRef}
-        currentChatId={plan === "pro" ? currentChatId : undefined}
-        onSelectChat={plan === "pro" ? setCurrentChatId : undefined}
-        onNewChat={plan === "pro" ? () => setCurrentChatId(null) : undefined}
-        plan={plan}
-        onChatsChange={plan === "pro" ? handleChatsChange : undefined}
-        chatListRefreshKey={plan === "pro" ? chatListRefreshKey : 0}
+        currentChatId={effectivePlan === "pro" ? currentChatId : undefined}
+        onSelectChat={effectivePlan === "pro" ? setCurrentChatId : undefined}
+        onNewChat={effectivePlan === "pro" ? () => setCurrentChatId(null) : undefined}
+        plan={effectivePlan}
+        onChatsChange={effectivePlan === "pro" ? handleChatsChange : undefined}
+        chatListRefreshKey={effectivePlan === "pro" ? chatListRefreshKey : 0}
       />
 
       {isSidebarOpen && isMobileOverlay && (
@@ -103,10 +106,10 @@ export const HomeClient = () => {
         <ChatWindow
           ref={chatWindowRef}
           isSidebarOpen={isSidebarOpen}
-          chatId={plan === "pro" ? currentChatId : undefined}
-          plan={plan}
-          onChatIdChange={plan === "pro" ? setCurrentChatId : undefined}
-          onChatsChange={plan === "pro" ? handleChatsChange : undefined}
+          chatId={effectivePlan === "pro" ? currentChatId : undefined}
+          plan={effectivePlan}
+          onChatIdChange={effectivePlan === "pro" ? setCurrentChatId : undefined}
+          onChatsChange={effectivePlan === "pro" ? handleChatsChange : undefined}
         />
       </div>
     </div>

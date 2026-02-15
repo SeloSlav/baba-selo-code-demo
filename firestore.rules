@@ -17,6 +17,11 @@ service cloud.firestore {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
 
+      // Meal plan history - user can read/write their own
+      match /mealPlanHistory/{planId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
       // Rules for spoonPoints subcollection within user doc
       match /spoonPoints/{pointsDocId} { // Matches /users/{userId}/spoonPoints/{pointsDocId}
          // Allow owner full read/write access to their own points doc

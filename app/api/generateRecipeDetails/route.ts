@@ -17,45 +17,48 @@ export async function POST(request: Request) {
     const baseUrl = getBaseUrl();
     let result: any = {};
 
+    const descriptionHint = recipeContent && typeof recipeContent === 'string' && recipeContent.trim().length > 0
+      ? `\n\nDescription/context: ${recipeContent.trim().slice(0, 500)}`
+      : '';
+
     // Step 1: Always generate basic recipe details first
-    const basicPrompt = `Given a recipe title, generate a complete recipe with ingredients and directions.
+    const basicPrompt = `Given a recipe title${descriptionHint ? ' and description' : ''}, generate a COMPLETE recipe with a proper ingredients list and step-by-step directions.
 
-Recipe Title: ${recipeTitle}
+Recipe Title: ${recipeTitle}${descriptionHint}
 
-Please provide the following:
+You MUST provide:
 
 INGREDIENTS:
-- ingredient 1
-- ingredient 2
-...
+- 1 cup flour (or similar with quantities)
+- 2 tbsp olive oil
+- etc. (each ingredient on its own line with a dash, include quantities)
 
 DIRECTIONS:
-1. step 1
-2. step 2
-...
+1. First step with clear instructions
+2. Second step
+3. etc. (numbered steps, each on its own line)
 
 Rules:
-1. Ingredients should be clear and include quantities
-2. Directions should be detailed and easy to follow
-3. Keep the style consistent with traditional recipes
-4. Maintain authenticity for cultural dishes
-5. Include any special notes about ingredients or techniques`;
+1. Ingredients MUST be a proper list with quantities (e.g. "2 cups rice", "1/2 tsp salt")
+2. Directions MUST be numbered steps, not a single paragraph
+3. Generate at least 5-8 ingredients and 4-8 direction steps
+4. Be specific and detailed`;
 
     try {
       const completion = await openai.chat.completions.create({
         messages: [
           {
             role: "system",
-            content: "You are a professional chef specializing in recipe development. Generate detailed recipe ingredients and directions while maintaining authenticity and clarity."
+            content: "You are a professional chef. Generate a complete, detailed recipe with a proper ingredients list (with quantities) and numbered step-by-step directions. Never return a single sentence—always return structured lists."
           },
           {
             role: "user",
             content: basicPrompt
           }
         ],
-        model: "gpt-3.5-turbo",
-        temperature: 0.7,
-        max_tokens: 1000,
+        model: "gpt-4o-mini",
+        temperature: 0.6,
+        max_tokens: 1500,
       });
 
       if (!completion.choices?.[0]?.message?.content) {
@@ -67,23 +70,46 @@ Rules:
 
       const response = completion.choices[0].message.content;
 
-      // Parse ingredients and directions
-      const ingredientsMatch = response.match(/INGREDIENTS:\n((?:- [^\n]+\n)+)/);
-      const directionsMatch = response.match(/DIRECTIONS:\n((?:\d+\. [^\n]+\n?)+)/);
+      // Parse ingredients - support "- item" or "• item" or "* item"
+      const ingredientsSection = response.match(/INGREDIENTS?:\s*\n([\s\S]*?)(?=DIRECTIONS?:\s*\n|$)/i);
+      result.ingredients = [];
+      if (ingredientsSection) {
+        result.ingredients = ingredientsSection[1]
+          .split('\n')
+          .map(line => line.replace(/^[\s\-•*]\s*/, '').trim())
+          .filter(line => line.length > 2);
+      }
 
-      result.ingredients = ingredientsMatch 
-        ? ingredientsMatch[1].split('\n')
-          .map(line => line.replace(/^- /, '').trim())
-          .filter(line => line)
-        : [];
+      // Parse directions - support "1. step" or "1) step"
+      const directionsSection = response.match(/DIRECTIONS?:\s*\n([\s\S]*?)(?=INGREDIENTS?:\s*\n|$)/i);
+      result.directions = [];
+      if (directionsSection) {
+        result.directions = directionsSection[1]
+          .split('\n')
+          .map(line => line.replace(/^\s*\d+[\.\)]\s*/, '').trim())
+          .filter(line => line.length > 2);
+      }
 
-      result.directions = directionsMatch
-        ? directionsMatch[1].split('\n')
-          .map(line => line.replace(/^\d+\. /, '').trim())
-          .filter(line => line)
-        : [];
+      // Fallback: if parsing failed, try splitting by common patterns
+      if (!result.ingredients.length && response.includes('-')) {
+        const afterIng = response.split(/INGREDIENTS?:\s*\n/i)[1];
+        if (afterIng) {
+          result.ingredients = afterIng.split(/DIRECTIONS?:\s*\n/i)[0]
+            .split('\n')
+            .map(line => line.replace(/^[\s\-•*]\s*/, '').trim())
+            .filter(line => line.length > 2);
+        }
+      }
+      if (!result.directions.length && /\d+\./.test(response)) {
+        const afterDir = response.split(/DIRECTIONS?:\s*\n/i)[1];
+        if (afterDir) {
+          result.directions = afterDir
+            .split('\n')
+            .map(line => line.replace(/^\s*\d+[\.\)]\s*/, '').trim())
+            .filter(line => line.length > 2);
+        }
+      }
 
-      // Validate that we got ingredients and directions
       if (!result.ingredients.length || !result.directions.length) {
         return NextResponse.json({
           error: "Failed to generate recipe details",
@@ -161,22 +187,18 @@ Rules:
         const summaryData = await summaryResponse.json();
         result.summary = summaryData.summary;
 
-        // Step 4: Get macro information
+        // Step 4: Get macro information (macroInfo API expects 'recipe' string)
+        const recipeForMacros = `${recipeTitle}\n\nIngredients:\n${result.ingredients.join('\n')}\n\nDirections:\n${result.directions.join('\n')}`;
         const macroResponse = await fetch(`${baseUrl}/api/macroInfo`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ingredients: result.ingredients,
-            servings: 4
-          }),
+          body: JSON.stringify({ recipe: recipeForMacros }),
         });
 
-        if (!macroResponse.ok) {
-          throw new Error('Failed to generate macro information');
+        if (macroResponse.ok) {
+          const macroData = await macroResponse.json();
+          result.macroInfo = macroData.macros || macroData;
         }
-
-        const macroData = await macroResponse.json();
-        result.macroInfo = macroData;
 
         // Step 5: Get dish pairings
         const pairingResponse = await fetch(`${baseUrl}/api/dishPairing`, {
@@ -195,40 +217,43 @@ Rules:
         result.dishPairings = pairingData.suggestion;
 
       } catch (error) {
-        console.error("Error in recipe generation:", error);
-        return NextResponse.json({ 
-          error: "Recipe generation failed",
-          message: error.message || "An unexpected error occurred during recipe generation",
-          details: {
-            ingredients: result.ingredients,
-            directions: result.directions
-          }
-        }, { status: 500 });
+        console.error("Error in recipe generation (generateAll):", error);
+        // Return 200 with partial data so meal plans still get ingredients/directions
+        result.cuisineType = result.cuisineType || 'General';
+        result.cookingDifficulty = result.cookingDifficulty || 'medium';
+        result.cookingTime = result.cookingTime || '30 min';
+        result.diet = Array.isArray(result.diet) ? result.diet : [];
+        result.summary = result.summary || '';
+        result.macroInfo = result.macroInfo?.macros || result.macroInfo || null;
+        result.dishPairings = result.dishPairings || '';
       }
     }
 
-    // Update recipe with all generated data, using fallbacks for missing data
+    // Update recipe with all generated data; macroInfo API returns { servings, total, per_serving }
+    const macros = result.macroInfo;
     result = {
       ...result,
       recipeSummary: result.summary || '',
-      macroInfo: {
-        servings: 4,
-        per_serving: {
-          calories: result.macroInfo?.calories ? Math.round(result.macroInfo.calories / 4 * 100) / 100 : 0,
-          carbs: result.macroInfo?.carbs ? Math.round(result.macroInfo.carbs / 4 * 100) / 100 : 0,
-          fats: result.macroInfo?.fat ? Math.round(result.macroInfo.fat / 4 * 100) / 100 : 0,
-          proteins: result.macroInfo?.protein ? Math.round(result.macroInfo.protein / 4 * 100) / 100 : 0
-        },
-        total: {
-          calories: result.macroInfo?.calories ? Math.round(result.macroInfo.calories * 100) / 100 : 0,
-          carbs: result.macroInfo?.carbs ? Math.round(result.macroInfo.carbs * 100) / 100 : 0,
-          fats: result.macroInfo?.fat ? Math.round(result.macroInfo.fat * 100) / 100 : 0,
-          proteins: result.macroInfo?.protein ? Math.round(result.macroInfo.protein * 100) / 100 : 0
-        }
-      },
-      dishPairings: result.dishPairings || [],
-      cookingTime: result.cookingTime || 0,
-      cuisineType: result.cuisineType || 'unknown',
+      macroInfo: macros?.total && macros?.per_serving
+        ? {
+            servings: macros.servings ?? 4,
+            per_serving: {
+              calories: Math.round((macros.per_serving?.calories ?? 0) * 100) / 100,
+              carbs: Math.round((macros.per_serving?.carbs ?? 0) * 100) / 100,
+              fats: Math.round((macros.per_serving?.fats ?? 0) * 100) / 100,
+              proteins: Math.round((macros.per_serving?.proteins ?? 0) * 100) / 100
+            },
+            total: {
+              calories: Math.round((macros.total?.calories ?? 0) * 100) / 100,
+              carbs: Math.round((macros.total?.carbs ?? 0) * 100) / 100,
+              fats: Math.round((macros.total?.fats ?? 0) * 100) / 100,
+              proteins: Math.round((macros.total?.proteins ?? 0) * 100) / 100
+            }
+          }
+        : null,
+      dishPairings: result.dishPairings || '',
+      cookingTime: result.cookingTime || '30 min',
+      cuisineType: result.cuisineType || 'General',
       cookingDifficulty: result.cookingDifficulty || 'medium',
       diet: Array.isArray(result.diet) ? result.diet : result.diet || []
     };
