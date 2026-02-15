@@ -33,12 +33,12 @@ export const metadata = {
     title: "AI Recipe Generator | Baba Selo - Create & Save Recipes with AI",
     description:
       "AI Recipe Generator that creates personalized recipes, generates food images, and helps you save & share your culinary creations. Chat with Baba Selo for magical recipe guidance.",
-    url: "https://babaselo.com",
+    url: "https://www.babaselo.com",
     type: "website",
     siteName: "Baba Selo",
     images: [
       {
-        url: "https://babaselo.com/og-image.jpg",
+        url: "https://www.babaselo.com/og-image.jpg",
         width: 1200,
         height: 630,
         alt: "AI Recipe Generator - Baba Selo creates and saves recipes with AI",
@@ -50,7 +50,7 @@ export const metadata = {
     title: "AI Recipe Generator | Baba Selo - Create & Save Recipes with AI",
     description:
       "AI Recipe Generator that creates personalized recipes, generates food images, and helps you save & share your culinary creations.",
-    images: ["https://babaselo.com/twitter-image.jpg"],
+    images: ["https://www.babaselo.com/twitter-image.jpg"],
   },
 };
 

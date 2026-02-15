@@ -65,6 +65,16 @@ const Login = () => {
           Privacy Policy
         </a>
       </p>
+
+      {/* SEO: Discover links for crawlers and users */}
+      <nav className="mt-6 flex gap-4 text-sm text-amber-700/80" aria-label="Discover">
+        <a href="/blog" className="hover:text-amber-800 underline">
+          Blog
+        </a>
+        <a href="/explore" className="hover:text-amber-800 underline">
+          Explore Recipes
+        </a>
+      </nav>
     </div>
   );
 };

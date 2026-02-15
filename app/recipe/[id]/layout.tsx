@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/firebase';
+import { RecipeSchema } from './RecipeSchema';
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -39,14 +40,19 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     const title = `${recipe.recipeTitle} | Baba Selo`;
     const description = recipe.recipeSummary || `A delicious ${recipe.cuisineType} recipe for ${recipe.recipeTitle}. Create and save with AI Recipe Generator | Baba Selo.`;
     const image = recipe.imageURL || defaultImage;
+    const canonicalUrl = `https://www.babaselo.com/recipe/${id}`;
 
     return {
       metadataBase: new URL('https://www.babaselo.com'),
       title,
       description,
+      alternates: {
+        canonical: canonicalUrl,
+      },
       openGraph: {
         title,
         description,
+        url: canonicalUrl,
         images: [image],
         type: 'website',
       },
@@ -67,10 +73,18 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   }
 }
 
-export default function Layout({
+export default async function Layout({
   children,
+  params,
 }: {
   children: React.ReactNode;
+  params: Promise<{ id: string }>;
 }) {
-  return <div className="recipe-layout">{children}</div>;
+  const { id } = await params;
+  return (
+    <div className="recipe-layout">
+      <RecipeSchema recipeId={id} />
+      {children}
+    </div>
+  );
 } 
