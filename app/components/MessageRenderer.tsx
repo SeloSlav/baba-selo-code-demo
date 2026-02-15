@@ -55,33 +55,103 @@ const isSelo = (text: string | any): boolean => {
 };
 
 // Update Timer component to accept seconds instead of minutes
+// Uses timestamp-based countdown so it stays accurate when tab is backgrounded (browsers throttle setInterval).
+// Uses Web Notifications so the user is alerted even when the tab is in the background.
 const Timer: React.FC<{ initialSeconds: number }> = ({ initialSeconds }) => {
     const [timeLeft, setTimeLeft] = useState(initialSeconds);
     const [isRunning, setIsRunning] = useState(false);
     const [hasFinished, setHasFinished] = useState(false);
     const [isAlarmPlaying, setIsAlarmPlaying] = useState(false);
     const audioRef = useRef<HTMLAudioElement | null>(null);
+    const endTimeRef = useRef<number>(0);
+    const hasFiredRef = useRef(false);
 
-    useEffect(() => {
-        let interval: NodeJS.Timeout;
+    // Request notification permission when timer starts
+    const requestNotificationPermission = async () => {
+        if (typeof window === 'undefined' || !('Notification' in window)) return false;
+        if (Notification.permission === 'granted') return true;
+        if (Notification.permission === 'denied') return false;
+        const permission = await Notification.requestPermission();
+        return permission === 'granted';
+    };
 
-        if (isRunning && timeLeft > 0) {
-            interval = setInterval(() => {
-                setTimeLeft(time => time - 1);
-            }, 1000);
-        } else if (timeLeft === 0 && isRunning) {
-            setIsRunning(false);
-            setHasFinished(true);
-            setIsAlarmPlaying(true);
-            // Play beep sound
-            audioRef.current = new Audio('/timer-beep.mp3');
-            audioRef.current.loop = true;
-            audioRef.current.play();
+    const fireTimerAlarm = useRef(() => {
+        if (hasFiredRef.current) return;
+        hasFiredRef.current = true;
+        setIsRunning(false);
+        setHasFinished(true);
+        setIsAlarmPlaying(true);
+
+        // Web Notification - works when tab is backgrounded
+        if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+            try {
+                new Notification('Timer complete!', {
+                    body: "Time's up, dear! 🕒",
+                    icon: '/favicon.svg',
+                });
+            } catch {
+                // ignore
+            }
         }
 
-        return () => {
-            clearInterval(interval);
+        // Play beep sound (may be muted when tab is backgrounded; notification is primary)
+        const playBeep = () => {
+            try {
+                const audio = new Audio('/timer-beep.mp3');
+                audioRef.current = audio;
+                audio.loop = true;
+                audio.play().catch(() => {
+                    // Fallback: Web Audio API beep if file missing or autoplay blocked
+                    try {
+                        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.frequency.value = 880;
+                        gain.gain.value = 0.3;
+                        osc.start();
+                        osc.stop(ctx.currentTime + 0.3);
+                    } catch {
+                        // ignore
+                    }
+                });
+            } catch {
+                try {
+                    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.frequency.value = 880;
+                    gain.gain.value = 0.3;
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.3);
+                } catch {
+                    // ignore
+                }
+            }
         };
+        playBeep();
+    });
+
+    useEffect(() => {
+        let interval: ReturnType<typeof setInterval>;
+
+        if (isRunning) {
+            if (timeLeft > 0 && endTimeRef.current === 0) {
+                endTimeRef.current = Date.now() + timeLeft * 1000;
+            }
+            interval = setInterval(() => {
+                const remaining = Math.max(0, Math.ceil((endTimeRef.current - Date.now()) / 1000));
+                setTimeLeft(remaining);
+                if (remaining === 0) {
+                    fireTimerAlarm.current();
+                }
+            }, 250); // Check more frequently to catch when we're past the target (handles throttling)
+        }
+
+        return () => clearInterval(interval);
     }, [isRunning, timeLeft]);
 
     const stopAlarm = () => {
@@ -96,7 +166,12 @@ const Timer: React.FC<{ initialSeconds: number }> = ({ initialSeconds }) => {
         if (timeLeft === 0) {
             setTimeLeft(initialSeconds);
             setHasFinished(false);
+            hasFiredRef.current = false;
+            endTimeRef.current = 0;
             stopAlarm();
+        }
+        if (!isRunning && endTimeRef.current === 0) {
+            requestNotificationPermission();
         }
         setIsRunning(!isRunning);
     };
@@ -105,6 +180,8 @@ const Timer: React.FC<{ initialSeconds: number }> = ({ initialSeconds }) => {
         setTimeLeft(initialSeconds);
         setIsRunning(false);
         setHasFinished(false);
+        hasFiredRef.current = false;
+        endTimeRef.current = 0;
         stopAlarm();
     };
 

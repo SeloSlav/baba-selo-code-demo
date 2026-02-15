@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTimes, faClock } from "@fortawesome/free-solid-svg-icons";
 
@@ -19,6 +19,13 @@ export const TimerPopup: React.FC<TimerPopupProps> = ({
   const [minutes, setMinutes] = useState<number>(0);
   const [seconds, setSeconds] = useState<number>(0);
   const [error, setError] = useState("");
+
+  // Request notification permission when popup opens so timer can alert when tab is backgrounded
+  useEffect(() => {
+    if (isOpen && typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, [isOpen]);
 
   const handleSubmit = () => {
     const totalSeconds = (hours * 3600) + (minutes * 60) + seconds;
