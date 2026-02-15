@@ -109,9 +109,14 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
                         </Link>
                     </li>
                     <li className="flex items-center px-4 py-2 rounded-md hover:bg-amber-50 cursor-pointer">
-                        <Link href="/meal-plans" className="flex items-center w-full">
-                            <FontAwesomeIcon icon={faCalendarDays} className="text-amber-700 mr-3" />
-                            <span>Meal Plans</span>
+                        <Link href="/meal-plans" className="flex items-center w-full justify-between">
+                            <div className="flex items-center">
+                                <FontAwesomeIcon icon={faCalendarDays} className="text-amber-700 mr-3" />
+                                <span>Meal Plans</span>
+                            </div>
+                            <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full font-medium">
+                                Pro ⭐
+                            </span>
                         </Link>
                     </li>
                     <hr />
@@ -177,9 +182,14 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
                     </Link>
                 </li>
                 <li className="flex items-center px-4 py-2 rounded-md hover:bg-amber-50 cursor-pointer">
-                    <Link href="/meal-plans" className="flex items-center w-full">
-                        <FontAwesomeIcon icon={faCalendarDays} className="text-amber-700 mr-3" />
-                        <span>Meal Plans</span>
+                    <Link href="/meal-plans" className="flex items-center w-full justify-between">
+                        <div className="flex items-center">
+                            <FontAwesomeIcon icon={faCalendarDays} className="text-amber-700 mr-3" />
+                            <span>Meal Plans</span>
+                        </div>
+                        <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full font-medium">
+                            Pro ⭐
+                        </span>
                     </Link>
                 </li>
                 <li className="flex items-center px-4 py-2 rounded-md hover:bg-amber-50 cursor-pointer">
@@ -194,8 +204,8 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
                             <FontAwesomeIcon icon={faSpoon} className="text-amber-700 mr-3" />
                             <span>Spoons</span>
                         </div>
-                        <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full">
-                            Earn! ✨
+                        <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full font-medium">
+                            Earn 🥄
                         </span>
                     </Link>
                 </li>
@@ -205,8 +215,8 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
                             <FontAwesomeIcon icon={faStore} className="text-amber-700 mr-3" />
                             <span>Market</span>
                         </div>
-                        <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full">
-                            Redeem! 🎁
+                        <span className="text-xs bg-emerald-100 text-emerald-800 px-2 py-1 rounded-full font-medium">
+                            Redeem 🎁
                         </span>
                     </Link>
                 </li>

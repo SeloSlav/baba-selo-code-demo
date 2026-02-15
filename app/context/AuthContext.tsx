@@ -231,9 +231,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           /* Spoon Menu Button - only shown for authenticated users */
           <button
             onClick={toggleSpoonMenu}
-            className="relative p-2.5 rounded-xl hover:bg-gray-100 bg-white shadow-md border border-gray-200/50 hover:shadow-lg"
+            className="relative w-10 h-10 flex items-center justify-center rounded-xl hover:bg-amber-50 bg-white shadow-md border border-amber-200/80 hover:border-amber-300 hover:shadow-amber-900/5 transition-colors"
           >
-            <FontAwesomeIcon icon={faSpoon} className="text-[#5d5d5d] text-xl" />
+            <FontAwesomeIcon icon={faSpoon} className="text-amber-700 text-lg" />
             {unreadCount > 0 && (
               <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
                 {unreadCount}
@@ -245,9 +245,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         {/* Profile Menu Button - shown for all users */}
         <button
           onClick={toggleProfileMenu}
-          className="relative p-2.5 rounded-xl hover:bg-gray-100 bg-white shadow-md border border-gray-200/50 hover:shadow-lg"
+          className="relative w-10 h-10 flex items-center justify-center rounded-xl hover:bg-amber-50 bg-white shadow-md border border-amber-200/80 hover:border-amber-300 hover:shadow-amber-900/5 transition-colors"
         >
-          <FontAwesomeIcon icon={faUserCircle} className="text-[#5d5d5d] text-xl" />
+          <FontAwesomeIcon icon={faUserCircle} className="text-amber-700 text-lg" />
         </button>
 
         {/* Menus */}

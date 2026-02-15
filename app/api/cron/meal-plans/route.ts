@@ -44,13 +44,31 @@ export async function GET(req: Request) {
     return NextResponse.json({ message: 'Email not configured' });
   }
 
+  function getLocalTimeInTimezone(date: Date, timeZone: string): { hour: number; minute: number; dayOfWeek: number } {
+    try {
+      const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone,
+        hour: '2-digit',
+        minute: '2-digit',
+        weekday: 'short',
+        hour12: false,
+      });
+      const parts = formatter.formatToParts(date);
+      const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '0';
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      return {
+        hour: parseInt(get('hour'), 10),
+        minute: parseInt(get('minute'), 10),
+        dayOfWeek: Math.max(0, dayNames.indexOf(get('weekday'))),
+      };
+    } catch {
+      return { hour: date.getUTCHours(), minute: date.getUTCMinutes(), dayOfWeek: date.getUTCDay() };
+    }
+  }
+
   try {
     const usersSnapshot = await admin.firestore().collection('users').get();
     const now = new Date();
-    const currentHour = now.getUTCHours();
-    const currentMinute = now.getUTCMinutes();
-    const currentDay = now.getUTCDay(); // 0=Sun, 6=Sat
-    const nowStr = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`;
 
     let sent = 0;
     for (const doc of usersSnapshot.docs) {
@@ -60,14 +78,18 @@ export async function GET(req: Request) {
       const schedule = d.mealPlanSchedule;
       if (!schedule?.enabled || !schedule?.time) continue;
 
+      const timeZone = schedule.timezone || 'UTC';
+      const local = getLocalTimeInTimezone(now, timeZone);
+      const nowStr = `${local.hour.toString().padStart(2, '0')}:${local.minute.toString().padStart(2, '0')}`;
+
       const planType = d.mealPlanType || 'daily';
       if (planType === 'weekly') {
         const dayOfWeek = schedule.dayOfWeek ?? 6; // default Saturday
-        if (currentDay !== dayOfWeek) continue;
+        if (local.dayOfWeek !== dayOfWeek) continue;
       }
 
-      const [h, m] = String(schedule.time).split(':').map(Number);
-      const scheduleStr = `${h.toString().padStart(2, '0')}:${(m || 0).toString().padStart(2, '0')}`;
+      const [schedHour, schedMin] = String(schedule.time).split(':').map(Number);
+      const scheduleStr = `${schedHour.toString().padStart(2, '0')}:${(schedMin || 0).toString().padStart(2, '0')}`;
       if (scheduleStr !== nowStr) continue;
 
       const email = d.email || (await admin.auth().getUser(doc.id).catch(() => null))?.email;
@@ -120,6 +142,9 @@ ${preferenceContext}${ingredientsContext}${calorieContext}`
 }
 ${preferenceContext}${ingredientsContext}${calorieContext}`;
 
+      const isEveningDelivery = !isWeekly && schedHour >= 18;
+      const dailyPrompt = isEveningDelivery ? "Tomorrow's meal plan!" : "Today's meal plan!";
+
       const completion = await openai.chat.completions.create({
         model: 'gpt-4o',
         max_tokens: isWeekly ? 4000 : 2500,
@@ -127,7 +152,7 @@ ${preferenceContext}${ingredientsContext}${calorieContext}`;
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: systemContent },
-          { role: 'user', content: isWeekly ? "This week's meal plan!" : "Today's meal plan!" },
+          { role: 'user', content: isWeekly ? "This week's meal plan!" : dailyPrompt },
         ],
       });
 

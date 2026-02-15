@@ -212,6 +212,9 @@ export const ChatSidebar = ({
                             >
                                 <FontAwesomeIcon icon={faCalendarDays} className="text-amber-600" />
                                 <span>Meal Plans</span>
+                                <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-medium">
+                                    Pro ⭐
+                                </span>
                             </Link>
                             <Link 
                                 href={user ? (username ? `/${username}` : "/recipes") : "/explore"}

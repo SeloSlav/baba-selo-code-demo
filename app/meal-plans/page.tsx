@@ -57,6 +57,25 @@ const WEEKDAYS = [
   { value: 6, label: "Saturday" },
 ];
 
+function formatTimeForDisplay(time: string): string {
+  const [h, m] = time.split(":").map(Number);
+  const min = String(m || 0).padStart(2, "0");
+  if (h === 0) return `12:${min} AM`;
+  if (h === 12) return `12:${min} PM`;
+  if ((h ?? 0) < 12) return `${h}:${min} AM`;
+  return `${(h ?? 12) - 12}:${min} PM`;
+}
+
+function getTimezoneLabel(tz: string): string {
+  if (tz === "UTC") return "UTC";
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", { timeZone: tz, timeZoneName: "short" }).formatToParts(new Date());
+    return parts.find((p) => p.type === "timeZoneName")?.value || tz;
+  } catch {
+    return tz;
+  }
+}
+
 const FALLBACK_FUN_FACTS = [
   "Olive oil was used in ancient Olympic games—athletes rubbed it on their skin before competing.",
   "The Mediterranean diet is one of the most studied eating patterns in the world.",
@@ -95,8 +114,15 @@ export default function MealPlansPage() {
   const [mealPlanEnabled, setMealPlanEnabled] = useState(false);
   const [mealPlanTime, setMealPlanTime] = useState("08:00");
   const [mealPlanDay, setMealPlanDay] = useState(6); // Saturday default for weekly
+  const [userTimezone, setUserTimezone] = useState<string>(() => {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    } catch {
+      return "UTC";
+    }
+  });
   const [includeShoppingList, setIncludeShoppingList] = useState(true);
-  const [calorieTarget, setCalorieTarget] = useState<number | "">("");
+  const [calorieTarget, setCalorieTarget] = useState<number | "">(2000);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [sendingNow, setSendingNow] = useState(false);
@@ -104,6 +130,7 @@ export default function MealPlansPage() {
   const [funFacts, setFunFacts] = useState<string[]>([]);
   const [funFactIndex, setFunFactIndex] = useState(0);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [showExamplePrompts, setShowExamplePrompts] = useState(false);
   const [activeTab, setActiveTab] = useState<"configure" | "plans">("configure");
   const [planHistory, setPlanHistory] = useState<{
     id: string;
@@ -129,6 +156,7 @@ export default function MealPlansPage() {
     fetchPlan().then(setPlan);
   }, [user]);
 
+
   useEffect(() => {
     if (!user || effectivePlan !== "pro") return;
     const load = async () => {
@@ -139,11 +167,13 @@ export default function MealPlansPage() {
       if (d?.mealPlanType === "daily" || d?.mealPlanType === "weekly") setMealPlanType(d.mealPlanType);
       if (d?.includeShoppingList != null) setIncludeShoppingList(d.includeShoppingList);
       if (d?.mealPlanCalorieTarget != null && typeof d.mealPlanCalorieTarget === "number" && d.mealPlanCalorieTarget > 0) setCalorieTarget(d.mealPlanCalorieTarget);
+      else if (d && "mealPlanCalorieTarget" in d && d.mealPlanCalorieTarget == null) setCalorieTarget("");
       const s = d?.mealPlanSchedule;
       if (s) {
         setMealPlanEnabled(!!s.enabled);
         setMealPlanTime(s.time || "08:00");
         if (s.dayOfWeek != null) setMealPlanDay(s.dayOfWeek);
+        if (s.timezone) setUserTimezone(s.timezone);
       }
     };
     load();
@@ -222,6 +252,7 @@ export default function MealPlansPage() {
         mealPlanSchedule: {
           enabled: false,
           time: mealPlanTime,
+          timezone: userTimezone,
           ...(mealPlanType === "weekly" && { dayOfWeek: mealPlanDay }),
         },
       });
@@ -250,6 +281,7 @@ export default function MealPlansPage() {
         mealPlanSchedule: {
           enabled: mealPlanEnabled,
           time: mealPlanTime,
+          timezone: userTimezone,
           ...(mealPlanType === "weekly" && { dayOfWeek: mealPlanDay }),
         },
       };
@@ -493,7 +525,7 @@ export default function MealPlansPage() {
                             Active
                           </span>
                           <span className="text-gray-600 text-sm">
-                            Next: {WEEKDAYS[mealPlanDay]?.label || "—"} at {mealPlanTime} UTC
+                            Next: {WEEKDAYS[mealPlanDay]?.label || "—"} at {formatTimeForDisplay(mealPlanTime)} {userTimezone === "UTC" ? "UTC" : `(${getTimezoneLabel(userTimezone)})`}
                             {mealPlanType === "weekly" && " (weekly)"}
                           </span>
                         </>
@@ -656,63 +688,67 @@ export default function MealPlansPage() {
               </div>
             ) : (
             <div className="grid lg:grid-cols-2 gap-8">
-              {/* Left: Preferences + Ingredients */}
-              <div className="space-y-6">
-                <div className="bg-white rounded-2xl border border-amber-100 shadow-lg p-6">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-2">Your preferences</h2>
-                  <p className="text-sm text-gray-500 mb-4">Diet, cuisines, time limits, allergies—in your own words.</p>
-                  <textarea
-                    value={mealPlanPrompt}
-                    onChange={(e) => setMealPlanPrompt(e.target.value)}
-                    placeholder="e.g. Mediterranean, lots of veggies. No dairy. Quick weeknight meals."
-                    className="w-full min-h-[88px] p-4 border border-amber-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-y"
-                    rows={3}
-                  />
-                  <p className="text-xs text-gray-500 mt-2 mb-3">Examples:</p>
-                  <div className="flex flex-wrap gap-2">
+              {/* Left: All preferences in one compact box */}
+              <div className="bg-white rounded-2xl border border-amber-100 shadow-lg p-5">
+                <h2 className="text-base font-semibold text-gray-900 mb-1">Your preferences</h2>
+                <p className="text-xs text-gray-500 mb-3">Diet, cuisines, time limits—in your own words.</p>
+                <textarea
+                  value={mealPlanPrompt}
+                  onChange={(e) => setMealPlanPrompt(e.target.value)}
+                  placeholder="e.g. Mediterranean, lots of veggies. No dairy. Quick weeknight meals."
+                  className="w-full min-h-[64px] p-3 text-sm border border-amber-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-y"
+                  rows={2}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowExamplePrompts(!showExamplePrompts)}
+                  className="mt-1.5 text-xs text-amber-600 hover:text-amber-700 font-medium"
+                >
+                  {showExamplePrompts ? "Hide" : "See"} example prompts
+                </button>
+                {showExamplePrompts && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
                     {EXAMPLE_PROMPTS.map((ex) => (
                       <button
                         key={ex}
                         type="button"
                         onClick={() => setMealPlanPrompt(ex)}
-                        className="px-3 py-1.5 text-xs bg-amber-50 hover:bg-amber-100 text-amber-900 rounded-full border border-amber-200 transition-colors"
+                        className="px-2.5 py-1 text-xs bg-amber-50 hover:bg-amber-100 text-amber-900 rounded-full border border-amber-200 transition-colors"
                       >
                         {ex}
                       </button>
                     ))}
                   </div>
-                </div>
+                )}
 
-                <div className="bg-white rounded-2xl border border-amber-100 shadow-lg p-6">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-2">Ingredients on hand <span className="text-gray-400 font-normal">(optional)</span></h2>
-                  <p className="text-sm text-gray-500 mb-4">What&apos;s in your fridge or pantry? Baba will prioritize recipes that use these.</p>
-                  <textarea
-                    value={ingredientsOnHand}
-                    onChange={(e) => setIngredientsOnHand(e.target.value)}
-                    placeholder="e.g. chicken breast, spinach, lemons, rice"
-                    className="w-full min-h-[60px] p-4 border border-amber-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-y"
-                    rows={2}
-                  />
-                </div>
-
-                <div className="bg-white rounded-2xl border border-amber-100 shadow-lg p-6">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-2">Daily calorie target <span className="text-gray-400 font-normal">(optional)</span></h2>
-                  <p className="text-sm text-gray-500 mb-4">Aim for recipes that fit within this calorie budget per day. Baba will choose lighter or heartier dishes accordingly.</p>
-                  <div className="flex items-center gap-3">
+                <div className="mt-4 pt-4 border-t border-amber-100 grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-medium text-gray-700 block mb-1">Ingredients on hand <span className="text-gray-400">(optional)</span></label>
                     <input
-                      type="number"
-                      min={800}
-                      max={4000}
-                      step={100}
-                      value={calorieTarget === "" ? "" : calorieTarget}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setCalorieTarget(v === "" ? "" : (parseInt(v, 10) || 0));
-                      }}
-                      placeholder="e.g. 2000"
-                      className="w-28 p-3 border border-amber-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      type="text"
+                      value={ingredientsOnHand}
+                      onChange={(e) => setIngredientsOnHand(e.target.value)}
+                      placeholder="chicken, spinach, lemons..."
+                      className="w-full p-2.5 text-sm border border-amber-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                     />
-                    <span className="text-sm text-gray-500">calories/day</span>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-700 block mb-1">Calories/day <span className="text-gray-400">(optional)</span></label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={800}
+                        max={4000}
+                        step={100}
+                        value={calorieTarget === "" ? "" : calorieTarget}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setCalorieTarget(v === "" ? "" : (parseInt(v, 10) || 0));
+                        }}
+                        placeholder="2000"
+                        className="w-20 p-2.5 text-sm border border-amber-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -757,8 +793,11 @@ export default function MealPlansPage() {
                           onChange={(e) => setMealPlanTime(e.target.value)}
                           className="p-2 border border-amber-200 rounded-lg focus:outline-none focus:border-amber-500"
                         />
-                        <span className="text-xs text-gray-500">UTC</span>
+                        <span className="text-xs text-gray-500">{userTimezone === "UTC" ? "UTC" : getTimezoneLabel(userTimezone)}</span>
                       </div>
+                      {mealPlanType === "daily" && parseInt(mealPlanTime?.split(":")[0] || "0", 10) >= 18 && (
+                        <p className="text-xs text-amber-700 mt-1">You&apos;ll get it the night before—wake up ready for breakfast.</p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -768,7 +807,10 @@ export default function MealPlansPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <button
                       type="button"
-                      onClick={() => setMealPlanType("daily")}
+                      onClick={() => {
+                        setMealPlanType("daily");
+                        if (mealPlanTime === "08:00") setMealPlanTime("20:00"); // Optimal: evening = plan for next morning
+                      }}
                       className={`p-4 rounded-xl border-2 text-left transition-all ${
                         mealPlanType === "daily"
                           ? "border-amber-500 bg-amber-50"
@@ -780,7 +822,10 @@ export default function MealPlansPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setMealPlanType("weekly")}
+                      onClick={() => {
+                        setMealPlanType("weekly");
+                        if (mealPlanTime === "20:00") setMealPlanTime("08:00"); // Optimal: Saturday morning = shop Sunday
+                      }}
                       className={`p-4 rounded-xl border-2 text-left transition-all ${
                         mealPlanType === "weekly"
                           ? "border-amber-500 bg-amber-50"
