@@ -108,6 +108,7 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
                             <span>Blog</span>
                         </Link>
                     </li>
+                    <hr />
                     <li className="flex items-center px-4 py-2 rounded-md hover:bg-amber-50 cursor-pointer">
                         <Link href="/meal-plans" className="flex items-center w-full justify-between">
                             <div className="flex items-center">
@@ -163,6 +164,7 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
                     </div>
                 </li>
                 <hr />
+                {/* Primary: core navigation */}
                 <li className="flex items-center px-4 py-2 rounded-md hover:bg-amber-50 cursor-pointer">
                     <Link href="/" className="flex items-center w-full">
                         <FontAwesomeIcon icon={faHome} className="text-amber-700 mr-3" />
@@ -187,6 +189,8 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
                         <span>Blog</span>
                     </Link>
                 </li>
+                <hr />
+                {/* Engagement: plan → earn → redeem */}
                 <li className="flex items-center px-4 py-2 rounded-md hover:bg-amber-50 cursor-pointer">
                     <Link href="/meal-plans" className="flex items-center w-full justify-between">
                         <div className="flex items-center">
@@ -220,6 +224,8 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
                         </span>
                     </Link>
                 </li>
+                <hr />
+                {/* Config */}
                 {/* <li className="flex items-center px-4 py-2 rounded-md hover:bg-amber-50 cursor-pointer">
                     <Link href="/yard" className="flex items-center w-full justify-between">
                         <div className="flex items-center">

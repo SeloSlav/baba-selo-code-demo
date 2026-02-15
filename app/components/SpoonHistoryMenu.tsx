@@ -182,10 +182,11 @@ export const SpoonHistoryMenu: React.FC<SpoonHistoryMenuProps> = ({
   return (
     <div
       ref={menuRef}
-      className="absolute top-full right-0 mt-1 z-40 bg-white rounded-3xl shadow-lg w-80 border border-gray-300 p-3 custom-scrollbar overflow-x-hidden"
-      style={{ maxHeight: 'calc(100vh - 5rem)', overflowY: 'auto' }}
+      className="absolute top-full right-0 mt-1 z-40 bg-white rounded-3xl shadow-lg w-80 border border-amber-200/60 overflow-hidden flex flex-col"
+      style={{ maxHeight: 'calc(100vh - 5rem)' }}
     >
-      <div className="mb-3 px-3">
+      {/* Fixed header */}
+      <div className="flex-shrink-0 p-4 pb-0">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-semibold">Recent Activity</h3>
@@ -213,32 +214,36 @@ export const SpoonHistoryMenu: React.FC<SpoonHistoryMenuProps> = ({
         )}
       </div>
 
-      <hr className="border-t border-gray-200 mb-2" />
+      <hr className="border-t border-gray-200 mx-4 mt-3 flex-shrink-0" />
 
-      <div className="space-y-1">
-        {transactions && transactions.length > 0 ? (
-          transactions
-            .sort((a, b) => b.timestamp.toDate().getTime() - a.timestamp.toDate().getTime())
-            .slice(0, 10) // Show only the 10 most recent transactions
-            .map((transaction) => (
-              <TransactionRow
-                key={`${transaction.timestamp.toDate().getTime()}-${transaction.actionType}-${transaction.targetId || ''}`}
-                transaction={transaction}
-                onTransactionRead={onTransactionRead}
-                showDate="short"
-              />
-            ))
-        ) : (
-          <div className="text-center text-gray-500 py-8">
-            No points history yet. Start interacting with recipes to earn points!
-          </div>
-        )}
+      {/* Scrollable content - scrollbar integrated with rounded corners */}
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden spoon-menu-scrollbar pr-1">
+        <div className="space-y-1 py-2">
+          {transactions && transactions.length > 0 ? (
+            transactions
+              .sort((a, b) => b.timestamp.toDate().getTime() - a.timestamp.toDate().getTime())
+              .slice(0, 10)
+              .map((transaction) => (
+                <TransactionRow
+                  key={`${transaction.timestamp.toDate().getTime()}-${transaction.actionType}-${transaction.targetId || ''}`}
+                  transaction={transaction}
+                  onTransactionRead={onTransactionRead}
+                  showDate="short"
+                />
+              ))
+          ) : (
+            <div className="text-center text-gray-500 py-8 px-4">
+              No points history yet. Start interacting with recipes to earn points!
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="pt-4 border-t border-gray-200 space-y-2">
+      {/* Fixed footer */}
+      <div className="flex-shrink-0 pt-3 pb-4 px-4 border-t border-gray-200">
         <Link 
           href="/spoons" 
-          className="flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-100"
+          className="flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-xl hover:bg-amber-50"
         >
           <span>View Full History</span>
           <span className="text-gray-400">→</span>
