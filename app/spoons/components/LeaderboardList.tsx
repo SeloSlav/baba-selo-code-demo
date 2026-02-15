@@ -16,7 +16,7 @@ interface LeaderboardListProps {
 
 export const LeaderboardList: React.FC<LeaderboardListProps> = ({ leaderboard, currentUserId }) => {
   return (
-    <div className="bg-white rounded-3xl shadow-lg border border-gray-300 p-6 mb-8">
+    <div className="bg-white rounded-3xl shadow-lg border border-amber-100 p-6 mb-8 shadow-amber-900/5">
       <h2 className="text-xl font-semibold mb-6">Global Leaderboard</h2>
       <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
         {leaderboard.length > 0 ? (
@@ -24,7 +24,7 @@ export const LeaderboardList: React.FC<LeaderboardListProps> = ({ leaderboard, c
             {leaderboard.map((entry, index) => (
               <div
                 key={entry.userId}
-                className="flex items-center justify-between p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
+                className="flex items-center justify-between p-4 rounded-xl bg-amber-50/50 hover:bg-amber-50 transition-colors"
               >
                 <div className="flex items-center">
                   <div className="w-8 h-8 rounded-full flex items-center justify-center"
@@ -57,7 +57,7 @@ export const LeaderboardList: React.FC<LeaderboardListProps> = ({ leaderboard, c
                         ) : (
                           <Link 
                             href={`/${entry.username}`}
-                            className="hover:text-purple-600 transition-colors"
+                            className="hover:text-amber-600 transition-colors"
                           >
                             {entry.username}
                           </Link>
@@ -66,27 +66,27 @@ export const LeaderboardList: React.FC<LeaderboardListProps> = ({ leaderboard, c
                       {entry.userId === currentUserId && entry.username === 'Anonymous Chef' && (
                         <Link
                           href="/settings"
-                          className="inline-flex items-center gap-1 text-xs px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full hover:bg-yellow-200 transition-colors"
+                          className="inline-flex items-center gap-1 text-xs px-3 py-1 bg-amber-100 text-amber-700 rounded-full hover:bg-amber-200 transition-colors"
                         >
                           <FontAwesomeIcon icon={faGear} className="text-xs" />
                           <span>Set Username</span>
                         </Link>
                       )}
                       {entry.userId === currentUserId && entry.username !== 'Anonymous Chef' && (
-                        <div className="text-xs text-yellow-600">That's you!</div>
+                        <div className="text-xs text-amber-600">That's you!</div>
                       )}
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center">
-                  <FontAwesomeIcon icon={faSpoon} className="text-yellow-600 mr-2" />
+                  <FontAwesomeIcon icon={faSpoon} className="text-amber-600 mr-2" />
                   <span className="font-bold">{entry.totalPoints.toLocaleString()}</span>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="text-center text-gray-500 py-8">
+          <div className="text-center text-amber-800/70 py-8">
             No spoon points recorded yet. Start interacting with recipes to earn points!
           </div>
         )}

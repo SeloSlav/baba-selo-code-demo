@@ -474,14 +474,14 @@ export const ChatWindow = forwardRef(
     };
 
     return (
-      <div className="flex flex-col h-screen w-full">
+      <div className="flex flex-col h-screen w-full bg-gradient-to-b from-amber-50/30 to-transparent">
         <div
           ref={messagesContainerRef}
           className={`flex-grow overflow-y-auto ml-4 transition-all duration-300 ${sidebarMarginClass} ${isImageUploadOpen ? 'pointer-events-none opacity-50' : ''}`}
         >
           <div className="p-6">
             <div className="flex justify-center mb-6">
-              <img src="/baba.png" alt="Baba" className="w-32 h-32" />
+              <img src="/baba-removebg.png" alt="Baba" className="w-32 h-32" />
             </div>
 
             <div className="text-center text-2xl font-semibold mb-4">
@@ -516,7 +516,7 @@ export const ChatWindow = forwardRef(
                   }}
                   onBlur={handleInputBlur}
                   placeholder="Chat with Baba Selo"
-                  className="w-full p-3 mt-1 rounded-t-3xl focus:outline-none resize-none text-black bg-gray-100 placeholder-gray-400 custom-scrollbar"
+                  className="w-full p-3 mt-1 rounded-t-3xl focus:outline-none resize-none text-black bg-white placeholder-amber-900/50 border-2 border-amber-200 focus:border-amber-400 custom-scrollbar"
                   style={{
                     minHeight: "3rem",
                     maxHeight: "8.75rem",
@@ -526,35 +526,35 @@ export const ChatWindow = forwardRef(
                     overflowWrap: "break-word",
                   }}
                 />
-                <div className="flex items-center justify-between bg-gray-100 p-2 rounded-b-3xl">
+                <div className="flex items-center justify-between bg-white p-2 rounded-b-3xl border-2 border-t-0 border-amber-200">
                   <div className="flex items-center gap-2">
                     <button
-                      className="p-2 bg-gray-200 rounded-md hover:bg-gray-300 flex items-center justify-center"
+                      className="p-2 rounded-md hover:bg-amber-100 flex items-center justify-center"
                       style={{ background: "transparent" }}
                       onClick={() => setIsImageUploadOpen(true)}
                     >
-                      <FontAwesomeIcon icon={faCamera} className="text-black" />
+                      <FontAwesomeIcon icon={faCamera} className="text-amber-900" />
                     </button>
                     <button
-                      className="p-2 bg-gray-200 rounded-md hover:bg-gray-300 flex items-center justify-center"
+                      className="p-2 rounded-md hover:bg-amber-100 flex items-center justify-center"
                       style={{ background: "transparent" }}
                       onClick={() => setIsDrawImageOpen(true)}
                     >
-                      <FontAwesomeIcon icon={faMagicWandSparkles} className="text-black" />
+                      <FontAwesomeIcon icon={faMagicWandSparkles} className="text-amber-900" />
                     </button>
                     <button
-                      className="p-2 bg-gray-200 rounded-md hover:bg-gray-300 flex items-center justify-center"
+                      className="p-2 rounded-md hover:bg-amber-100 flex items-center justify-center"
                       style={{ background: "transparent" }}
                       onClick={() => setIsTimerOpen(true)}
                     >
-                      <FontAwesomeIcon icon={faClock} className="text-black" />
+                      <FontAwesomeIcon icon={faClock} className="text-amber-900" />
                     </button>
                     <button
-                      className="p-2 bg-gray-200 rounded-md hover:bg-gray-300 flex items-center justify-center"
+                      className="p-2 rounded-md hover:bg-amber-100 flex items-center justify-center"
                       style={{ background: "transparent" }}
                       onClick={() => setIsVoiceRecordOpen(true)}
                     >
-                      <FontAwesomeIcon icon={faMicrophone} className="text-black" />
+                      <FontAwesomeIcon icon={faMicrophone} className="text-amber-900" />
                     </button>
                   </div>
                   <button
@@ -562,8 +562,8 @@ export const ChatWindow = forwardRef(
                     disabled={message.trim() === "" || loading}
                     className={`rounded-full w-10 h-10 flex items-center justify-center
                       ${message.trim() === "" || loading
-                        ? "bg-gray-300 text-gray-600 cursor-not-allowed"
-                        : "bg-black text-white hover:bg-gray-800"
+                        ? "bg-amber-200 text-amber-700/60 cursor-not-allowed"
+                        : "bg-amber-600 text-white hover:bg-amber-700"
                       }`}
                     title={message.trim() === "" ? "Message is empty" : ""}
                   >
@@ -587,7 +587,7 @@ export const ChatWindow = forwardRef(
         {windowWidth !== null && windowWidth < 768 && showScrollButton && (
           <button
             onClick={scrollToBottom}
-            className="fixed left-1/2 -translate-x-1/2 bottom-8 bg-black text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg z-50"
+            className="fixed left-1/2 -translate-x-1/2 bottom-8 bg-amber-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg shadow-amber-900/20 z-50 hover:bg-amber-700"
           >
             <FontAwesomeIcon icon={faArrowDown} className="text-lg" />
           </button>
@@ -606,7 +606,7 @@ export const ChatWindow = forwardRef(
               onFocus={handleInputFocus}
               onBlur={handleInputBlur}
               placeholder="Chat with Baba Selo"
-              className="w-full p-3 mt-1 rounded-t-3xl focus:outline-none resize-none text-black bg-gray-100 placeholder-gray-400 custom-scrollbar"
+              className="w-full p-3 mt-1 rounded-t-3xl focus:outline-none resize-none text-black bg-white placeholder-amber-900/40 border border-amber-100 custom-scrollbar"
               style={{
                 minHeight: "3rem",
                 maxHeight: "8.75rem",
@@ -616,44 +616,44 @@ export const ChatWindow = forwardRef(
                 overflowWrap: "break-word",
               }}
             />
-            <div className="flex items-center justify-between bg-gray-100 p-2 rounded-b-3xl">
+            <div className="flex items-center justify-between bg-white p-2 rounded-b-3xl border border-t-0 border-amber-100">
               <div className="flex items-center gap-2">
                 <button
-                  className="p-2 bg-gray-200 rounded-md hover:bg-gray-300 flex items-center justify-center"
+                  className="p-2 rounded-md hover:bg-amber-100 flex items-center justify-center"
                   style={{ background: "transparent" }}
                   onClick={() => setIsImageUploadOpen(true)}
                 >
-                  <FontAwesomeIcon icon={faPaperclip} className="text-black" />
+                  <FontAwesomeIcon icon={faPaperclip} className="text-amber-900" />
                 </button>
                 <button
-                  className="p-2 bg-gray-200 rounded-md hover:bg-gray-300 flex items-center justify-center"
+                  className="p-2 rounded-md hover:bg-amber-100 flex items-center justify-center"
                   style={{ background: "transparent" }}
                   onClick={() => setIsDrawImageOpen(true)}
                 >
-                  <FontAwesomeIcon icon={faMagicWandSparkles} className="text-black" />
+                  <FontAwesomeIcon icon={faMagicWandSparkles} className="text-amber-900" />
                 </button>
                 <button
-                  className="p-2 bg-gray-200 rounded-md hover:bg-gray-300 flex items-center justify-center"
+                  className="p-2 rounded-md hover:bg-amber-100 flex items-center justify-center"
                   style={{ background: "transparent" }}
                   onClick={() => setIsTimerOpen(true)}
                 >
-                  <FontAwesomeIcon icon={faClock} className="text-black" />
+                  <FontAwesomeIcon icon={faClock} className="text-amber-900" />
                 </button>
                 <button
-                  className="p-2 bg-gray-200 rounded-md hover:bg-gray-300 flex items-center justify-center"
+                  className="p-2 rounded-md hover:bg-amber-100 flex items-center justify-center"
                   style={{ background: "transparent" }}
                   onClick={() => setIsVoiceRecordOpen(true)}
                 >
-                  <FontAwesomeIcon icon={faMicrophone} className="text-black" />
+                  <FontAwesomeIcon icon={faMicrophone} className="text-amber-900" />
                 </button>
               </div>
               <button
                 onClick={() => sendMessage(message)}
                 disabled={message.trim() === "" || loading}
-                className={`rounded-full w-10 h-10 flex items-center justify-center
+                  className={`rounded-full w-10 h-10 flex items-center justify-center
                   ${message.trim() === "" || loading
-                    ? "bg-gray-300 text-gray-600 cursor-not-allowed"
-                    : "bg-black text-white hover:bg-gray-800"
+                    ? "bg-amber-200 text-amber-700/60 cursor-not-allowed"
+                    : "bg-amber-600 text-white hover:bg-amber-700"
                   }`}
                 title={message.trim() === "" ? "Message is empty" : ""}
               >

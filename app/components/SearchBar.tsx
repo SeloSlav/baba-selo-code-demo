@@ -12,6 +12,7 @@ interface SearchBarProps {
   totalCount?: number;
   showCount?: boolean;
   isExplorePage?: boolean;
+  placeholder?: string;
 }
 
 export const SearchBar = ({ 
@@ -22,7 +23,8 @@ export const SearchBar = ({
   resultCount,
   totalCount = 0,
   showCount = true,
-  isExplorePage = false
+  isExplorePage = false,
+  placeholder = "Search by title, cuisine, or ingredients..."
 }: SearchBarProps) => {
   return (
     <div className="space-y-2">
@@ -31,25 +33,25 @@ export const SearchBar = ({
           type="text"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Search by title, cuisine, or ingredients..."
-          className="w-full p-4 pr-12 border border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          placeholder={placeholder}
+          className="w-full p-4 pr-12 border border-amber-200 rounded-xl focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 bg-white"
           aria-label="Search recipes"
           disabled={isPageLoading}
         />
         <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
           {isPageLoading || isLoading ? (
-            <div className="w-4 h-4 border-2 border-gray-500 border-t-transparent rounded-full animate-spin"></div>
+            <div className="w-4 h-4 border-2 border-amber-600 border-t-transparent rounded-full animate-spin"></div>
           ) : (
             <FontAwesomeIcon
               icon={faSearch}
-              className="text-gray-400"
+              className="text-amber-600/70"
               aria-hidden="true"
             />
           )}
         </div>
       </div>
       {showCount && (
-        <div className="text-sm text-gray-500 flex items-center gap-2">
+        <div className="text-sm text-amber-900/70 flex items-center gap-2">
           {isPageLoading ? (
             <span>10,000+ recipes made with love ❤️</span>
           ) : isLoading ? (
@@ -65,7 +67,7 @@ export const SearchBar = ({
             <div className="group relative">
               <FontAwesomeIcon 
                 icon={faCircleInfo} 
-                className="text-gray-400 hover:text-gray-600 cursor-help"
+                className="text-amber-600/70 hover:text-amber-700 cursor-help"
               />
               <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 p-3 bg-black text-white text-xs rounded-lg shadow-lg z-50">
                 <div className="relative">

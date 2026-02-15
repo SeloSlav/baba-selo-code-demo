@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useAuth } from "../context/AuthContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faThumbtack, faTrashAlt, faEllipsisH, faPlus, faPen } from "@fortawesome/free-solid-svg-icons";
@@ -136,10 +137,10 @@ export const ChatList: React.FC<ChatListProps> = ({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-gray-600 text-sm font-semibold">Chats</h2>
+        <h2 className="text-amber-900/80 text-sm font-semibold">Chats</h2>
         <button
           onClick={onNewChat}
-          className="p-1.5 rounded-md hover:bg-gray-200 text-gray-600"
+          className="p-1.5 rounded-md hover:bg-amber-100 text-amber-800"
           aria-label="New chat"
         >
           <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
@@ -147,12 +148,12 @@ export const ChatList: React.FC<ChatListProps> = ({
       </div>
 
       {loading ? (
-        <div className="text-sm text-gray-500">Loading chats...</div>
+        <div className="text-sm text-amber-800/70">Loading chats...</div>
       ) : (
         <>
           {isPro && pinnedChats.length > 0 && (
             <div>
-              <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+              <h3 className="text-xs font-medium text-amber-800/70 uppercase tracking-wide mb-2">
                 Pinned
               </h3>
               <ul className="space-y-1">
@@ -181,7 +182,7 @@ export const ChatList: React.FC<ChatListProps> = ({
 
           <div>
             {isPro && pinnedChats.length > 0 && (
-              <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+              <h3 className="text-xs font-medium text-amber-800/70 uppercase tracking-wide mb-2">
                 Recent
               </h3>
             )}
@@ -209,7 +210,7 @@ export const ChatList: React.FC<ChatListProps> = ({
           </div>
 
           {chats.length === 0 && (
-            <div className="text-center px-4 py-5 bg-gray-50/50 rounded-xl border border-gray-200/80">
+            <div className="text-center px-4 py-5 bg-amber-50/60 rounded-xl border border-amber-100">
               <div className="text-xl mb-1.5">💬</div>
               <p className="font-medium text-gray-700 text-sm">No chats yet</p>
               <p className="text-gray-500 text-xs mt-0.5">
@@ -255,10 +256,13 @@ function ChatItem({
   isPro: boolean;
 }) {
   const menuRef = useRef<HTMLLIElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuPortalRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const editValueRef = useRef(chat.title);
   const closedRef = useRef(false);
   const [editValue, setEditValue] = useState(chat.title);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const isEditing = editingChatId === chat.id;
 
   editValueRef.current = editValue;
@@ -274,9 +278,23 @@ function ChatItem({
   }, [isEditing, chat.title]);
 
   useEffect(() => {
+    if (menuOpen && triggerRef.current && typeof document !== "undefined") {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setMenuPosition({
+        top: rect.bottom + 4,
+        left: rect.right - 176, // w-44 = 176px, align right edge with trigger
+      });
+    }
+  }, [menuOpen]);
+
+  useEffect(() => {
     if (!menuOpen) return;
     const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        menuRef.current && !menuRef.current.contains(target) &&
+        menuPortalRef.current && !menuPortalRef.current.contains(target)
+      ) {
         onMenuClose();
       }
     };
@@ -320,61 +338,73 @@ function ChatItem({
               if (e.key === "Escape") onCancelEdit();
             }}
             onBlur={handleRenameSubmit}
-            className="w-full px-2 py-1 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-black focus:border-black"
+            className="w-full px-2 py-1 text-sm border border-amber-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
           />
         </div>
       ) : (
         <button
+          ref={triggerRef}
           onClick={onSelect}
-          className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center justify-between gap-2 transition-colors ${
-            isActive ? "bg-gray-200 font-medium" : "hover:bg-gray-100"
+          className={`w-full text-left px-3 py-2 pr-8 rounded-lg text-sm flex items-center gap-2 transition-colors relative min-h-[2.25rem] ${
+            isActive ? "bg-amber-200/60 font-medium" : "hover:bg-amber-50"
           }`}
         >
           <span className="truncate flex-1">{chat.title}</span>
-          <FontAwesomeIcon
-            icon={faEllipsisH}
-            className="w-3.5 h-3.5 text-gray-400 shrink-0"
+          <span
+            className="absolute top-2 right-2 p-1 rounded hover:bg-amber-100/80 transition-colors"
             onClick={(e) => {
               e.stopPropagation();
               onMenuToggle();
             }}
-          />
+          >
+            <FontAwesomeIcon
+              icon={faEllipsisH}
+              className="w-3.5 h-3.5 text-amber-700/70"
+            />
+          </span>
         </button>
       )}
 
-      {menuOpen && (
-        <div className="absolute right-0 top-full mt-1 z-40 bg-white rounded-xl shadow-lg w-44 border border-gray-200 p-2">
-          <button
-            className="flex items-center w-full px-3 py-2 rounded-lg hover:bg-gray-100 text-left text-sm"
-            onClick={onStartEdit}
+      {menuOpen &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={menuPortalRef}
+            className="fixed z-[9999] bg-white rounded-xl shadow-lg w-44 border border-amber-100 p-2"
+            style={{ top: menuPosition.top, left: menuPosition.left }}
           >
-            <FontAwesomeIcon icon={faPen} className="w-4 h-4 mr-2 text-gray-400" />
-            Rename
-          </button>
-          <button
-            className="flex items-center w-full px-3 py-2 rounded-lg hover:bg-gray-100 text-left text-sm disabled:opacity-50"
-            onClick={onPinUnpin}
-            disabled={!isPro || loadingPin}
-          >
-            {loadingPin ? (
-              <div className="w-4 h-4 mr-2 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <FontAwesomeIcon
-                icon={faThumbtack}
-                className={`w-4 h-4 mr-2 ${chat.pinned ? "text-yellow-500" : "text-gray-400"}`}
-              />
-            )}
-            {chat.pinned ? "Unpin" : "Pin"}
-          </button>
-          <button
-            className="flex items-center w-full px-3 py-2 rounded-lg hover:bg-gray-100 text-left text-sm text-red-500"
-            onClick={onDelete}
-          >
-            <FontAwesomeIcon icon={faTrashAlt} className="w-4 h-4 mr-2" />
-            Delete
-          </button>
-        </div>
-      )}
+            <button
+              className="flex items-center w-full px-3 py-2 rounded-lg hover:bg-amber-50 text-left text-sm"
+              onClick={onStartEdit}
+            >
+              <FontAwesomeIcon icon={faPen} className="w-4 h-4 mr-2 text-amber-700/70" />
+              Rename
+            </button>
+            <button
+              className="flex items-center w-full px-3 py-2 rounded-lg hover:bg-amber-50 text-left text-sm disabled:opacity-50"
+              onClick={onPinUnpin}
+              disabled={!isPro || loadingPin}
+            >
+              {loadingPin ? (
+                <div className="w-4 h-4 mr-2 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <FontAwesomeIcon
+                  icon={faThumbtack}
+                  className={`w-4 h-4 mr-2 ${chat.pinned ? "text-amber-600" : "text-amber-600/70"}`}
+                />
+              )}
+              {chat.pinned ? "Unpin" : "Pin"}
+            </button>
+            <button
+              className="flex items-center w-full px-3 py-2 rounded-lg hover:bg-amber-50 text-left text-sm text-red-500"
+              onClick={onDelete}
+            >
+              <FontAwesomeIcon icon={faTrashAlt} className="w-4 h-4 mr-2" />
+              Delete
+            </button>
+          </div>,
+          document.body
+        )}
     </li>
   );
 }

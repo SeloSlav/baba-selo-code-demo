@@ -10,7 +10,7 @@ const Login = () => {
   const { signInWithGoogle, authError } = useAuth();
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-white">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-amber-50/80 to-white">
       {/* Baba logo */}
       <Image
         src="/baba.png"
@@ -51,7 +51,7 @@ const Login = () => {
           href="/terms" 
           target="_blank"
           rel="noopener noreferrer"
-          className="text-blue-600 hover:text-blue-800 underline"
+          className="text-amber-600 hover:text-amber-800 underline"
         >
           Terms of Service
         </a>{' '}
@@ -60,7 +60,7 @@ const Login = () => {
           href="/privacy" 
           target="_blank"
           rel="noopener noreferrer"
-          className="text-blue-600 hover:text-blue-800 underline"
+          className="text-amber-600 hover:text-amber-800 underline"
         >
           Privacy Policy
         </a>

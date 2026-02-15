@@ -43,13 +43,13 @@ export const RecipeNotes = ({
                 setHasNoteChanges(true);
               }}
               placeholder="Add your recipe notes here..."
-              className="w-full min-h-[150px] p-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y"
+              className="w-full min-h-[150px] p-4 border border-amber-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-y bg-amber-50/30"
             />
             {hasNoteChanges && (
               <button
                 onClick={handleSaveNotes}
                 disabled={savingNotes}
-                className="absolute top-2 right-2 bg-blue-500 text-white px-3 py-1 rounded-md text-sm hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="absolute top-2 right-2 bg-amber-600 text-white px-3 py-1 rounded-md text-sm hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {savingNotes ? (
                   <div className="flex items-center">
@@ -63,11 +63,11 @@ export const RecipeNotes = ({
             )}
           </>
         ) : recipe.recipeNotes ? (
-          <div className="bg-gray-100 p-4 rounded-lg whitespace-pre-wrap">
+          <div className="bg-amber-50/60 p-4 rounded-lg whitespace-pre-wrap border border-amber-100">
             {recipe.recipeNotes}
           </div>
         ) : (
-          <div className="text-gray-500 italic">No notes added yet.</div>
+          <div className="text-amber-800/70 italic">No notes added yet.</div>
         )}
       </div>
     </div>

@@ -13,23 +13,27 @@
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #d1d5db;
+    background: #fcd34d;
     border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #9ca3af;
+    background: #f59e0b;
 }
 
 /* For Firefox */
 * {
     scrollbar-width: thin;
-    scrollbar-color: #d1d5db transparent;
+    scrollbar-color: #fcd34d transparent;
 }
 
 :root {
-  --background: #ffffff;
+  --background: #fffbeb;
   --foreground: #171717;
+  --accent: #d97706;
+  --accent-hover: #b45309;
+  --accent-muted: #fef3c7;
+  --border-warm: #fde68a;
 }
 
 body {
@@ -94,7 +98,7 @@ body {
   width: 8px;
   height: 8px;
   margin: 0 4px;
-  background-color: #B44F1B;
+  background-color: #d97706;
   border-radius: 50%;
   display: inline-block;
   animation: bounceSequential 1.5s infinite; /* Reduced duration: 1.5s */

@@ -1,4 +1,7 @@
-import React, { useEffect, useState } from "react";
+"use client";
+
+import React, { useEffect, useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import Image from "next/image";
 import { db } from "../firebase/firebase";
@@ -22,7 +25,9 @@ export const RecipeList = () => {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [newRecipeIndex, setNewRecipeIndex] = useState<number | null>(null); // Track the index of the new recipe for animation
   const [menuOpen, setMenuOpen] = useState<string | null>(null); // Track which recipe's menu is open
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [loadingPinAction, setLoadingPinAction] = useState<string | null>(null);
+  const menuPortalRef = useRef<HTMLDivElement>(null);
   const { showDeletePopup } = useDeleteRecipe();
 
   useEffect(() => {
@@ -92,9 +97,34 @@ export const RecipeList = () => {
     };
   }, [user]);
 
-  const handleMenuToggle = (id: string) => {
-    setMenuOpen(menuOpen === id ? null : id);
+  const handleMenuToggle = (id: string, triggerEl?: HTMLElement) => {
+    if (menuOpen === id) {
+      setMenuOpen(null);
+      setMenuPosition(null);
+      return;
+    }
+    if (triggerEl) {
+      const rect = triggerEl.getBoundingClientRect();
+      setMenuPosition({ top: rect.bottom + 4, left: rect.right - 192 }); // w-48 = 192px
+    }
+    setMenuOpen(id);
   };
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      const trigger = document.querySelector(`[data-recipe-menu-trigger="${menuOpen}"]`);
+      const clickedTrigger = trigger?.contains(target);
+      const clickedMenu = menuPortalRef.current?.contains(target);
+      if (!clickedTrigger && !clickedMenu) {
+        setMenuOpen(null);
+        setMenuPosition(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [menuOpen]);
 
   const handlePinUnpin = async (id: string, isPinned: boolean) => {
     try {
@@ -105,6 +135,7 @@ export const RecipeList = () => {
         lastPinnedAt: !isPinned ? new Date().toISOString() : null
       });
       setMenuOpen(null);
+      setMenuPosition(null);
     } catch (error) {
       console.error("Error toggling pin: ", error);
     } finally {
@@ -126,47 +157,56 @@ export const RecipeList = () => {
     });
   };
 
-  const renderMenu = (id: string, isPinned: boolean, recipeTitle: string) => {
-    const isPinning = loadingPinAction === id;
-    
-    return (
-      <div className="absolute right-0 z-40 bg-white rounded-3xl shadow-lg w-48 border border-gray-300 p-3">
+  const renderMenuPortal = () => {
+    if (!menuOpen || !menuPosition || typeof document === "undefined") return null;
+    const recipe = [...pinnedRecipes, ...recipes].find((r) => r.id === menuOpen);
+    if (!recipe) return null;
+    const isPinning = loadingPinAction === recipe.id;
+
+    return createPortal(
+      <div
+        ref={menuPortalRef}
+        className="fixed z-[9999] bg-white rounded-3xl shadow-lg w-48 border border-amber-100 p-3"
+        style={{ top: menuPosition.top, left: menuPosition.left }}
+      >
         <ul className="space-y-1">
           <li
-            className="flex items-center px-4 py-2 rounded-md hover:bg-gray-100 cursor-pointer disabled:opacity-50"
-            onClick={() => !isPinning && handlePinUnpin(id, isPinned)}
+            className="flex items-center px-4 py-2 rounded-md hover:bg-amber-50 cursor-pointer disabled:opacity-50"
+            onClick={() => !isPinning && handlePinUnpin(recipe.id, recipe.pinned)}
           >
             {isPinning ? (
               <>
                 <div className="w-4 h-4 mr-3">
-                  <div className="w-full h-full border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                  <div className="w-full h-full border-2 border-amber-600 border-t-transparent rounded-full animate-spin"></div>
                 </div>
-                <span>{isPinned ? 'Pinning...' : 'Unpinning...'}</span>
+                <span>{recipe.pinned ? "Unpinning..." : "Pinning..."}</span>
               </>
             ) : (
               <>
                 <FontAwesomeIcon
                   icon={faThumbtack}
                   className={`w-4 h-4 mr-3 transform transition-all duration-300 ${
-                    isPinned ? 'rotate-[45deg] scale-110 text-yellow-500' : 'hover:scale-110 text-[#5d5d5d]'
+                    recipe.pinned ? "rotate-[45deg] scale-110 text-amber-600" : "hover:scale-110 text-amber-600/70"
                   }`}
                 />
-                <span>{isPinned ? "Unpin Recipe" : "Pin Recipe"}</span>
+                <span>{recipe.pinned ? "Unpin Recipe" : "Pin Recipe"}</span>
               </>
             )}
           </li>
           <li
-            className="flex items-center px-4 py-2 rounded-md hover:bg-gray-100 cursor-pointer text-red-500"
+            className="flex items-center px-4 py-2 rounded-md hover:bg-amber-50 cursor-pointer text-red-500"
             onClick={() => {
-              handleDelete(id, recipeTitle);
+              handleDelete(recipe.id, recipe.recipeTitle);
               setMenuOpen(null);
+              setMenuPosition(null);
             }}
           >
             <FontAwesomeIcon icon={faTrashAlt} className="w-4 h-4 mr-3" />
             <span>Delete recipe</span>
           </li>
         </ul>
-      </div>
+      </div>,
+      document.body
     );
   };
 
@@ -175,14 +215,13 @@ export const RecipeList = () => {
       {user ? (
         <>
           <div>
-            <h2 className="text-gray-600 text-sm font-semibold pb-2 border-b">
+            <h2 className="text-amber-900/80 text-sm font-semibold pb-2 border-b border-amber-100">
               Pinned Recipes
             </h2>
             {pinnedRecipes.map((recipe, index) => (
               <div
                 key={recipe.id}
-                className={`relative group p-3 mt-2 rounded-md min-h-[88px] overflow-hidden ${!recipe.imageURL ? "bg-yellow-200 hover:bg-yellow-300" : ""}`}
-                onMouseLeave={() => setMenuOpen(null)}
+                className={`relative group p-3 mt-2 rounded-md min-h-[88px] overflow-hidden ${!recipe.imageURL ? "bg-amber-100 hover:bg-amber-200/80" : ""}`}
               >
                 {recipe.imageURL && (
                   <>
@@ -200,33 +239,39 @@ export const RecipeList = () => {
                   </>
                 )}
 
+                <button
+                  data-recipe-menu-trigger={recipe.id}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleMenuToggle(recipe.id, e.currentTarget);
+                  }}
+                  className={`absolute top-2 right-2 z-20 p-1.5 rounded-full transition-opacity ${
+                    recipe.imageURL
+                      ? "text-white/90 hover:text-white hover:bg-white/20"
+                      : "text-amber-700/70 hover:bg-amber-100"
+                  } group-hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100`}
+                >
+                  <FontAwesomeIcon icon={faEllipsisH} className="w-4 h-4" />
+                </button>
+
                 <Link href={`/recipe/${recipe.id}`} passHref>
                   <div className="relative z-10">
                     <div
-                      className={`flex justify-between items-center ${recipe.imageURL
+                      className={`flex justify-between items-center pr-8 ${recipe.imageURL
                         ? "text-white font-bold text-shadow [text-shadow:_0_2px_4px_rgb(0_0_0_/_0.8)]"
                         : "text-black"
                       }`}
                     >
                       {recipe.recipeTitle}
-                      <FontAwesomeIcon
-                        icon={faEllipsisH}
-                        className="ml-4 group-hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleMenuToggle(recipe.id);
-                        }}
-                      />
                     </div>
                   </div>
                 </Link>
-
-                {menuOpen === recipe.id && renderMenu(recipe.id, recipe.pinned, recipe.recipeTitle)}
               </div>
             ))}
             {pinnedRecipes.length === 0 && (
-              <div className="text-center px-6 py-5 bg-gray-50/50 rounded-xl border border-gray-200/80 mt-3 backdrop-blur-sm">
+              <div className="text-center px-6 py-5 bg-amber-50/60 rounded-xl border border-amber-100 mt-3 backdrop-blur-sm">
                 <div className="text-xl mb-1.5">📌</div>
                 <p className="font-medium text-gray-700">No pinned recipes yet</p>
                 <p className="text-gray-500 text-sm mt-0.5">Pin your favorites for quick access</p>
@@ -235,14 +280,13 @@ export const RecipeList = () => {
           </div>
 
           <div>
-            <h2 className="text-gray-600 text-sm font-semibold pb-2 border-b">
+            <h2 className="text-amber-900/80 text-sm font-semibold pb-2 border-b border-amber-100">
               Recently Saved Recipes
             </h2>
             {recipes.map((recipe, index) => (
               <div
                 key={recipe.id}
-                className={`relative group p-3 mt-2 rounded-md min-h-[88px] overflow-hidden ${!recipe.imageURL ? "bg-pink-200 hover:bg-pink-300" : ""}`}
-                onMouseLeave={() => setMenuOpen(null)}
+                className={`relative group p-3 mt-2 rounded-md min-h-[88px] overflow-hidden ${!recipe.imageURL ? "bg-amber-50 hover:bg-amber-100" : ""}`}
               >
                 {recipe.imageURL && (
                   <>
@@ -260,42 +304,50 @@ export const RecipeList = () => {
                   </>
                 )}
 
+                <button
+                  data-recipe-menu-trigger={recipe.id}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleMenuToggle(recipe.id, e.currentTarget);
+                  }}
+                  className={`absolute top-2 right-2 z-20 p-1.5 rounded-full transition-opacity ${
+                    recipe.imageURL
+                      ? "text-white/90 hover:text-white hover:bg-white/20"
+                      : "text-amber-700/70 hover:bg-amber-100"
+                  } group-hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100`}
+                >
+                  <FontAwesomeIcon icon={faEllipsisH} className="w-4 h-4" />
+                </button>
+
                 <Link href={`/recipe/${recipe.id}`} passHref>
                   <div className="relative z-10">
                     <div
-                      className={`flex justify-between items-center ${recipe.imageURL
+                      className={`flex justify-between items-center pr-8 ${recipe.imageURL
                         ? "text-white font-bold text-shadow [text-shadow:_0_2px_4px_rgb(0_0_0_/_0.8)]"
                         : "text-black"
                       }`}
                     >
                       {recipe.recipeTitle}
-                      <FontAwesomeIcon
-                        icon={faEllipsisH}
-                        className="ml-4 group-hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleMenuToggle(recipe.id);
-                        }}
-                      />
                     </div>
                   </div>
                 </Link>
-
-                {menuOpen === recipe.id && renderMenu(recipe.id, recipe.pinned, recipe.recipeTitle)}
               </div>
             ))}
             {recipes.length === 0 && (
-              <div className="text-center px-6 py-5 bg-gray-50/50 rounded-xl border border-gray-200/80 mt-3 backdrop-blur-sm">
+              <div className="text-center px-6 py-5 bg-amber-50/60 rounded-xl border border-amber-100 mt-3 backdrop-blur-sm">
                 <div className="text-xl mb-1.5">📝</div>
                 <p className="font-medium text-gray-700">No recipes saved yet</p>
                 <p className="text-gray-500 text-sm mt-0.5">Your culinary journey starts here</p>
               </div>
             )}
           </div>
+
+          {renderMenuPortal()}
         </>
       ) : (
-        <div className="bg-gradient-to-b from-purple-50 to-white rounded-xl border border-purple-100 p-6 shadow-sm">
+        <div className="bg-gradient-to-b from-amber-50 to-white rounded-xl border border-amber-100 p-6 shadow-sm">
           <div className="max-w-[260px] mx-auto">
             <div className="text-center mb-4">
               <div className="text-2xl mb-2">👩‍🍳</div>
@@ -308,21 +360,21 @@ export const RecipeList = () => {
             </p>
             <ul className="space-y-2 text-sm text-gray-700 mb-5 text-left">
               <li className="flex gap-2.5">
-                <span className="text-purple-500 mt-0.5 shrink-0">•</span>
+                <span className="text-amber-600 mt-0.5 shrink-0">•</span>
                 <span>Save unlimited recipes</span>
               </li>
               <li className="flex gap-2.5">
-                <span className="text-purple-500 mt-0.5 shrink-0">•</span>
+                <span className="text-amber-600 mt-0.5 shrink-0">•</span>
                 <span>Pin favorites for quick access</span>
               </li>
               <li className="flex gap-2.5">
-                <span className="text-purple-500 mt-0.5 shrink-0">•</span>
+                <span className="text-amber-600 mt-0.5 shrink-0">•</span>
                 <span>Share your culinary creations</span>
               </li>
             </ul>
             <Link 
               href="/login" 
-              className="block w-full text-center py-3 px-6 bg-gray-900 text-white font-semibold rounded-lg hover:bg-gray-800 active:scale-[0.98] transition-all shadow-md hover:shadow-lg"
+              className="block w-full text-center py-3 px-6 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-700 active:scale-[0.98] transition-all shadow-md shadow-amber-900/20 hover:shadow-lg hover:shadow-amber-900/25"
             >
               Get Started Free
             </Link>

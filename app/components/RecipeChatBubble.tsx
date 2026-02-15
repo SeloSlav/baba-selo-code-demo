@@ -214,7 +214,7 @@ export const RecipeChatBubble: React.FC<RecipeChatBubbleProps> = ({ recipeConten
         return (
             <button
                 onClick={() => setIsOpen(true)}
-                className="fixed bottom-6 right-6 bg-white rounded-full w-20 h-20 md:w-auto md:h-auto md:px-5 md:py-3 md:gap-2 flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-105 transition-all z-50 animate-chat-bubble-pulse border-2 border-gray-100"
+                className="fixed bottom-6 right-6 bg-white rounded-full w-20 h-20 md:w-auto md:h-auto md:px-5 md:py-3 md:gap-2 flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-105 transition-all z-50 animate-chat-bubble-pulse border-2 border-amber-100"
                 aria-label="Chat with Baba Selo about this recipe"
             >
                 <Image
@@ -248,7 +248,7 @@ export const RecipeChatBubble: React.FC<RecipeChatBubbleProps> = ({ recipeConten
                 </div>
                 <button 
                     onClick={() => setIsOpen(false)}
-                    className="text-gray-500 hover:text-gray-700"
+                    className="text-amber-700/70 hover:text-amber-800"
                 >
                     <FontAwesomeIcon icon={faXmark} />
                 </button>
@@ -272,7 +272,7 @@ export const RecipeChatBubble: React.FC<RecipeChatBubbleProps> = ({ recipeConten
                             <button
                                 key={i}
                                 onClick={() => handleSuggestionClick(suggestion)}
-                                className="p-2 bg-blue-50 rounded-md hover:bg-blue-100 text-sm text-black"
+                                className="p-2 bg-amber-50 rounded-md hover:bg-amber-100 text-sm text-black border border-amber-100"
                             >
                                 {emoji} {suggestion}
                             </button>
@@ -304,9 +304,9 @@ export const RecipeChatBubble: React.FC<RecipeChatBubbleProps> = ({ recipeConten
                 {loading && (
                     <div className="flex items-start space-x-2">
                         <div className="typing-indicator flex space-x-2 mt-4">
-                            <div className="dot bg-gray-400 rounded-full w-2 h-2"></div>
-                            <div className="dot bg-gray-400 rounded-full w-2 h-2"></div>
-                            <div className="dot bg-gray-400 rounded-full w-2 h-2"></div>
+                            <div className="dot rounded-full w-2 h-2"></div>
+                            <div className="dot rounded-full w-2 h-2"></div>
+                            <div className="dot rounded-full w-2 h-2"></div>
                         </div>
                     </div>
                 )}
@@ -321,7 +321,7 @@ export const RecipeChatBubble: React.FC<RecipeChatBubbleProps> = ({ recipeConten
                         onChange={(e) => setMessage(e.target.value)}
                         onKeyDown={handleKeyDown}
                         placeholder="Ask about the recipe..."
-                        className="w-full p-3 rounded-t-3xl focus:outline-none resize-none text-black bg-gray-100 placeholder-gray-400 custom-scrollbar"
+                        className="w-full p-3 rounded-t-3xl focus:outline-none resize-none text-black bg-amber-50/80 placeholder-amber-900/40 border border-amber-100 custom-scrollbar"
                         style={{
                             minHeight: "2.5rem",
                             maxHeight: "5rem",
@@ -336,8 +336,8 @@ export const RecipeChatBubble: React.FC<RecipeChatBubbleProps> = ({ recipeConten
                         disabled={message.trim() === "" || loading}
                         className={`rounded-full w-10 h-10 flex items-center justify-center
                             ${message.trim() === "" || loading
-                                ? "bg-gray-300 text-gray-600 cursor-not-allowed"
-                                : "bg-black text-white hover:bg-gray-800"
+                                ? "bg-amber-200 text-amber-700/60 cursor-not-allowed"
+                                : "bg-amber-600 text-white hover:bg-amber-700"
                             }`}
                     >
                         <FontAwesomeIcon icon={faArrowUp} />

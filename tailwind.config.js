@@ -33,13 +33,18 @@ module.exports = {
         'slow-bounce': {
           '0%, 100%': { transform: 'translateY(0)' },
           '50%': { transform: 'translateY(-15%)' }
+        },
+        shimmer: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(100%)' }
         }
       },
       animation: {
         'sleeping-z-1': 'sleeping-z-float-1 2s ease-in-out infinite',
         'sleeping-z-2': 'sleeping-z-float-2 2s ease-in-out infinite 0.7s',
         'sleeping-z-3': 'sleeping-z-float-3 2s ease-in-out infinite 1.4s',
-        'slow-bounce': 'slow-bounce 2.5s ease-in-out infinite'
+        'slow-bounce': 'slow-bounce 2.5s ease-in-out infinite',
+        shimmer: 'shimmer 2s ease-in-out infinite'
       }
     },
   },

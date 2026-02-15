@@ -9,6 +9,7 @@ import { usePoints } from '../context/PointsContext';
 import { Recipe } from '../recipe/types';
 import { SearchBar } from '../components/SearchBar';
 import { RecipeCard } from '../components/RecipeCard';
+import { RecipeCardSkeleton } from '../components/RecipeCardSkeleton';
 
 const POINTS_FOR_LIKE = 50; // Points awarded when someone likes your recipe
 
@@ -358,7 +359,7 @@ export default function ExplorePage() {
     <SidebarLayout>
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Sticky header */}
-      <div className="sticky top-0 bg-white z-10 py-4 -mx-4 px-4 shadow-sm">
+      <div className="sticky top-0 bg-amber-50/95 backdrop-blur-sm z-10 py-4 -mx-4 px-4 shadow-sm border-b border-amber-100">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-3xl font-bold mb-4">Explore Recipes</h1>
           <SearchBar 
@@ -378,24 +379,24 @@ export default function ExplorePage() {
         {isPageLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map((n) => (
-              <div key={n} className="animate-pulse">
-                <div className="bg-gray-200 h-48 rounded-xl mb-4"></div>
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-              </div>
+              <RecipeCardSkeleton key={n} />
             ))}
           </div>
         ) : displayedRecipes.length > 0 ? (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {displayedRecipes.map((recipe) => (
+              {displayedRecipes.map((recipe, index) => (
                 <RecipeCard 
                   key={recipe.id} 
                   recipe={recipe}
                   onLike={handleLike}
                   currentUser={user}
                   showUsername={true}
+                  priority={index < 6}
                 />
+              ))}
+              {loadingMore && [1, 2, 3].map((n) => (
+                <RecipeCardSkeleton key={`skeleton-${n}`} />
               ))}
             </div>
 
@@ -406,11 +407,7 @@ export default function ExplorePage() {
                 className="h-20 flex items-center justify-center mt-8"
                 style={{ minHeight: '100px' }}
               >
-                {loadingMore ? (
-                  <div className="w-6 h-6 border-2 border-gray-500 border-t-transparent rounded-full animate-spin"></div>
-                ) : (
-                  <div className="w-full h-full" />
-                )}
+                <div className="w-full h-full" />
               </div>
             )}
           </>
@@ -418,7 +415,7 @@ export default function ExplorePage() {
           <div className="text-center py-12">
             <div className="text-4xl mb-4">🤔</div>
             <h3 className="text-xl font-semibold mb-2">No recipes found</h3>
-            <p className="text-gray-600">
+            <p className="text-amber-800/70">
               Try adjusting your search or check back later for new recipes
             </p>
           </div>

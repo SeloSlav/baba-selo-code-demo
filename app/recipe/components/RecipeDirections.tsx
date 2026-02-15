@@ -28,10 +28,10 @@ export const RecipeDirections = ({
         {recipe.directions.map((direction, index) => (
           <li
             key={index}
-            className={`cursor-pointer flex items-center bg-gray-100 border border-gray-300 rounded-md px-3 py-2 transform transition-all duration-300 ease-in-out hover:scale-[1.01] hover:shadow-md ${
+            className={`cursor-pointer flex items-center bg-amber-50 border border-amber-200 rounded-md px-3 py-2 transform transition-all duration-300 ease-in-out hover:scale-[1.01] hover:shadow-md ${
               checkedDirections[index]
-                ? "bg-blue-50 border-blue-200 -translate-x-1"
-                : "hover:border-gray-400"
+                ? "bg-amber-100 border-amber-300 -translate-x-1"
+                : "hover:border-amber-300"
             }`}
             onClick={() => toggleDirectionCheck(index)}
           >
@@ -40,15 +40,15 @@ export const RecipeDirections = ({
                 icon={checkedDirections[index] ? faCheckCircle : faCircle}
                 className={`mr-3 transform transition-transform duration-300 ${
                   checkedDirections[index]
-                    ? "text-blue-500 scale-110"
-                    : "text-gray-400 hover:scale-105"
+                    ? "text-amber-600 scale-110"
+                    : "text-amber-600/70 hover:scale-105"
                 }`}
               />
             </div>
             <span className={`transition-all duration-300 ${
               checkedDirections[index]
-                ? "line-through text-gray-400"
-                : "text-gray-700"
+                ? "line-through text-amber-700/60"
+                : "text-gray-900"
             }`}>
               {direction}
             </span>

@@ -27,13 +27,13 @@ export const RecipePairings = ({
       </h3>
       <div className="relative group">
         {recipe.dishPairings ? (
-          <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+          <div className="bg-white border border-amber-100 rounded-lg p-4 shadow-sm">
             <div className="whitespace-pre-wrap">{recipe.dishPairings}</div>
             {isOwner && (
               <button
                 onClick={handleGetPairings}
                 disabled={loadingPairings}
-                className="opacity-0 group-hover:opacity-100 absolute top-2 right-2 bg-white text-gray-600 px-2 py-1 text-xs rounded-md shadow-sm hover:bg-gray-50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center whitespace-nowrap"
+                className="opacity-0 group-hover:opacity-100 absolute top-2 right-2 bg-white text-amber-800 px-2 py-1 text-xs rounded-md shadow-sm hover:bg-amber-50 border border-amber-100 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center whitespace-nowrap"
               >
                 {loadingPairings ? (
                   <div className="flex items-center">
@@ -54,7 +54,7 @@ export const RecipePairings = ({
             <button
               onClick={handleGetPairings}
               disabled={loadingPairings}
-              className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-xl shadow-lg hover:from-indigo-700 hover:to-purple-700 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 group"
+              className="bg-amber-600 text-white px-4 py-2 rounded-xl shadow-lg hover:bg-amber-700 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 group"
             >
               {loadingPairings ? (
                 <div className="flex items-center">

@@ -104,7 +104,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
         const currentUser = auth.currentUser;
 
         if (!currentUser) { // Check currentUser directly
-            onAssistantResponse(`Oh dear, I see you'd like to save this wonderful recipe! 🤗 But first, you'll need to <a href="/login" class="underline text-blue-600">continue with Google</a> to get set up. That way, I can keep all your recipes safe and organized in your personal recipe vault! Plus, you'll earn special spoon points for each recipe you save. Shall we get you set up, dear? 👩‍🍳✨`);
+            onAssistantResponse(`Oh dear, I see you'd like to save this wonderful recipe! 🤗 But first, you'll need to <a href="/login" class="underline text-amber-600 hover:text-amber-700">continue with Google</a> to get set up. That way, I can keep all your recipes safe and organized in your personal recipe vault! Plus, you'll earn special spoon points for each recipe you save. Shall we get you set up, dear? 👩‍🍳✨`);
             setLoading(false);
             return;
         }
@@ -152,7 +152,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                     docId 
                 );
 
-                let message = `Your <a href="/recipe/${docId}" target="_blank" rel="noopener noreferrer" class="underline text-blue-600"> ${title}</a> recipe has been tucked away in the kitchen vault, ready for use!`;
+                let message = `Your <a href="/recipe/${docId}" target="_blank" rel="noopener noreferrer" class="underline text-amber-600 hover:text-amber-700"> ${title}</a> recipe has been tucked away in the kitchen vault, ready for use!`;
                 
                 if (pointsResult.success) {
                     showPointsToast(pointsResult.points!, 'Recipe saved successfully!');
@@ -265,7 +265,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                             <button
                                 key={i}
                                 onClick={() => onSuggestionClick(suggestion)}
-                                className="p-2 bg-blue-50 rounded-md hover:bg-blue-100 text-black text-left w-full md:w-auto"
+                                className="px-4 py-3 bg-white rounded-xl hover:bg-amber-50 text-gray-900 font-medium text-left w-full md:w-auto border-2 border-amber-200 hover:border-amber-300 shadow-sm hover:shadow-md transition-all"
                             >
                                 {emoji} {suggestion}
                             </button>

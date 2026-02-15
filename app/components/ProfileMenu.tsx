@@ -82,7 +82,7 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
         return (
             <div
                 ref={menuRef}
-                className="absolute top-full right-0 mt-1 z-40 bg-white rounded-3xl shadow-lg w-60 border border-gray-300 p-3"
+                className="absolute top-full right-0 mt-1 z-40 bg-white rounded-3xl shadow-lg w-60 border border-amber-100 p-3"
             >
                 <ul className="space-y-1">
                     <li className="px-4 py-2">
@@ -90,21 +90,21 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
                         <div className="font-medium">Baba Selo</div>
                     </li>
                     <hr />
-                    <li className="flex items-center px-4 py-2 rounded-md hover:bg-gray-100 cursor-pointer">
+                    <li className="flex items-center px-4 py-2 rounded-md hover:bg-amber-50 cursor-pointer">
                         <Link href="/" className="flex items-center w-full">
-                            <FontAwesomeIcon icon={faHome} className="text-[#5d5d5d] mr-3" />
+                            <FontAwesomeIcon icon={faHome} className="text-amber-700 mr-3" />
                             <span>Home</span>
                         </Link>
                     </li>
-                    <li className="flex items-center px-4 py-2 rounded-md hover:bg-gray-100 cursor-pointer">
+                    <li className="flex items-center px-4 py-2 rounded-md hover:bg-amber-50 cursor-pointer">
                         <Link href="/explore" className="flex items-center w-full">
-                            <FontAwesomeIcon icon={faCompass} className="text-[#5d5d5d] mr-3" />
+                            <FontAwesomeIcon icon={faCompass} className="text-amber-700 mr-3" />
                             <span>Explore</span>
                         </Link>
                     </li>
                     <hr />
                     <li
-                        className="flex items-center px-4 py-2 rounded-md hover:bg-gray-100 cursor-pointer"
+                        className="flex items-center px-4 py-2 rounded-md hover:bg-amber-50 cursor-pointer"
                         onClick={() => { signInWithGoogle(); onClose(); }}
                     >
                         <FontAwesomeIcon icon={faGoogle} className="text-[#4285F4] mr-3" />
@@ -122,7 +122,7 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
     return (
         <div
             ref={menuRef}
-            className="absolute top-full right-0 mt-1 z-40 bg-white rounded-3xl shadow-lg w-60 border border-gray-300 p-3"
+            className="absolute top-full right-0 mt-1 z-40 bg-white rounded-3xl shadow-lg w-60 border border-amber-100 p-3"
             style={{ maxHeight: 'calc(100vh - 5rem)', overflowY: 'auto' }}
         >
             <ul className="space-y-1">
@@ -131,14 +131,14 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
                     <div className="flex items-center justify-between">
                         <Link 
                             href={username ? `/${username}` : "/settings"} 
-                            className="font-medium hover:text-purple-600 transition-colors"
+                            className="font-medium hover:text-amber-600 transition-colors"
                         >
                             {"Chef " + username || "Anonymous Chef"}
                         </Link>
                         {!username && (
                             <Link 
                                 href="/settings" 
-                                className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full hover:bg-blue-200 transition-colors"
+                                className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full hover:bg-amber-200 transition-colors"
                             >
                                 Set Username! 👤
                             </Link>
@@ -146,28 +146,28 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
                     </div>
                 </li>
                 <hr />
-                <li className="flex items-center px-4 py-2 rounded-md hover:bg-gray-100 cursor-pointer">
+                <li className="flex items-center px-4 py-2 rounded-md hover:bg-amber-50 cursor-pointer">
                     <Link href="/" className="flex items-center w-full">
-                        <FontAwesomeIcon icon={faHome} className="text-[#5d5d5d] mr-3" />
+                        <FontAwesomeIcon icon={faHome} className="text-amber-700 mr-3" />
                         <span>Home</span>
                     </Link>
                 </li>
-                <li className="flex items-center px-4 py-2 rounded-md hover:bg-gray-100 cursor-pointer">
+                <li className="flex items-center px-4 py-2 rounded-md hover:bg-amber-50 cursor-pointer">
                     <Link href="/explore" className="flex items-center w-full">
-                        <FontAwesomeIcon icon={faCompass} className="text-[#5d5d5d] mr-3" />
+                        <FontAwesomeIcon icon={faCompass} className="text-amber-700 mr-3" />
                         <span>Explore</span>
                     </Link>
                 </li>
-                <li className="flex items-center px-4 py-2 rounded-md hover:bg-gray-100 cursor-pointer">
+                <li className="flex items-center px-4 py-2 rounded-md hover:bg-amber-50 cursor-pointer">
                     <Link href={username ? `/${username}` : "/recipes"} className="flex items-center w-full">
-                        <FontAwesomeIcon icon={faBookOpenReader} className="text-[#5d5d5d] mr-3" />
+                        <FontAwesomeIcon icon={faBookOpenReader} className="text-amber-700 mr-3" />
                         <span>My Recipes</span>
                     </Link>
                 </li>
-                <li className="flex items-center px-4 py-2 rounded-md hover:bg-gray-100 cursor-pointer">
+                <li className="flex items-center px-4 py-2 rounded-md hover:bg-amber-50 cursor-pointer">
                     <Link href="/spoons" className="flex items-center w-full justify-between">
                         <div className="flex items-center">
-                            <FontAwesomeIcon icon={faSpoon} className="text-[#5d5d5d] mr-3" />
+                            <FontAwesomeIcon icon={faSpoon} className="text-amber-700 mr-3" />
                             <span>Spoons</span>
                         </div>
                         <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full">
@@ -175,18 +175,18 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
                         </span>
                     </Link>
                 </li>
-                <li className="flex items-center px-4 py-2 rounded-md hover:bg-gray-100 cursor-pointer">
+                <li className="flex items-center px-4 py-2 rounded-md hover:bg-amber-50 cursor-pointer">
                     <Link href="/marketplace" className="flex items-center w-full justify-between">
                         <div className="flex items-center">
-                            <FontAwesomeIcon icon={faStore} className="text-[#5d5d5d] mr-3" />
+                            <FontAwesomeIcon icon={faStore} className="text-amber-700 mr-3" />
                             <span>Market</span>
                         </div>
-                        <span className="text-xs bg-purple-100 text-purple-600 px-2 py-1 rounded-full">
+                        <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full">
                             Redeem! 🎁
                         </span>
                     </Link>
                 </li>
-                {/* <li className="flex items-center px-4 py-2 rounded-md hover:bg-gray-100 cursor-pointer">
+                {/* <li className="flex items-center px-4 py-2 rounded-md hover:bg-amber-50 cursor-pointer">
                     <Link href="/yard" className="flex items-center w-full justify-between">
                         <div className="flex items-center">
                             <FontAwesomeIcon icon={faSeedling} className="text-[#5d5d5d] mr-3" />
@@ -197,33 +197,33 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
                         </span>
                     </Link>
                 </li> */}
-                <li className="flex items-center px-4 py-2 rounded-md hover:bg-gray-100 cursor-pointer">
+                <li className="flex items-center px-4 py-2 rounded-md hover:bg-amber-50 cursor-pointer">
                     <Link href="/settings" className="flex items-center w-full">
-                        <FontAwesomeIcon icon={faGear} className="text-[#5d5d5d] mr-3" />
+                        <FontAwesomeIcon icon={faGear} className="text-amber-700 mr-3" />
                         <span>Settings</span>
                     </Link>
                 </li>
                 {isUserAdmin && (
-                    <li className="flex items-center px-4 py-2 rounded-md hover:bg-gray-100 cursor-pointer">
+                    <li className="flex items-center px-4 py-2 rounded-md hover:bg-amber-50 cursor-pointer">
                         <Link href="/admin" className="flex items-center w-full">
-                            <FontAwesomeIcon icon={faShieldHalved} className="text-[#5d5d5d] mr-3" />
+                            <FontAwesomeIcon icon={faShieldHalved} className="text-amber-700 mr-3" />
                             <span>Admin</span>
                         </Link>
                     </li>
                 )}
                 <hr />
-                <li className="flex items-center px-4 py-2 rounded-md hover:bg-gray-100 cursor-pointer">
+                <li className="flex items-center px-4 py-2 rounded-md hover:bg-amber-50 cursor-pointer">
                     <Link href="/upgrade" className="flex items-center w-full">
-                        <FontAwesomeIcon icon={faStarOfLife} className="text-[#5d5d5d] mr-3" />
+                        <FontAwesomeIcon icon={faStarOfLife} className="text-amber-600 mr-3" />
                         <span>Upgrade Plan</span>
                     </Link>
                 </li>
                 <hr />
                 <li
-                    className="flex items-center px-4 py-2 rounded-md hover:bg-gray-100 cursor-pointer"
+                    className="flex items-center px-4 py-2 rounded-md hover:bg-amber-50 cursor-pointer"
                     onClick={handleLogout}
                 >
-                    <FontAwesomeIcon icon={faSignOut} className="text-[#5d5d5d] mr-3" />
+                    <FontAwesomeIcon icon={faSignOut} className="text-amber-700 mr-3" />
                     <span>Log Out</span>
                 </li>
             </ul>

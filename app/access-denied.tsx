@@ -9,11 +9,11 @@ export const metadata: Metadata = {
 
 export default function AccessDenied() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 text-center bg-white">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 text-center bg-gradient-to-b from-amber-50/80 to-white">
       <div className="max-w-md w-full p-8">
         <div className="mb-6 flex justify-center">
           <Image 
-            src="/baba.png" 
+            src="/baba-removebg.png" 
             alt="Baba Selo" 
             width={180} 
             height={180}
@@ -31,7 +31,7 @@ export default function AccessDenied() {
         </div>
         <Link 
           href="/" 
-          className="inline-block px-6 py-2 bg-black text-white font-medium rounded-xl hover:bg-gray-900 transition-colors"
+          className="inline-block px-6 py-2 bg-amber-600 text-white font-medium rounded-xl hover:bg-amber-700 transition-colors"
         >
           Back to Kitchen
         </Link>

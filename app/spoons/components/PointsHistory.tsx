@@ -16,7 +16,7 @@ interface PointsHistoryProps {
 
 export const PointsHistory: React.FC<PointsHistoryProps> = ({ transactions }) => {
   return (
-    <div className="bg-white rounded-3xl shadow-lg border border-gray-300 p-6">
+    <div className="bg-white rounded-3xl shadow-lg border border-amber-100 p-6 shadow-amber-900/5">
       <h2 className="text-xl font-semibold mb-4">Points History</h2>
       <div className="divide-y divide-gray-100 max-h-[400px] overflow-y-auto overflow-x-hidden pr-2 custom-scrollbar">
         {transactions && transactions.length > 0 ? (
@@ -27,11 +27,11 @@ export const PointsHistory: React.FC<PointsHistoryProps> = ({ transactions }) =>
                 key={`${transaction.timestamp.toDate().getTime()}-${transaction.actionType}-${transaction.targetId || ''}-${index}`}
                 transaction={transaction}
                 showDate="long"
-                className="border-b border-gray-100"
+                className="border-b border-amber-100"
               />
             ))
         ) : (
-          <div className="text-center text-gray-500 py-8">
+          <div className="text-center text-amber-800/70 py-8">
             No points history yet. Start interacting with recipes to earn points!
           </div>
         )}

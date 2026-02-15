@@ -36,25 +36,25 @@ export const RecipeHeader = ({
       {/* Recipe Classifications */}
       <div className="mb-6 flex flex-wrap gap-3">
         {recipe.diet.length > 0 && (
-          <div className="flex items-center bg-gray-100 border border-gray-300 shadow-sm rounded-full px-3 py-1.5 text-sm">
+          <div className="flex items-center bg-amber-50 border border-amber-200 rounded-full px-3 py-1.5 text-sm">
             <span className="font-semibold mr-2">🍲</span>
             <span>{recipe.diet.map((d) => d.charAt(0).toUpperCase() + d.slice(1)).join(", ")}</span>
           </div>
         )}
         {recipe.cuisineType && (
-          <div className="flex items-center bg-gray-100 border border-gray-300 shadow-sm rounded-full px-3 py-1.5 text-sm">
+          <div className="flex items-center bg-amber-50 border border-amber-200 rounded-full px-3 py-1.5 text-sm">
             <span className="font-semibold mr-2">🍽️</span>
             <span>{recipe.cuisineType.charAt(0).toUpperCase() + recipe.cuisineType.slice(1)}</span>
           </div>
         )}
         {recipe.cookingTime && (
-          <div className="flex items-center bg-gray-100 border border-gray-300 shadow-sm rounded-full px-3 py-1.5 text-sm">
+          <div className="flex items-center bg-amber-50 border border-amber-200 rounded-full px-3 py-1.5 text-sm">
             <span className="font-semibold mr-2">⏲️</span>
             <span>{recipe.cookingTime}</span>
           </div>
         )}
         {recipe.cookingDifficulty && (
-          <div className="flex items-center bg-gray-100 border border-gray-300 shadow-sm rounded-full px-3 py-1.5 text-sm">
+          <div className="flex items-center bg-amber-50 border border-amber-200 rounded-full px-3 py-1.5 text-sm">
             <span className="font-semibold mr-2">🧩</span>
             <span>{recipe.cookingDifficulty.charAt(0).toUpperCase() + recipe.cookingDifficulty.slice(1)}</span>
           </div>
@@ -62,23 +62,23 @@ export const RecipeHeader = ({
       </div>
 
       {/* Action Bar */}
-      <div className="flex flex-wrap gap-3 mb-8 items-center border-t border-b border-gray-200 py-4">
+      <div className="flex flex-wrap gap-3 mb-8 items-center border-t border-b border-amber-100 py-4">
         <button
           onClick={handleCopyRecipe}
-          className="flex items-center text-gray-700 hover:text-gray-900 transition-colors duration-200"
+          className="flex items-center text-amber-900/80 hover:text-amber-900 transition-colors duration-200"
         >
           <FontAwesomeIcon icon={faCopy} className="w-5 h-5" />
           <span className="ml-2 text-sm">{copySuccess ? 'Link Copied!' : 'Share Recipe'}</span>
         </button>
 
         {/* Like button for all users */}
-        <div className="w-px h-6 bg-gray-200" /> {/* Divider */}
+        <div className="w-px h-6 bg-amber-200" /> {/* Divider */}
         {handleLike && currentUser ? (
           <button
             onClick={handleLike}
             disabled={hasLiked}
             className={`flex items-center transition-colors duration-200 ${
-              hasLiked ? 'text-red-500 cursor-default' : 'text-gray-700 hover:text-red-500'
+              hasLiked ? 'text-red-500 cursor-default' : 'text-amber-900/80 hover:text-red-500'
             }`}
           >
             <FontAwesomeIcon icon={faHeart} className="w-5 h-5" />
@@ -87,7 +87,7 @@ export const RecipeHeader = ({
             </span>
           </button>
         ) : (
-          <div className={`flex items-center text-gray-500`}>
+          <div className={`flex items-center text-amber-800/70`}>
             <FontAwesomeIcon icon={faHeart} className="w-5 h-5" />
             <span className="ml-2 text-sm">
               {recipe.likes?.length || 0} {recipe.likes?.length === 1 ? 'Like' : 'Likes'}
@@ -97,18 +97,18 @@ export const RecipeHeader = ({
 
         {isOwner && (
           <>
-            <div className="w-px h-6 bg-gray-200" /> {/* Divider */}
+            <div className="w-px h-6 bg-amber-200" /> {/* Divider */}
             <button
               onClick={handlePinToggle}
               disabled={loadingPinAction}
               className={`flex items-center transition-colors duration-200 ${
-                recipe.pinned ? 'text-yellow-500 hover:text-yellow-600' : 'text-gray-700 hover:text-gray-900'
+                recipe.pinned ? 'text-amber-600 hover:text-amber-700' : 'text-amber-900/80 hover:text-amber-900'
               }`}
             >
               {loadingPinAction ? (
                 <>
                   <div className="w-5 h-5">
-                    <div className="w-full h-full border-2 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
+                    <div className="w-full h-full border-2 border-amber-600 border-t-transparent rounded-full animate-spin"></div>
                   </div>
                   <span className="ml-2 text-sm">{recipe.pinned ? 'Unpinning...' : 'Pinning...'}</span>
                 </>
@@ -125,11 +125,11 @@ export const RecipeHeader = ({
               )}
             </button>
 
-            <div className="w-px h-6 bg-gray-200" /> {/* Divider */}
+            <div className="w-px h-6 bg-amber-200" /> {/* Divider */}
             <button
               onClick={handleDelete}
               disabled={loadingDeleteAction}
-              className="flex items-center text-gray-700 hover:text-red-600 transition-colors duration-200"
+              className="flex items-center text-amber-900/80 hover:text-red-600 transition-colors duration-200"
             >
               {loadingDeleteAction ? (
                 <>

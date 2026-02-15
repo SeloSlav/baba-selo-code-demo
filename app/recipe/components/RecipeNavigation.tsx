@@ -26,7 +26,7 @@ export const RecipeNavigation = ({
   pairingsRef,
 }: RecipeNavigationProps) => {
   return (
-    <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm -mx-6 px-6 py-4 -mt-2 mb-4 rounded-b-lg shadow-sm border-b border-gray-100">
+    <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm -mx-6 px-6 py-4 -mt-2 mb-4 rounded-b-lg shadow-sm border-b border-amber-100">
       {/* Desktop version */}
       <div className="hidden md:block">
         <div className="mb-4">
@@ -37,7 +37,7 @@ export const RecipeNavigation = ({
                 className={`px-4 py-2 rounded-full transition-all duration-200 ${
                   activeSection === 'ingredients'
                     ? 'bg-black text-white'
-                    : 'bg-gray-100 hover:bg-gray-200'
+                    : 'bg-amber-100 hover:bg-amber-200'
                 }`}
               >
                 📝 Ingredients
@@ -47,7 +47,7 @@ export const RecipeNavigation = ({
                 className={`px-4 py-2 rounded-full transition-all duration-200 ${
                   activeSection === 'directions'
                     ? 'bg-black text-white'
-                    : 'bg-gray-100 hover:bg-gray-200'
+                    : 'bg-amber-100 hover:bg-amber-200'
                 }`}
               >
                 👩‍🍳 Directions
@@ -57,7 +57,7 @@ export const RecipeNavigation = ({
                 className={`px-4 py-2 rounded-full transition-all duration-200 ${
                   activeSection === 'notes'
                     ? 'bg-black text-white'
-                    : 'bg-gray-100 hover:bg-gray-200'
+                    : 'bg-amber-100 hover:bg-amber-200'
                 }`}
               >
                 📝 Notes
@@ -67,7 +67,7 @@ export const RecipeNavigation = ({
                 className={`px-4 py-2 rounded-full transition-all duration-200 ${
                   activeSection === 'macros'
                     ? 'bg-black text-white'
-                    : 'bg-gray-100 hover:bg-gray-200'
+                    : 'bg-amber-100 hover:bg-amber-200'
                 }`}
               >
                 📊 Nutrition
@@ -77,7 +77,7 @@ export const RecipeNavigation = ({
                 className={`px-4 py-2 rounded-full transition-all duration-200 ${
                   activeSection === 'pairings'
                     ? 'bg-black text-white'
-                    : 'bg-gray-100 hover:bg-gray-200'
+                    : 'bg-amber-100 hover:bg-amber-200'
                 }`}
               >
                 🍷 Pairings
@@ -86,11 +86,11 @@ export const RecipeNavigation = ({
           </div>
           <div className="grid grid-cols-2 gap-4 mt-4">
             <div>
-              <div className="flex justify-between text-sm text-gray-600 mb-1">
+              <div className="flex justify-between text-sm text-amber-800/70 mb-1">
                 <span>Ingredients</span>
                 <span>{Math.round(ingredientsProgress)}%</span>
               </div>
-              <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div className="h-2 bg-amber-200/60 rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-green-500 transition-all duration-300 ease-out"
                   style={{ width: `${ingredientsProgress}%` }}
@@ -98,11 +98,11 @@ export const RecipeNavigation = ({
               </div>
             </div>
             <div>
-              <div className="flex justify-between text-sm text-gray-600 mb-1">
+              <div className="flex justify-between text-sm text-amber-800/70 mb-1">
                 <span>Steps</span>
                 <span>{Math.round(directionsProgress)}%</span>
               </div>
-              <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div className="h-2 bg-amber-200/60 rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-blue-500 transition-all duration-300 ease-out"
                   style={{ width: `${directionsProgress}%` }}
@@ -120,10 +120,10 @@ export const RecipeNavigation = ({
             {/* Progress bars in a more compact format */}
             <div className="grid grid-cols-2 gap-2 mb-2">
               <div className="w-full">
-                <div className="flex justify-between text-xs text-gray-600 mb-1">
+                <div className="flex justify-between text-xs text-amber-800/70 mb-1">
                   <span>Ingredients: {Math.round(ingredientsProgress)}%</span>
                 </div>
-                <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                <div className="h-1.5 bg-amber-200/60 rounded-full overflow-hidden">
                   <div 
                     className="h-full bg-green-500 transition-all duration-300 ease-out"
                     style={{ width: `${ingredientsProgress}%` }}
@@ -131,10 +131,10 @@ export const RecipeNavigation = ({
                 </div>
               </div>
               <div className="w-full">
-                <div className="flex justify-between text-xs text-gray-600 mb-1">
+                <div className="flex justify-between text-xs text-amber-800/70 mb-1">
                   <span>Steps: {Math.round(directionsProgress)}%</span>
                 </div>
-                <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                <div className="h-1.5 bg-amber-200/60 rounded-full overflow-hidden">
                   <div 
                     className="h-full bg-blue-500 transition-all duration-300 ease-out"
                     style={{ width: `${directionsProgress}%` }}
@@ -150,7 +150,7 @@ export const RecipeNavigation = ({
                   className={`px-3 py-1.5 rounded-full text-sm transition-all duration-200 whitespace-nowrap ${
                     activeSection === 'ingredients'
                       ? 'bg-black text-white'
-                      : 'bg-gray-100 hover:bg-gray-200'
+                      : 'bg-amber-100 hover:bg-amber-200'
                   }`}
                 >
                   📝 Ingredients
@@ -160,7 +160,7 @@ export const RecipeNavigation = ({
                   className={`px-3 py-1.5 rounded-full text-sm transition-all duration-200 whitespace-nowrap ${
                     activeSection === 'directions'
                       ? 'bg-black text-white'
-                      : 'bg-gray-100 hover:bg-gray-200'
+                      : 'bg-amber-100 hover:bg-amber-200'
                   }`}
                 >
                   👩‍🍳 Directions
@@ -170,7 +170,7 @@ export const RecipeNavigation = ({
                   className={`px-3 py-1.5 rounded-full text-sm transition-all duration-200 whitespace-nowrap ${
                     activeSection === 'notes'
                       ? 'bg-black text-white'
-                      : 'bg-gray-100 hover:bg-gray-200'
+                      : 'bg-amber-100 hover:bg-amber-200'
                   }`}
                 >
                   📝 Notes
@@ -180,7 +180,7 @@ export const RecipeNavigation = ({
                   className={`px-3 py-1.5 rounded-full text-sm transition-all duration-200 whitespace-nowrap ${
                     activeSection === 'macros'
                       ? 'bg-black text-white'
-                      : 'bg-gray-100 hover:bg-gray-200'
+                      : 'bg-amber-100 hover:bg-amber-200'
                   }`}
                 >
                   📊 Nutrition
@@ -190,7 +190,7 @@ export const RecipeNavigation = ({
                   className={`px-3 py-1.5 rounded-full text-sm transition-all duration-200 whitespace-nowrap ${
                     activeSection === 'pairings'
                       ? 'bg-black text-white'
-                      : 'bg-gray-100 hover:bg-gray-200'
+                      : 'bg-amber-100 hover:bg-amber-200'
                   }`}
                 >
                   🍷 Pairings

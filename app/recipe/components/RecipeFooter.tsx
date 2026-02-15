@@ -14,7 +14,7 @@ export const RecipeFooter = () => {
           className="opacity-100"
         />
       </div>
-      <div className="text-gray-500 text-sm px-4">
+      <div className="text-amber-900/70 text-sm px-4">
         <p>⚠️ Please double-check all ingredients, measurements, and cooking steps, as even Baba Selo can make mistakes sometimes.</p>
         <p className="mt-2 mb-24">For food safety, always ensure proper cooking temperatures and handling of ingredients.</p>
       </div>

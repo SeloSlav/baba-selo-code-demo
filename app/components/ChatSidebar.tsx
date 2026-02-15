@@ -16,12 +16,12 @@ const shimmer = (w: number, h: number) => `
 <svg width="${w}" height="${h}" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
   <defs>
     <linearGradient id="g">
-      <stop stop-color="#f6f7f8" offset="0%" />
-      <stop stop-color="#edeef1" offset="50%" />
-      <stop stop-color="#f6f7f8" offset="100%" />
+      <stop stop-color="#fef3c7" offset="0%" />
+      <stop stop-color="#fde68a" offset="50%" />
+      <stop stop-color="#fef3c7" offset="100%" />
     </linearGradient>
   </defs>
-  <rect width="${w}" height="${h}" fill="#f6f7f8" />
+  <rect width="${w}" height="${h}" fill="#fef3c7" />
   <rect id="r" width="${w}" height="${h}" fill="url(#g)" />
   <animate xlink:href="#r" attributeName="x" from="-${w}" to="${w}" dur="1s" repeatCount="indefinite" />
 </svg>`;
@@ -93,16 +93,16 @@ export const ChatSidebar = ({
 
     const renderMenu = () => {
         return (
-            <div className="absolute right-0 z-40 bg-white rounded-xl shadow-lg w-48 border border-gray-200 p-2">
+                        <div className="absolute right-0 z-40 bg-white rounded-xl shadow-lg w-48 border border-amber-100 p-2">
                 <ul className="space-y-1">
-                    <li 
-                        className="flex items-center px-3 py-2 rounded-md hover:bg-gray-100 cursor-pointer disabled:opacity-50"
+                        <li 
+                        className="flex items-center px-3 py-2 rounded-md hover:bg-amber-50 cursor-pointer disabled:opacity-50"
                         onClick={() => !loadingPinAction && handlePinUnpin(!!recipe.pinned)}
                     >
                         {loadingPinAction ? (
                             <>
                                 <div className="w-4 h-4 mr-3">
-                                    <div className="w-full h-full border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                                    <div className="w-full h-full border-2 border-amber-600 border-t-transparent rounded-full animate-spin"></div>
                                 </div>
                                 <span>{recipe.pinned ? 'Unpinning...' : 'Pinning...'}</span>
                             </>
@@ -111,7 +111,7 @@ export const ChatSidebar = ({
                                 <FontAwesomeIcon
                                     icon={faThumbtack}
                                     className={`w-4 h-4 mr-3 transform transition-all duration-300 ${
-                                        recipe.pinned ? 'rotate-[45deg] scale-110 text-yellow-500' : 'hover:scale-110 text-gray-400'
+                                        recipe.pinned ? 'rotate-[45deg] scale-110 text-amber-600' : 'hover:scale-110 text-amber-600/70'
                                     }`}
                                 />
                                 <span>{recipe.pinned ? "Unpin Recipe" : "Pin Recipe"}</span>
@@ -135,20 +135,20 @@ export const ChatSidebar = ({
             {/* Hamburger Menu Icon */}
             <button
                 onClick={toggleSidebar}
-                className="fixed top-4 left-4 z-30 p-2 rounded-md hover:bg-gray-200 bg-white"
+                className="fixed top-4 left-4 z-30 p-2 rounded-md hover:bg-amber-100 bg-white border border-amber-100 shadow-sm"
             >
-                <FontAwesomeIcon icon={faHamburger} className="text-[#5d5d5d]" />
+                <FontAwesomeIcon icon={faHamburger} className="text-amber-800" />
             </button>
 
             {/* Sidebar */}
             <aside
-                className={`fixed inset-y-0 left-0 transform z-20 bg-gray-50 w-64 h-full shadow-inner transition-transform duration-300 ease-in-out ${
+                className={`fixed inset-y-0 left-0 transform z-20 bg-amber-50/80 w-64 h-full shadow-inner border-r border-amber-100 transition-transform duration-300 ease-in-out ${
                     isSidebarOpen ? "translate-x-0" : "-translate-x-full"
                 }`}
             >
                 <div className="flex flex-col h-full">
                     {/* Sidebar Header with optimized image */}
-                    <div className="flex items-center justify-between p-4 border-b">
+                    <div className="flex items-center justify-between p-4 border-b border-amber-100">
                         <div className="relative w-8 h-8">
                             {!imageError ? (
                                 <Image
@@ -166,16 +166,16 @@ export const ChatSidebar = ({
                                     priority
                                 />
                             ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-full">
+                                <div className="w-full h-full flex items-center justify-center bg-amber-100 rounded-full">
                                     <span className="text-lg">👨‍🍳</span>
                                 </div>
                             )}
                         </div>
                         <button
                             onClick={toggleSidebar}
-                            className="p-2 rounded-md hover:bg-gray-200"
+                            className="p-2 rounded-md hover:bg-amber-100"
                         >
-                            <FontAwesomeIcon icon={faClose} className="text-[#5d5d5d]" />
+                            <FontAwesomeIcon icon={faClose} className="text-amber-800" />
                         </button>
                     </div>
 
@@ -198,20 +198,20 @@ export const ChatSidebar = ({
                         <RecipeList />
 
                         {/* View All Recipes Link */}
-                        <div className="pt-4 border-t border-gray-200 space-y-2">
+                        <div className="pt-4 border-t border-amber-100 space-y-2">
                             <Link 
                                 href={user ? (username ? `/${username}` : "/recipes") : "/explore"}
-                                className="flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-100"
+                                className="flex items-center justify-center gap-2 text-sm text-amber-900/80 hover:text-amber-900 transition-colors p-2 rounded-lg hover:bg-amber-50"
                             >
                                 <span>{user ? "View All Recipes" : "Explore All Recipes"}</span>
-                                <span className="text-gray-400">→</span>
+                                <span className="text-amber-600/70">→</span>
                             </Link>
 
                             <Link 
                                 href="/upgrade" 
-                                className="flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-100"
+                                className="flex items-center justify-center gap-2 text-sm text-amber-900/80 hover:text-amber-900 transition-colors p-2 rounded-lg hover:bg-amber-50"
                             >
-                                <FontAwesomeIcon icon={faStarOfLife} className="text-[#5d5d5d]" />
+                                <FontAwesomeIcon icon={faStarOfLife} className="text-amber-600" />
                                 <span>Upgrade Plan</span>
                             </Link>
                         </div>

@@ -56,8 +56,8 @@ function CheckoutContent() {
   }, [plan]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-amber-50/50 to-white px-4">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-lg shadow-amber-900/5 border border-amber-100 p-8 text-center">
         {loading ? (
           <div className="py-8 flex flex-col items-center">
             <LoadingSpinner className="mb-4" />
@@ -70,7 +70,7 @@ function CheckoutContent() {
             <p className="text-gray-600 mb-6">{error}</p>
             <a
               href="/upgrade"
-              className="inline-block bg-black text-white px-6 py-2 rounded-xl hover:bg-gray-900 transition-colors"
+              className="inline-block bg-amber-600 text-white px-6 py-2 rounded-xl hover:bg-amber-700 transition-colors"
             >
               Go Back
             </a>

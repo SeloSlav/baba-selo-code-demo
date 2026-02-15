@@ -11,12 +11,12 @@ const shimmer = (w: number, h: number) => `
 <svg width="${w}" height="${h}" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
   <defs>
     <linearGradient id="g">
-      <stop stop-color="#f6f7f8" offset="0%" />
-      <stop stop-color="#edeef1" offset="50%" />
-      <stop stop-color="#f6f7f8" offset="100%" />
+      <stop stop-color="#fef3c7" offset="0%" />
+      <stop stop-color="#fde68a" offset="50%" />
+      <stop stop-color="#fef3c7" offset="100%" />
     </linearGradient>
   </defs>
-  <rect width="${w}" height="${h}" fill="#f6f7f8" />
+  <rect width="${w}" height="${h}" fill="#fef3c7" />
   <rect id="r" width="${w}" height="${h}" fill="url(#g)" />
   <animate xlink:href="#r" attributeName="x" from="-${w}" to="${w}" dur="1s" repeatCount="indefinite" />
 </svg>`;
@@ -34,6 +34,7 @@ interface RecipeCardProps {
   showMenu?: boolean;
   onMenuClick?: (recipeId: string) => void;
   isMenuOpen?: boolean;
+  priority?: boolean;
 }
 
 export const RecipeCard = memo(function RecipeCard({ 
@@ -43,13 +44,14 @@ export const RecipeCard = memo(function RecipeCard({
   showUsername = false,
   showMenu = false,
   onMenuClick,
-  isMenuOpen = false
+  isMenuOpen = false,
+  priority = false
 }: RecipeCardProps) {
   const [imageError, setImageError] = useState(false);
   const [isImageLoading, setIsImageLoading] = useState(true);
 
   return (
-    <div className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200">
+    <div className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:shadow-amber-900/5 border border-amber-100/50 transition-shadow duration-200">
       <Link href={`/recipe/${recipe.id}`}>
         <div className="relative h-48">
           {recipe.imageURL && !imageError ? (
@@ -57,6 +59,7 @@ export const RecipeCard = memo(function RecipeCard({
               src={recipe.imageURL}
               alt={recipe.recipeTitle}
               fill
+              priority={priority}
               className={`object-cover transition-opacity duration-300 ${
                 isImageLoading ? 'opacity-0' : 'opacity-100'
               }`}
@@ -67,7 +70,7 @@ export const RecipeCard = memo(function RecipeCard({
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             />
           ) : (
-            <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
+            <div className="absolute inset-0 bg-amber-50 flex items-center justify-center">
               <span className="text-4xl">🍳</span>
             </div>
           )}
@@ -107,7 +110,7 @@ export const RecipeCard = memo(function RecipeCard({
                 className={`p-2 rounded-full transition-colors ${
                   recipe.likes?.includes(currentUser?.uid || '')
                     ? 'text-red-500 hover:bg-red-50'
-                    : 'text-gray-400 hover:bg-gray-50'
+                    : 'text-amber-600/70 hover:bg-amber-50'
                 }`}
               >
                 <FontAwesomeIcon icon={faHeart} />
@@ -122,11 +125,11 @@ export const RecipeCard = memo(function RecipeCard({
                   e.stopPropagation();
                   onMenuClick(recipe.id);
                 }}
-                className="relative p-1.5 rounded-full hover:bg-gray-100 transition-colors z-50 pointer-events-auto"
+                className="relative p-1.5 rounded-full hover:bg-amber-50 transition-colors z-50 pointer-events-auto"
               >
                 <FontAwesomeIcon 
                   icon={faEllipsisVertical}
-                  className="w-4 h-4 text-gray-400"
+                  className="w-4 h-4 text-amber-600/70"
                 />
               </button>
             )}
@@ -135,25 +138,25 @@ export const RecipeCard = memo(function RecipeCard({
         
         <div className="flex flex-wrap gap-2">
           {recipe.diet && recipe.diet.length > 0 && (
-            <div className="flex items-center bg-gray-100 border border-gray-300 shadow-sm rounded-full px-3 py-1.5 text-sm">
+            <div className="flex items-center bg-amber-50 border border-amber-200 rounded-full px-3 py-1.5 text-sm">
               <span className="font-semibold mr-2">🍲</span>
               <span>{recipe.diet.map(d => d.charAt(0).toUpperCase() + d.slice(1)).join(", ")}</span>
             </div>
           )}
           {recipe.cuisineType && (
-            <div className="flex items-center bg-gray-100 border border-gray-300 shadow-sm rounded-full px-3 py-1.5 text-sm">
+            <div className="flex items-center bg-amber-50 border border-amber-200 rounded-full px-3 py-1.5 text-sm">
               <span className="font-semibold mr-2">🍽️</span>
               <span>{recipe.cuisineType}</span>
             </div>
           )}
           {recipe.cookingTime && (
-            <div className="flex items-center bg-gray-100 border border-gray-300 shadow-sm rounded-full px-3 py-1.5 text-sm">
+            <div className="flex items-center bg-amber-50 border border-amber-200 rounded-full px-3 py-1.5 text-sm">
               <span className="font-semibold mr-2">⏲️</span>
               <span>{recipe.cookingTime}</span>
             </div>
           )}
           {recipe.cookingDifficulty && (
-            <div className="flex items-center bg-gray-100 border border-gray-300 shadow-sm rounded-full px-3 py-1.5 text-sm">
+            <div className="flex items-center bg-amber-50 border border-amber-200 rounded-full px-3 py-1.5 text-sm">
               <span className="font-semibold mr-2">🧩</span>
               <span>{recipe.cookingDifficulty.charAt(0).toUpperCase() + recipe.cookingDifficulty.slice(1).toLowerCase()}</span>
             </div>

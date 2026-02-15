@@ -132,9 +132,9 @@ const SpoonStats = () => {
       <div className="flex flex-col items-center justify-center min-h-screen">
         <img src="/baba-removebg.png" alt="Baba" className="w-32 h-32 mb-6" />
         <div className="typing-indicator flex space-x-2">
-          <div className="dot bg-gray-400 rounded-full w-6 h-6"></div>
-          <div className="dot bg-gray-400 rounded-full w-6 h-6"></div>
-          <div className="dot bg-gray-400 rounded-full w-6 h-6"></div>
+          <div className="dot rounded-full w-6 h-6"></div>
+          <div className="dot rounded-full w-6 h-6"></div>
+          <div className="dot rounded-full w-6 h-6"></div>
         </div>
       </div>
       </SidebarLayout>
@@ -151,10 +151,10 @@ const SpoonStats = () => {
           Let's see how many points you've earned, dear!
         </h1>
         <div className="flex items-center gap-2">
-          <p className="text-gray-600">Track your cooking achievements</p>
-          <button
+        <p className="text-amber-900/70">Track your cooking achievements</p>
+        <button
             onClick={() => setIsInfoModalOpen(true)}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-amber-600/70 hover:text-amber-700 transition-colors"
             title="Learn about spoon points"
           >
             <FontAwesomeIcon icon={faInfoCircle} className="w-4 h-4" />
@@ -163,27 +163,27 @@ const SpoonStats = () => {
       </div>
 
       {/* Header with total points */}
-      <div className="bg-white rounded-3xl shadow-lg border border-gray-300 p-6 mb-8">
+      <div className="bg-white rounded-3xl shadow-lg border border-amber-100 p-6 mb-8 shadow-amber-900/5">
         {userData?.totalPoints ? (
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <div className="bg-yellow-100 p-4 rounded-full mr-4">
-                <FontAwesomeIcon icon={faSpoon} className="text-2xl text-yellow-600" />
+              <div className="bg-amber-100 p-4 rounded-full mr-4">
+                <FontAwesomeIcon icon={faSpoon} className="text-2xl text-amber-600" />
               </div>
               <h1 className="text-xl md:text-3xl font-bold">Your Spoon Stats</h1>
             </div>
             <div className="text-right">
-              <div className="text-4xl font-bold text-yellow-600">{userData.totalPoints}</div>
-              <div className="text-gray-600">Total Spoons Earned</div>
+              <div className="text-4xl font-bold text-amber-600">{userData.totalPoints}</div>
+              <div className="text-amber-900/70">Total Spoons Earned</div>
             </div>
           </div>
         ) : (
           <div className="text-center py-8">
             <div className="text-2xl font-bold mb-4">No Points Yet!</div>
-            <p className="text-gray-600 mb-6">Time to start your cooking journey with Baba!</p>
+            <p className="text-amber-900/70 mb-6">Time to start your cooking journey with Baba!</p>
             <Link
               href="/"
-              className="inline-flex items-center px-6 py-3 bg-black text-white rounded-full hover:bg-gray-800 transition-colors"
+              className="inline-flex items-center px-6 py-3 bg-amber-600 text-white rounded-full hover:bg-amber-700 transition-colors"
             >
               <span className="mr-2">✨</span>
               Start by Generating a Recipe
@@ -210,11 +210,11 @@ const SpoonStats = () => {
             onClick={e => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <div className="flex items-center justify-between p-6 border-b border-amber-100">
               <h2 className="text-xl font-bold text-gray-900">How Do Spoon Points Work?</h2>
               <button
                 onClick={() => setIsInfoModalOpen(false)}
-                className="text-gray-500 hover:text-gray-700 transition-colors"
+                className="text-amber-800/70 hover:text-amber-900 transition-colors"
               >
                 <FontAwesomeIcon icon={faXmark} className="w-5 h-5" />
               </button>
@@ -228,12 +228,12 @@ const SpoonStats = () => {
                   Earn them by interacting with Baba Selo and building your recipe collection.
                 </p>
 
-                <div className="bg-yellow-50 rounded-lg p-4 sm:p-6 space-y-4 border border-yellow-100">
+                <div className="bg-amber-50 rounded-lg p-4 sm:p-6 space-y-4 border border-amber-100">
                   <div className="flex items-center gap-3">
-                    <div className="bg-yellow-100 p-3 rounded-full flex-shrink-0">
-                      <FontAwesomeIcon icon={faSpoon} className="text-yellow-600 w-5 h-5" />
+                    <div className="bg-amber-100 p-3 rounded-full flex-shrink-0">
+                      <FontAwesomeIcon icon={faSpoon} className="text-amber-600 w-5 h-5" />
                     </div>
-                    <h3 className="font-semibold text-yellow-900 text-lg">Ways to earn points</h3>
+                    <h3 className="font-semibold text-amber-900 text-lg">Ways to earn points</h3>
                   </div>
                   <div className="grid gap-2">
                     {[

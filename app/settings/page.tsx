@@ -281,9 +281,9 @@ export default function SettingsPage() {
       <div className="flex flex-col items-center justify-center min-h-screen">
         <img src="/baba-removebg.png" alt="Baba" className="w-32 h-32 mb-6" />
         <div className="typing-indicator flex space-x-2">
-          <div className="dot bg-gray-400 rounded-full w-6 h-6"></div>
-          <div className="dot bg-gray-400 rounded-full w-6 h-6"></div>
-          <div className="dot bg-gray-400 rounded-full w-6 h-6"></div>
+          <div className="dot rounded-full w-6 h-6"></div>
+          <div className="dot rounded-full w-6 h-6"></div>
+          <div className="dot rounded-full w-6 h-6"></div>
         </div>
       </div>
       </SidebarLayout>
@@ -299,7 +299,7 @@ export default function SettingsPage() {
       {/* Save Status Indicator */}
       {(isSaving || saveSuccess) && (
         <div className={`fixed bottom-4 right-4 p-4 rounded-lg shadow-lg z-50 transition-all duration-300 ${
-          isSaving ? "bg-gray-800 text-white" : "bg-green-600 text-white"
+          isSaving ? "bg-amber-800 text-white" : "bg-amber-600 text-white"
         }`}
         style={{ 
           opacity: isSaving || saveSuccess ? 1 : 0,
@@ -334,10 +334,10 @@ export default function SettingsPage() {
 
       <div className="grid grid-cols-1 gap-8">
         {/* Username Section */}
-        <div className="p-8 border border-gray-200 rounded-2xl shadow-sm bg-white flex flex-col transition-shadow hover:shadow-md">
+        <div className="p-8 border border-amber-100 rounded-2xl shadow-sm bg-white flex flex-col transition-shadow hover:shadow-md hover:shadow-amber-900/5">
           <form onSubmit={handleUsernameSubmit}>
             <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 bg-green-50 rounded-xl">
+              <div className="p-2 bg-amber-50 rounded-xl">
                 <span className="text-xl">👤</span>
               </div>
               <div className="flex-grow">
@@ -353,15 +353,15 @@ export default function SettingsPage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Enter your username"
-                className="flex-1 p-3 border border-gray-300 rounded-xl focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all"
+                className="flex-1 p-3 border border-amber-200 rounded-xl focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all"
               />
               <button
                 type="submit"
                 disabled={savingUsername}
                 className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap
                   ${savingUsername
-                    ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                    : "bg-black text-white hover:bg-[#212121]"
+                    ? "bg-amber-200 text-amber-700/60 cursor-not-allowed"
+                    : "bg-amber-600 text-white hover:bg-amber-700"
                   }`}
               >
                 {savingUsername ? (
@@ -389,9 +389,9 @@ export default function SettingsPage() {
         </div>
 
         {/* Image Style Preferences */}
-        <div className="p-8 border border-gray-200 rounded-2xl shadow-sm bg-white flex flex-col transition-shadow hover:shadow-md">
+        <div className="p-8 border border-amber-100 rounded-2xl shadow-sm bg-white flex flex-col transition-shadow hover:shadow-md hover:shadow-amber-900/5">
           <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-purple-50 rounded-xl">
+            <div className="p-2 bg-amber-50 rounded-xl">
               <span className="text-xl">🎨</span>
             </div>
             <div>
@@ -412,15 +412,15 @@ export default function SettingsPage() {
                 }}
                 className={`p-4 border rounded-xl cursor-pointer transition-all ${
                   preferredImageStyle === key
-                    ? "border-purple-500 bg-purple-50"
-                    : "border-gray-200 hover:border-purple-200 hover:bg-purple-50/50"
+                    ? "border-amber-500 bg-amber-50"
+                    : "border-amber-100 hover:border-amber-200 hover:bg-amber-50/50"
                 }`}
               >
                 <div className="flex items-center gap-2 mb-2">
                   <div className={`w-4 h-4 rounded-full border ${
                     preferredImageStyle === key
-                      ? "border-4 border-purple-500"
-                      : "border-gray-300"
+                      ? "border-4 border-amber-500"
+                      : "border-amber-200"
                   }`} />
                   <h4 className="font-semibold">{style.name}</h4>
                 </div>
@@ -431,9 +431,9 @@ export default function SettingsPage() {
         </div>
 
         {/* Dietary Preferences */}
-        <div className="p-8 border border-gray-200 rounded-2xl shadow-sm bg-white flex flex-col transition-shadow hover:shadow-md">
+        <div className="p-8 border border-amber-100 rounded-2xl shadow-sm bg-white flex flex-col transition-shadow hover:shadow-md hover:shadow-amber-900/5">
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-blue-50 rounded-xl">
+            <div className="p-2 bg-amber-50 rounded-xl">
               <span className="text-xl">🍲</span>
             </div>
             <div>
@@ -455,15 +455,15 @@ export default function SettingsPage() {
               }}
               onClick={() => setShowDietaryDropdown(true)}
               placeholder="Type to search..."
-              className="w-full p-3 border border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+              className="w-full p-3 border border-amber-200 rounded-xl focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all"
             />
             {showDietaryDropdown && filteredDietaryOptions.length > 0 && (
-              <ul className="absolute z-10 w-full bg-white border border-gray-200 mt-1 rounded-xl shadow-lg max-h-40 overflow-auto">
+              <ul className="absolute z-10 w-full bg-white border border-amber-100 mt-1 rounded-xl shadow-lg max-h-40 overflow-auto">
                 {filteredDietaryOptions.map((option) => (
                   <li
                     key={option}
                     onClick={() => handleSelectDietary(option)}
-                    className="px-4 py-2.5 hover:bg-gray-50 cursor-pointer transition-colors"
+                    className="px-4 py-2.5 hover:bg-amber-50 cursor-pointer transition-colors"
                   >
                     {option}
                   </li>
@@ -477,7 +477,7 @@ export default function SettingsPage() {
             {dietaryPreferences.map((pref) => (
               <div
                 key={pref}
-                className="flex items-center gap-1.5 bg-blue-50 px-3 py-1.5 rounded-full text-sm"
+                className="flex items-center gap-1.5 bg-amber-50 px-3 py-1.5 rounded-full text-sm border border-amber-100"
               >
                 <span>{pref}</span>
                 <button
@@ -496,9 +496,9 @@ export default function SettingsPage() {
         </div>
 
         {/* Preferred Cooking Oil */}
-        <div className="p-8 border border-gray-200 rounded-2xl shadow-sm bg-white flex flex-col transition-shadow hover:shadow-md">
+        <div className="p-8 border border-amber-100 rounded-2xl shadow-sm bg-white flex flex-col transition-shadow hover:shadow-md hover:shadow-amber-900/5">
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-blue-50 rounded-xl">
+            <div className="p-2 bg-amber-50 rounded-xl">
               <span className="text-xl">🫒</span>
             </div>
             <div>
@@ -520,15 +520,15 @@ export default function SettingsPage() {
               }}
               onClick={() => setShowOilDropdown(true)}
               placeholder="Type or select a cooking oil..."
-              className="w-full p-3 border border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+              className="w-full p-3 border border-amber-200 rounded-xl focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all"
             />
             {showOilDropdown && filteredOilOptions.length > 0 && (
-              <ul className="absolute z-10 w-full bg-white border border-gray-200 mt-1 rounded-xl shadow-lg max-h-40 overflow-auto">
+              <ul className="absolute z-10 w-full bg-white border border-amber-100 mt-1 rounded-xl shadow-lg max-h-40 overflow-auto">
                 {filteredOilOptions.map((oil) => (
                   <li
                     key={oil}
                     onClick={() => handleSelectOil(oil)}
-                    className="px-4 py-2.5 hover:bg-gray-50 cursor-pointer transition-colors"
+                    className="px-4 py-2.5 hover:bg-amber-50 cursor-pointer transition-colors"
                   >
                     {oil}
                   </li>
@@ -539,7 +539,7 @@ export default function SettingsPage() {
 
           {/* Selected oil tag */}
           {preferredCookingOil && (
-            <div className="flex items-center gap-1.5 bg-blue-50 px-3 py-1.5 rounded-full text-sm w-fit">
+            <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-100 px-3 py-1.5 rounded-full text-sm w-fit">
               <span>{preferredCookingOil}</span>
               <button
                 onClick={() => {

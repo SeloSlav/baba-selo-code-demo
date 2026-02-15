@@ -21,6 +21,7 @@ import { faSearch, faXmark, faEllipsisVertical, faThumbtack, faTrashCan } from "
 import { getAuth } from "firebase/auth";
 import { useDeleteRecipe } from "../context/DeleteRecipeContext";
 import { SearchBar } from '../components/SearchBar';
+import { RecipeCardSkeleton } from '../components/RecipeCardSkeleton';
 import { RecipeCard } from '../components/RecipeCard';
 import { SidebarLayout } from '../components/SidebarLayout';
 import { Recipe } from '../recipe/types';
@@ -314,12 +315,15 @@ const Recipes = () => {
   if (loading && recipes.length === 0) {
     return (
       <SidebarLayout>
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <img src="/baba-removebg.png" alt="Baba" className="w-32 h-32 mb-6" />
-        <div className="typing-indicator flex space-x-2">
-          <div className="dot bg-gray-400 rounded-full w-6 h-6"></div>
-          <div className="dot bg-gray-400 rounded-full w-6 h-6"></div>
-          <div className="dot bg-gray-400 rounded-full w-6 h-6"></div>
+      <div className="max-w-7xl mx-auto px-4 py-8 min-h-screen bg-[var(--background)]">
+        <div className="sticky top-0 bg-amber-50/95 backdrop-blur-sm z-10 py-4 -mx-4 px-4 shadow-sm border-b border-amber-100 mb-8">
+          <div className="h-8 bg-amber-100 rounded w-40 mb-4 animate-pulse" />
+          <div className="h-12 bg-amber-100/60 rounded-xl animate-pulse" />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+          {[1, 2, 3, 4, 5, 6].map((n) => (
+            <RecipeCardSkeleton key={n} />
+          ))}
         </div>
       </div>
       </SidebarLayout>
@@ -331,7 +335,7 @@ const Recipes = () => {
     <SidebarLayout>
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Sticky header */}
-      <div className="sticky top-0 bg-white z-10 py-4 -mx-4 px-4 shadow-sm">
+      <div className="sticky top-0 bg-amber-50/95 backdrop-blur-sm z-10 py-4 -mx-4 px-4 shadow-sm border-b border-amber-100">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-3xl font-bold mb-4">My Recipes</h1>
           <SearchBar 
@@ -349,11 +353,7 @@ const Recipes = () => {
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map((n) => (
-              <div key={n} className="animate-pulse">
-                <div className="bg-gray-200 h-48 rounded-xl mb-4"></div>
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-              </div>
+              <RecipeCardSkeleton key={n} />
             ))}
           </div>
         ) : filteredRecipes.length > 0 ? (
@@ -361,11 +361,11 @@ const Recipes = () => {
             <div>
               {/* Pinned Recipes */}
               <div className="mb-8">
-                <h2 className="text-gray-600 text-sm font-semibold pb-2 border-b">
+                <h2 className="text-amber-900/80 text-sm font-semibold pb-2 border-b border-amber-100">
                   📌 Pinned Recipes
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
-                  {pinnedRecipes.map((recipe) => (
+                  {pinnedRecipes.map((recipe, index) => (
                     <div key={recipe.id} className="relative">
                       <RecipeCard 
                         key={recipe.id} 
@@ -373,15 +373,16 @@ const Recipes = () => {
                         showMenu={true}
                         onMenuClick={(id) => setMenuOpen(current => current === id ? null : id)}
                         isMenuOpen={menuOpen === recipe.id}
+                        priority={index < 6}
                       />
                       {menuOpen === recipe.id && (
-                        <div ref={menuRef} className="absolute right-2 top-2 bg-white rounded-3xl shadow-lg w-60 border border-gray-300 p-3 z-40">
+                        <div ref={menuRef} className="absolute right-2 top-2 bg-white rounded-3xl shadow-lg w-60 border border-amber-100 p-3 z-40">
                           <ul className="space-y-1">
                             <li>
                               <button
                                 onClick={() => handlePinToggle(recipe.id, recipe.pinned || false)}
                                 disabled={loadingPinAction === recipe.id}
-                                className="w-full px-4 py-2 text-left hover:bg-gray-100 rounded-md flex items-center gap-2"
+                                className="w-full px-4 py-2 text-left hover:bg-amber-50 rounded-md flex items-center gap-2"
                               >
                                 <FontAwesomeIcon 
                                   icon={faThumbtack} 
@@ -391,7 +392,7 @@ const Recipes = () => {
                                 />
                                 {loadingPinAction === recipe.id ? (
                                   <span className="flex items-center">
-                                    <div className="w-4 h-4 border-2 border-gray-500 border-t-transparent rounded-full animate-spin mr-2"></div>
+                                    <div className="w-4 h-4 border-2 border-amber-600 border-t-transparent rounded-full animate-spin mr-2"></div>
                                     {recipe.pinned ? 'Unpinning...' : 'Pinning...'}
                                   </span>
                                 ) : (
@@ -403,7 +404,7 @@ const Recipes = () => {
                               <button
                                 onClick={() => handleDelete(recipe.id, recipe.recipeTitle)}
                                 disabled={loadingDeleteAction === recipe.id}
-                                className="w-full px-4 py-2 text-left text-red-600 hover:bg-gray-100 rounded-md flex items-center gap-2"
+                                className="w-full px-4 py-2 text-left text-red-600 hover:bg-amber-50 rounded-md flex items-center gap-2"
                               >
                                 <FontAwesomeIcon icon={faTrashCan} />
                                 {loadingDeleteAction === recipe.id ? (
@@ -426,11 +427,11 @@ const Recipes = () => {
 
               {/* All Recipes */}
               <div>
-                <h2 className="text-gray-600 text-sm font-semibold pb-2 border-b">
+                <h2 className="text-amber-900/80 text-sm font-semibold pb-2 border-b border-amber-100">
                   🍳 All Recipes
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
-                  {unpinnedRecipes.map((recipe) => (
+                  {unpinnedRecipes.map((recipe, index) => (
                     <div key={recipe.id} className="relative">
                       <RecipeCard 
                         key={recipe.id} 
@@ -438,15 +439,16 @@ const Recipes = () => {
                         showMenu={true}
                         onMenuClick={(id) => setMenuOpen(current => current === id ? null : id)}
                         isMenuOpen={menuOpen === recipe.id}
+                        priority={index < 6}
                       />
                       {menuOpen === recipe.id && (
-                        <div ref={menuRef} className="absolute right-2 top-2 bg-white rounded-3xl shadow-lg w-60 border border-gray-300 p-3 z-40">
+                        <div ref={menuRef} className="absolute right-2 top-2 bg-white rounded-3xl shadow-lg w-60 border border-amber-100 p-3 z-40">
                           <ul className="space-y-1">
                             <li>
                               <button
                                 onClick={() => handlePinToggle(recipe.id, recipe.pinned || false)}
                                 disabled={loadingPinAction === recipe.id}
-                                className="w-full px-4 py-2 text-left hover:bg-gray-100 rounded-md flex items-center gap-2"
+                                className="w-full px-4 py-2 text-left hover:bg-amber-50 rounded-md flex items-center gap-2"
                               >
                                 <FontAwesomeIcon 
                                   icon={faThumbtack} 
@@ -456,7 +458,7 @@ const Recipes = () => {
                                 />
                                 {loadingPinAction === recipe.id ? (
                                   <span className="flex items-center">
-                                    <div className="w-4 h-4 border-2 border-gray-500 border-t-transparent rounded-full animate-spin mr-2"></div>
+                                    <div className="w-4 h-4 border-2 border-amber-600 border-t-transparent rounded-full animate-spin mr-2"></div>
                                     {recipe.pinned ? 'Unpinning...' : 'Pinning...'}
                                   </span>
                                 ) : (
@@ -468,7 +470,7 @@ const Recipes = () => {
                               <button
                                 onClick={() => handleDelete(recipe.id, recipe.recipeTitle)}
                                 disabled={loadingDeleteAction === recipe.id}
-                                className="w-full px-4 py-2 text-left text-red-600 hover:bg-gray-100 rounded-md flex items-center gap-2"
+                                className="w-full px-4 py-2 text-left text-red-600 hover:bg-amber-50 rounded-md flex items-center gap-2"
                               >
                                 <FontAwesomeIcon icon={faTrashCan} />
                                 {loadingDeleteAction === recipe.id ? (
@@ -486,6 +488,9 @@ const Recipes = () => {
                       )}
                     </div>
                   ))}
+                  {loadingMore && [1, 2, 3].map((n) => (
+                    <RecipeCardSkeleton key={`skeleton-${n}`} />
+                  ))}
                 </div>
               </div>
             </div>
@@ -497,11 +502,7 @@ const Recipes = () => {
                 className="h-20 flex items-center justify-center mt-8"
                 style={{ minHeight: '100px' }}
               >
-                {loadingMore ? (
-                  <div className="w-6 h-6 border-2 border-gray-500 border-t-transparent rounded-full animate-spin"></div>
-                ) : (
-                  <div className="w-full h-full" />
-                )}
+                <div className="w-full h-full" />
               </div>
             )}
           </>
@@ -509,7 +510,7 @@ const Recipes = () => {
           <div className="text-center py-12">
             <div className="text-4xl mb-4">🤔</div>
             <h3 className="text-xl font-semibold mb-2">No recipes found</h3>
-            <p className="text-gray-600">
+            <p className="text-amber-800/70">
               Try adjusting your search or check back later for new recipes
             </p>
           </div>

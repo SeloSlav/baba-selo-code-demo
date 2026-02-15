@@ -28,10 +28,10 @@ export const RecipeIngredients = ({
         {recipe.ingredients.map((ingredient, index) => (
           <li
             key={index}
-            className={`cursor-pointer flex items-center bg-gray-100 border border-gray-300 rounded-full px-3 py-2 transform transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-md ${
+            className={`cursor-pointer flex items-center bg-amber-50 border border-amber-200 rounded-full px-3 py-2 transform transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-md ${
               checkedIngredients[index]
                 ? "bg-green-50 border-green-200 -translate-x-1"
-                : "hover:border-gray-400"
+                : "hover:border-amber-300"
             }`}
             onClick={() => toggleIngredientCheck(index)}
           >
@@ -40,13 +40,13 @@ export const RecipeIngredients = ({
               className={`mr-3 transform transition-transform duration-300 ${
                 checkedIngredients[index]
                   ? "text-green-500 scale-110"
-                  : "text-gray-400 hover:scale-105"
+                  : "text-amber-600/70 hover:scale-105"
               }`}
             />
             <span className={`transition-all duration-300 ${
               checkedIngredients[index]
-                ? "line-through text-gray-400"
-                : "text-gray-700"
+                ? "line-through text-amber-700/60"
+                : "text-gray-900"
             }`}>
               {ingredient}
             </span>
