@@ -127,6 +127,7 @@ const RecipeDetails = () => {
             directions: directions,
             ingredients: ingredients,
             imageURL: data.imageURL || "",
+            imageUpdatedAt: data.imageUpdatedAt ?? null,
             recipeSummary: data.recipeSummary || "",
             recipeNotes: data.recipeNotes || "",
             macroInfo: data.macroInfo || null,
@@ -360,16 +361,17 @@ const RecipeDetails = () => {
         }
 
         if (data.imageUrl) {
-            // Update Firestore with the permanent URL (store clean URL)
+            const ts = Date.now();
+            // Update Firestore with the permanent URL and timestamp for cache-busting on refresh
             const recipeDocRef = doc(db, "recipes", id as string);
-            await updateDoc(recipeDocRef, { imageURL: data.imageUrl });
+            await updateDoc(recipeDocRef, { imageURL: data.imageUrl, imageUpdatedAt: ts });
 
             // Cache-bust: append timestamp so browser fetches fresh image (same storage path = same signed URL = stale cache)
-            const cacheBustedUrl = `${data.imageUrl}${data.imageUrl.includes('?') ? '&' : '?'}_t=${Date.now()}`;
+            const cacheBustedUrl = `${data.imageUrl}${data.imageUrl.includes('?') ? '&' : '?'}_t=${ts}`;
 
             // Update local state with cache-busted URL and show loading until new image loads
             setIsImageLoading(true);
-            setRecipe((prevRecipe) => prevRecipe && { ...prevRecipe, imageURL: cacheBustedUrl });
+            setRecipe((prevRecipe) => prevRecipe && { ...prevRecipe, imageURL: cacheBustedUrl, imageUpdatedAt: ts });
 
             // Only try to award points if the action was available
             if (actionCheck.available) {
@@ -417,12 +419,12 @@ const RecipeDetails = () => {
         }
       }
 
-      // Update Firestore to remove the image URL
+      // Update Firestore to remove the image URL and clear cache timestamp
       const recipeDocRef = doc(db, "recipes", id as string);
-      await updateDoc(recipeDocRef, { imageURL: "" });
+      await updateDoc(recipeDocRef, { imageURL: "", imageUpdatedAt: null });
 
       // 4. Update local state
-      setRecipe((prevRecipe) => prevRecipe && { ...prevRecipe, imageURL: "" });
+      setRecipe((prevRecipe) => prevRecipe && { ...prevRecipe, imageURL: "", imageUpdatedAt: null });
       setImageError(false);
     } catch (error) {
       console.error("Error deleting image:", error);
@@ -502,13 +504,14 @@ const RecipeDetails = () => {
         timestamp: serverTimestamp(),
       });
 
-      // Update Firestore with the new image URL (store clean URL)
+      const ts = Date.now();
+      // Update Firestore with the new image URL and timestamp for cache-busting on refresh
       const recipeDocRef = doc(db, "recipes", id as string);
-      await updateDoc(recipeDocRef, { imageURL: downloadURL });
+      await updateDoc(recipeDocRef, { imageURL: downloadURL, imageUpdatedAt: ts });
 
       // Cache-bust for display so browser fetches fresh image after overwrite
-      const cacheBustedUrl = `${downloadURL}${downloadURL.includes('?') ? '&' : '?'}_t=${Date.now()}`;
-      setRecipe((prevRecipe) => prevRecipe && { ...prevRecipe, imageURL: cacheBustedUrl });
+      const cacheBustedUrl = `${downloadURL}${downloadURL.includes('?') ? '&' : '?'}_t=${ts}`;
+      setRecipe((prevRecipe) => prevRecipe && { ...prevRecipe, imageURL: cacheBustedUrl, imageUpdatedAt: ts });
       setImageError(false);
       setIsImageLoading(true);
 

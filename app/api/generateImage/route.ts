@@ -63,8 +63,8 @@ if (!getApps().length) {
 
 export async function POST(req: Request) {
     try {
-        const { prompt, userId, recipeId } = await req.json();
-        console.log("Received request with userId:", userId);
+        const { prompt, userId, recipeId, styleOverride } = await req.json();
+        console.log("Received request with userId:", userId, "styleOverride:", styleOverride);
 
         if (!prompt || !recipeId) {
             return NextResponse.json({ 
@@ -84,10 +84,13 @@ export async function POST(req: Request) {
             canAwardPoints = actionCheck.available;
         }
 
-        // Get user's preferred style from Firebase (Admin SDK for server-side read)
+        // Get style: styleOverride (for preview generation) takes precedence, else user preference from Firebase
         let stylePrompt = imageStyleOptions["photorealistic-recipe"].prompt;
         let userStyle: string | null = null;
-        if (userId) {
+        if (styleOverride && imageStyleOptions[styleOverride]) {
+            userStyle = styleOverride;
+            stylePrompt = imageStyleOptions[styleOverride].prompt;
+        } else if (userId) {
             try {
                 const userDoc = await admin.firestore().collection('users').doc(userId).get();
                 if (userDoc.exists) {

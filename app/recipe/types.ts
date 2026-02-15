@@ -10,6 +10,7 @@ export interface Recipe {
   directions: string[];
   ingredients: string[];
   imageURL?: string;
+  imageUpdatedAt?: { toMillis?: () => number } | number | null;
   recipeSummary?: string;
   recipeNotes?: string;
   macroInfo?: {

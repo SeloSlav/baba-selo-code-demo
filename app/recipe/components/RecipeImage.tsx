@@ -49,13 +49,20 @@ export const RecipeImage = ({
   // Show controls if user is owner OR admin
   const canManageImages = isOwner || isUserAdmin;
 
+  // Cache-bust: use imageUpdatedAt so browser fetches fresh image after regenerate/upload (same storage path = stale cache)
+  const displayImageUrl = recipe.imageURL
+    ? recipe.imageUpdatedAt
+      ? `${recipe.imageURL}${recipe.imageURL.includes('?') ? '&' : '?'}_t=${typeof recipe.imageUpdatedAt === 'object' && recipe.imageUpdatedAt !== null && 'toMillis' in recipe.imageUpdatedAt ? (recipe.imageUpdatedAt as { toMillis: () => number }).toMillis() : recipe.imageUpdatedAt}`
+      : recipe.imageURL
+    : undefined;
+
   return (
     <div className="relative aspect-[16/12] sm:aspect-video w-full mb-6 bg-gray-100 rounded-lg overflow-hidden group">
-      {recipe.imageURL && !imageError ? (
+      {displayImageUrl && !imageError ? (
         <>
           <Image
-            src={recipe.imageURL}
-            alt={recipe.recipeTitle}
+            src={displayImageUrl}
+            alt={recipe.recipeTitle || 'Recipe'}
             fill
             className={`object-cover transition-opacity duration-300 ${
               isImageLoading ? 'opacity-0' : 'opacity-100'

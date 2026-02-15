@@ -460,8 +460,18 @@ export default function SettingsPage() {
                     : "border-amber-100 hover:border-amber-200 hover:bg-amber-50/50"
                 }`}
               >
+                <div className="aspect-square rounded-lg overflow-hidden bg-amber-50 mb-3 border border-amber-100">
+                  <img
+                    src={`/style-previews/${key}.png`}
+                    alt={`${style.name} style example`}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                </div>
                 <div className="flex items-center gap-2 mb-2">
-                  <div className={`w-4 h-4 rounded-full border ${
+                  <div className={`w-4 h-4 rounded-full border shrink-0 ${
                     preferredImageStyle === key
                       ? "border-4 border-amber-500"
                       : "border-amber-200"
