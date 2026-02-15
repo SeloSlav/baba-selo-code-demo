@@ -99,7 +99,7 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
                     <li className="flex items-center px-4 py-2 rounded-md hover:bg-amber-50 cursor-pointer">
                         <Link href="/explore" className="flex items-center w-full">
                             <FontAwesomeIcon icon={faCompass} className="text-amber-700 mr-3" />
-                            <span>Explore</span>
+                            <span>Explore Recipes</span>
                         </Link>
                     </li>
                     <li className="flex items-center px-4 py-2 rounded-md hover:bg-amber-50 cursor-pointer">
@@ -170,9 +170,15 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
                     </Link>
                 </li>
                 <li className="flex items-center px-4 py-2 rounded-md hover:bg-amber-50 cursor-pointer">
+                    <Link href={username ? `/${username}` : "/recipes"} className="flex items-center w-full">
+                        <FontAwesomeIcon icon={faBookOpenReader} className="text-amber-700 mr-3" />
+                        <span>My Recipes</span>
+                    </Link>
+                </li>
+                <li className="flex items-center px-4 py-2 rounded-md hover:bg-amber-50 cursor-pointer">
                     <Link href="/explore" className="flex items-center w-full">
                         <FontAwesomeIcon icon={faCompass} className="text-amber-700 mr-3" />
-                        <span>Explore</span>
+                        <span>Explore Recipes</span>
                     </Link>
                 </li>
                 <li className="flex items-center px-4 py-2 rounded-md hover:bg-amber-50 cursor-pointer">
@@ -190,12 +196,6 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
                         <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full font-medium">
                             Pro ⭐
                         </span>
-                    </Link>
-                </li>
-                <li className="flex items-center px-4 py-2 rounded-md hover:bg-amber-50 cursor-pointer">
-                    <Link href={username ? `/${username}` : "/recipes"} className="flex items-center w-full">
-                        <FontAwesomeIcon icon={faBookOpenReader} className="text-amber-700 mr-3" />
-                        <span>My Recipes</span>
                     </Link>
                 </li>
                 <li className="flex items-center px-4 py-2 rounded-md hover:bg-amber-50 cursor-pointer">

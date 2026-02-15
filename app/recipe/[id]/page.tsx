@@ -81,6 +81,7 @@ const RecipeDetails = () => {
   const auth = getAuth();
   const [imageError, setImageError] = useState(false);
   const [isImageLoading, setIsImageLoading] = useState(true);
+  const [partialImageUrl, setPartialImageUrl] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [notes, setNotes] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
@@ -313,13 +314,13 @@ const RecipeDetails = () => {
     });
   };
 
-  // Function to generate a new recipe image using DALL·E
+  // Function to generate a new recipe image using streaming (partial results → final)
   const handleGenerateImage = async () => {
     if (!recipe || !id || !user) return;
 
     setLoadingImage(true);
+    setPartialImageUrl(null);
     try {
-        // Check if points can be awarded, but don't block the generation
         const actionCheck = await SpoonPointSystem.isActionAvailable(
             user.uid,
             'GENERATE_IMAGE',
@@ -335,12 +336,10 @@ const RecipeDetails = () => {
                 : "You can generate the image, but no points will be awarded at this time.");
         }
 
-        // Set up timeout for the fetch request
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 50000); // 50 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 90000); // 90s for streaming
 
-        // Generate image and get permanent Firebase Storage URL
-        const response = await fetch("/api/generateImage", {
+        const response = await fetch("/api/generateImageStream", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -355,44 +354,74 @@ const RecipeDetails = () => {
 
         clearTimeout(timeoutId);
 
-        const data = await response.json();
-
-        if (!response.ok) {
-            showPointsToast(0, data.message || "Failed to generate image");
+        if (!response.ok || !response.body) {
+            showPointsToast(0, "Failed to generate image. Please try again.");
             return;
         }
 
-        if (data.imageUrl) {
-            const ts = Date.now();
-            // Update Firestore with the permanent URL and timestamp for cache-busting on refresh
-            const recipeDocRef = doc(db, "recipes", id as string);
-            await updateDoc(recipeDocRef, { imageURL: data.imageUrl, imageUpdatedAt: ts });
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
 
-            // Cache-bust: append timestamp so browser fetches fresh image (same storage path = same signed URL = stale cache)
-            const cacheBustedUrl = `${data.imageUrl}${data.imageUrl.includes('?') ? '&' : '?'}_t=${ts}`;
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
 
-            // Update local state with cache-busted URL and show loading until new image loads
-            setIsImageLoading(true);
-            setRecipe((prevRecipe) => prevRecipe && { ...prevRecipe, imageURL: cacheBustedUrl, imageUpdatedAt: ts });
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n\n");
+            buffer = lines.pop() ?? "";
 
-            // Only try to award points if the action was available
-            if (actionCheck.available) {
-                const pointsResult = await SpoonPointSystem.awardPoints(
-                    user.uid,
-                    'GENERATE_IMAGE',
-                    id as string
-                );
+            for (const line of lines) {
+                if (line.startsWith("data: ")) {
+                    try {
+                        const data = JSON.parse(line.slice(6));
+                        if (data.type === "partial" && data.b64) {
+                            setPartialImageUrl(`data:image/png;base64,${data.b64}`);
+                        } else if (data.type === "final" && data.imageUrl) {
+                            setPartialImageUrl(null);
+                            const ts = Date.now();
+                            const recipeDocRef = doc(db, "recipes", id as string);
+                            await updateDoc(recipeDocRef, { imageURL: data.imageUrl, imageUpdatedAt: ts });
+                            const cacheBustedUrl = `${data.imageUrl}${data.imageUrl.includes('?') ? '&' : '?'}_t=${ts}`;
+                            setIsImageLoading(true);
+                            setRecipe((prevRecipe) => prevRecipe && { ...prevRecipe, imageURL: cacheBustedUrl, imageUpdatedAt: ts });
 
-                if (pointsResult.success) {
-                    showPointsToast(pointsResult.points!, 'Recipe image generated!');
+                            if (actionCheck.available) {
+                                const pointsResult = await SpoonPointSystem.awardPoints(
+                                    user.uid,
+                                    'GENERATE_IMAGE',
+                                    id as string
+                                );
+                                if (pointsResult.success) {
+                                    showPointsToast(pointsResult.points!, 'Recipe image generated!');
+                                }
+                            }
+                        } else if (data.type === "error") {
+                            showPointsToast(0, data.message || "Failed to generate image");
+                        }
+                    } catch {
+                        // ignore parse errors for incomplete chunks
+                    }
                 }
             }
-        } else {
-            showPointsToast(0, "Failed to generate image. Please try again.");
         }
+
+        if (buffer.startsWith("data: ")) {
+            try {
+                const data = JSON.parse(buffer.slice(6));
+                if (data.type === "error") {
+                    showPointsToast(0, data.message || "Failed to generate image");
+                }
+            } catch {
+                // ignore
+            }
+        }
+
+        setPartialImageUrl(null);
     } catch (error) {
         console.error("Error generating image:", error);
-        if (error.name === 'AbortError') {
+        setPartialImageUrl(null);
+        if (error instanceof Error && error.name === 'AbortError') {
             showPointsToast(0, "Image generation took too long. Please try again.");
         } else {
             showPointsToast(0, "Failed to generate image. Please try again later.");
@@ -1104,6 +1133,7 @@ const RecipeDetails = () => {
             isImageLoading={isImageLoading}
             imageError={imageError}
             loadingImage={loadingImage}
+            partialImageUrl={partialImageUrl}
             uploadingImage={uploadingImage}
             handleGenerateImage={handleGenerateImage}
             handleDeleteImage={handleDeleteImage}

@@ -1,6 +1,7 @@
 {
   "functions": {
     "app/api/generateImage/route.ts": { "maxDuration": 60 },
+    "app/api/generateImageStream/route.ts": { "maxDuration": 90 },
     "app/api/meal-plan/send/route.ts": { "maxDuration": 120 }
   },
   "regions": ["iad1"],

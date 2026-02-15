@@ -17,6 +17,7 @@ interface RecipeImageProps {
   isImageLoading: boolean;
   imageError: boolean;
   loadingImage: boolean;
+  partialImageUrl?: string | null;
   uploadingImage: boolean;
   handleGenerateImage: () => void;
   handleDeleteImage: () => void;
@@ -34,6 +35,7 @@ export const RecipeImage = ({
   isImageLoading,
   imageError,
   loadingImage,
+  partialImageUrl,
   uploadingImage,
   handleGenerateImage,
   handleDeleteImage,
@@ -56,9 +58,23 @@ export const RecipeImage = ({
       : recipe.imageURL
     : undefined;
 
+  // Show partial image while streaming (blurred → clearer → final)
+  const showPartialImage = loadingImage && partialImageUrl;
+
   return (
     <div className="relative aspect-[16/12] sm:aspect-video w-full mb-6 bg-gray-100 rounded-lg overflow-hidden group">
-      {displayImageUrl && !imageError ? (
+      {showPartialImage ? (
+        <>
+          <img
+            src={partialImageUrl!}
+            alt={`Generating ${recipe.recipeTitle || 'Recipe'}...`}
+            className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500"
+          />
+          <div className="absolute bottom-2 left-2 px-2 py-1 rounded bg-black/50 text-white text-xs font-medium">
+            Generating...
+          </div>
+        </>
+      ) : displayImageUrl && !imageError ? (
         <>
           <Image
             src={displayImageUrl}
