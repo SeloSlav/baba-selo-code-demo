@@ -194,7 +194,7 @@ const isTimerRequest = (text: string | any): { isTimer: boolean; seconds: number
 // Update TimerMessage component
 const TimerMessage: React.FC<{ seconds: number; messageRef: React.RefObject<HTMLDivElement> | null }> = ({ seconds, messageRef }) => (
     <AssistantMessageWrapper messageRef={messageRef}>
-        <div className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl">
+        <div className="bg-[#fef3c7] text-[#171717] px-5 py-2.5 rounded-3xl">
             <p className="mb-4">
                 Here's your {seconds >= 60 
                     ? `${Math.floor(seconds / 60)} minute` 
@@ -209,7 +209,7 @@ const TimerMessage: React.FC<{ seconds: number; messageRef: React.RefObject<HTML
 // Subcomponents for different message types
 const UserMessage: React.FC<{ content: string; imageUrl?: string }> = ({ content, imageUrl }) => (
     <div className="flex justify-end">
-        <div className="bg-[#0284FE] text-white px-5 py-2.5 rounded-3xl max-w-[80%] whitespace-pre-line">
+        <div className="bg-amber-600 text-white px-5 py-2.5 rounded-3xl max-w-[80%] whitespace-pre-line">
             <p>{content}</p>
             {imageUrl && (
                 <div className="mt-2">
@@ -241,7 +241,7 @@ const AssistantMessageWrapper: React.FC<{ children: React.ReactNode; messageRef:
 const LinkedMessage: React.FC<{ content: string; messageRef: React.RefObject<HTMLDivElement> | null }> = ({ content, messageRef }) => (
     <AssistantMessageWrapper messageRef={messageRef}>
         <div
-            className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl"
+            className="bg-[#fef3c7] text-[#171717] px-5 py-2.5 rounded-3xl"
             dangerouslySetInnerHTML={{ __html: content }}
         />
     </AssistantMessageWrapper>
@@ -255,7 +255,7 @@ const CalorieMessage: React.FC<{ content: any; messageRef: React.RefObject<HTMLD
 
 const SeloMessage: React.FC<{ content: string; messageRef: React.RefObject<HTMLDivElement> | null }> = ({ content, messageRef }) => (
     <AssistantMessageWrapper messageRef={messageRef}>
-        <div className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl">
+        <div className="bg-[#fef3c7] text-[#171717] px-5 py-2.5 rounded-3xl">
             {renderMarkdown(content)}
             {renderDiscountButton()}
         </div>
@@ -299,7 +299,7 @@ export const MessageRenderer: React.FC<MessageRendererProps> = ({
         if (isSelo(message.content)) {
             return (
                 <AssistantMessageWrapper messageRef={messageRef}>
-                    <div className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl">
+                    <div className="bg-[#fef3c7] text-[#171717] px-5 py-2.5 rounded-3xl">
                         {linkifyLastSelo(message.content)}
                     </div>
                 </AssistantMessageWrapper>
@@ -325,7 +325,7 @@ export const MessageRenderer: React.FC<MessageRendererProps> = ({
         if (message.content.includes("pairing") || message.content.includes("complement")) {
             return (
                 <AssistantMessageWrapper messageRef={messageRef}>
-                    <div className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl">
+                    <div className="bg-[#fef3c7] text-[#171717] px-5 py-2.5 rounded-3xl">
                         {renderDishPairingLinks(formattedPairings[index] || message.content, onSuggestionClick)}
                     </div>
                 </AssistantMessageWrapper>
@@ -334,7 +334,7 @@ export const MessageRenderer: React.FC<MessageRendererProps> = ({
 
         return (
             <AssistantMessageWrapper messageRef={messageRef}>
-                <div className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl">
+                <div className="bg-[#fef3c7] text-[#171717] px-5 py-2.5 rounded-3xl">
                     {renderMarkdown(message.content)}
                 </div>
             </AssistantMessageWrapper>

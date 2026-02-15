@@ -76,8 +76,8 @@ service cloud.firestore {
                          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes']))
                        );
 
-      // Disallow deleting recipes for now
-      allow delete: if false;
+      // Allow recipe owner to delete their own recipe
+      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
     }
 
     // Rules for the 'spoonPoints' collection

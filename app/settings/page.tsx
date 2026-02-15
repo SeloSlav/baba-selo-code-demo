@@ -58,7 +58,7 @@ const imageStyleOptions = {
   "whimsical-cartoon": {
     name: "Whimsical Cartoon",
     description: "Playful illustration—Studio Ghibli charm, fun & different.",
-    prompt: "Whimsical animated food illustration. Bright cheerful colors, smooth rounded shapes. Studio Ghibli-inspired charm. Playful, friendly, inviting—like food from an animated film."
+    prompt: "IMPORTANT: This must be a 2D animated illustration, NOT a photograph. Whimsical cartoon food art. Bright cheerful colors, smooth rounded shapes, hand-drawn style. Studio Ghibli or Pixar-inspired charm. Playful, friendly, inviting—like food from an animated film. No realism."
   }
 } as const;
 

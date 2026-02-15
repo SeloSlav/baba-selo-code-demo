@@ -3,6 +3,7 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCopy, faThumbtack, faTrashCan, faHeart } from "@fortawesome/free-solid-svg-icons";
 import { Recipe } from "../types";
+import { FilterTag } from "../../components/FilterTag";
 
 interface RecipeHeaderProps {
   recipe: Recipe;
@@ -35,29 +36,25 @@ export const RecipeHeader = ({
     <>
       {/* Recipe Classifications */}
       <div className="mb-6 flex flex-wrap gap-3">
-        {recipe.diet.length > 0 && (
-          <div className="flex items-center bg-amber-50 border border-amber-200 rounded-full px-3 py-1.5 text-sm">
-            <span className="font-semibold mr-2">🍲</span>
-            <span>{recipe.diet.map((d) => d.charAt(0).toUpperCase() + d.slice(1)).join(", ")}</span>
-          </div>
-        )}
+        {recipe.diet.length > 0 && recipe.diet.map((d) => (
+          <FilterTag key={d} type="diet" value={d} icon="🍲">
+            {d.charAt(0).toUpperCase() + d.slice(1)}
+          </FilterTag>
+        ))}
         {recipe.cuisineType && (
-          <div className="flex items-center bg-amber-50 border border-amber-200 rounded-full px-3 py-1.5 text-sm">
-            <span className="font-semibold mr-2">🍽️</span>
-            <span>{recipe.cuisineType.charAt(0).toUpperCase() + recipe.cuisineType.slice(1)}</span>
-          </div>
+          <FilterTag type="cuisine" value={recipe.cuisineType} icon="🍽️">
+            {recipe.cuisineType.charAt(0).toUpperCase() + recipe.cuisineType.slice(1)}
+          </FilterTag>
         )}
         {recipe.cookingTime && (
-          <div className="flex items-center bg-amber-50 border border-amber-200 rounded-full px-3 py-1.5 text-sm">
-            <span className="font-semibold mr-2">⏲️</span>
-            <span>{recipe.cookingTime}</span>
-          </div>
+          <FilterTag type="time" value={recipe.cookingTime} icon="⏲️">
+            {recipe.cookingTime}
+          </FilterTag>
         )}
         {recipe.cookingDifficulty && (
-          <div className="flex items-center bg-amber-50 border border-amber-200 rounded-full px-3 py-1.5 text-sm">
-            <span className="font-semibold mr-2">🧩</span>
-            <span>{recipe.cookingDifficulty.charAt(0).toUpperCase() + recipe.cookingDifficulty.slice(1)}</span>
-          </div>
+          <FilterTag type="difficulty" value={recipe.cookingDifficulty} icon="🧩">
+            {recipe.cookingDifficulty.charAt(0).toUpperCase() + recipe.cookingDifficulty.slice(1)}
+          </FilterTag>
         )}
       </div>
 

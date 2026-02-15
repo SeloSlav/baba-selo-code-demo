@@ -14,7 +14,7 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "../firebase/firebase";
-import Link from "next/link"; // Import Link for navigation
+import Link from "next/link";
 import Image from "next/image";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSearch, faXmark, faEllipsisVertical, faThumbtack, faTrashCan } from "@fortawesome/free-solid-svg-icons";
@@ -23,6 +23,7 @@ import { useDeleteRecipe } from "../context/DeleteRecipeContext";
 import { SearchBar } from '../components/SearchBar';
 import { RecipeCardSkeleton } from '../components/RecipeCardSkeleton';
 import { RecipeCard } from '../components/RecipeCard';
+import { getExploreFilterUrl } from '../components/FilterTag';
 import { SidebarLayout } from '../components/SidebarLayout';
 import { Recipe } from '../recipe/types';
 
@@ -61,6 +62,13 @@ interface RecipeDocument {
   likes?: string[];
   createdAt: any;
 }
+
+const QUICK_FILTERS = {
+  cuisine: ['Italian', 'Mexican', 'Japanese', 'Indian', 'Mediterranean', 'Bulgarian', 'Croatian', 'Eastern European', 'Middle Eastern', 'Costa Rican'],
+  time: ['15 min', '30 min', '45 min', '1 hour'],
+  diet: ['Vegetarian', 'Vegan', 'Pescetarian', 'Omnivore', 'Gluten-free', 'Keto'],
+  difficulty: ['Easy', 'Medium', 'Hard'],
+} as const;
 
 const Recipes = () => {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
@@ -345,6 +353,33 @@ const Recipes = () => {
             resultCount={filteredRecipes.length}
             totalCount={totalRecipes}
           />
+
+          {/* Quick filter list - links to Explore with filters */}
+          <div className="mt-4 space-y-2">
+            <p className="text-sm font-medium text-amber-900/80">Browse by category on Explore</p>
+            <div className="flex flex-wrap gap-2">
+              {QUICK_FILTERS.cuisine.map((v) => (
+                <Link key={v} href={getExploreFilterUrl('cuisine', v)} className="text-sm px-3 py-1.5 rounded-full border border-amber-200 bg-white hover:bg-amber-50 text-amber-900/80 transition-colors">
+                  {v}
+                </Link>
+              ))}
+              {QUICK_FILTERS.time.map((v) => (
+                <Link key={v} href={getExploreFilterUrl('time', v)} className="text-sm px-3 py-1.5 rounded-full border border-amber-200 bg-white hover:bg-amber-50 text-amber-900/80 transition-colors">
+                  {v}
+                </Link>
+              ))}
+              {QUICK_FILTERS.diet.map((v) => (
+                <Link key={v} href={getExploreFilterUrl('diet', v)} className="text-sm px-3 py-1.5 rounded-full border border-amber-200 bg-white hover:bg-amber-50 text-amber-900/80 transition-colors">
+                  {v}
+                </Link>
+              ))}
+              {QUICK_FILTERS.difficulty.map((v) => (
+                <Link key={v} href={getExploreFilterUrl('difficulty', v)} className="text-sm px-3 py-1.5 rounded-full border border-amber-200 bg-white hover:bg-amber-50 text-amber-900/80 transition-colors">
+                  {v}
+                </Link>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 

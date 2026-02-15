@@ -1,6 +1,7 @@
 import React from 'react';
 import { RecipeClassification } from './types';
 import { linkifyOliveOil } from './messageUtils';
+import { FilterTag } from './FilterTag';
 
 interface RecipeMessageProps {
     content: string;
@@ -43,7 +44,7 @@ export const RecipeMessage: React.FC<RecipeMessageProps> = ({
 
     return (
         <div ref={messageRef} className="flex items-start space-x-2">
-            <div className="bg-[#F3F3F3] text-[#0d0d0d] px-5 py-2.5 rounded-3xl">
+            <div className="bg-[#fef3c7] text-[#171717] px-5 py-2.5 rounded-3xl">
                 <div className="text-xl mb-2">{title}</div>
 
                 <div className="font-semibold mb-1">Ingredients</div>
@@ -72,39 +73,46 @@ export const RecipeMessage: React.FC<RecipeMessageProps> = ({
 
                 {classification && (
                     <div className="mb-3 flex flex-wrap items-center gap-2">
-                        {classification.diet && classification.diet.length > 0 && (
-                            <div className="flex items-center bg-white border border-gray-300 shadow-sm rounded-full px-3 py-1">
-                                <span className="font-semibold mr-1">🍲</span>
-                                <span>
-                                    {classification.diet
-                                        .map(d => d.charAt(0).toUpperCase() + d.slice(1))
-                                        .join(", ")}
-                                </span>
-                            </div>
-                        )}
+                        {classification.diet && classification.diet.length > 0 && classification.diet.map((d) => (
+                            <FilterTag
+                                key={d}
+                                type="diet"
+                                value={d}
+                                icon="🍲"
+                                className="flex items-center bg-white border border-gray-300 shadow-sm rounded-full px-3 py-1 hover:bg-gray-50 transition-colors"
+                            >
+                                {d.charAt(0).toUpperCase() + d.slice(1)}
+                            </FilterTag>
+                        ))}
                         {classification.cuisine && (
-                            <div className="flex items-center bg-white border border-gray-300 shadow-sm rounded-full px-3 py-1">
-                                <span className="font-semibold mr-1">🍽️</span>
-                                <span>
-                                    {classification.cuisine.charAt(0).toUpperCase() +
-                                        classification.cuisine.slice(1)}
-                                </span>
-                            </div>
+                            <FilterTag
+                                type="cuisine"
+                                value={classification.cuisine}
+                                icon="🍽️"
+                                className="flex items-center bg-white border border-gray-300 shadow-sm rounded-full px-3 py-1 hover:bg-gray-50 transition-colors"
+                            >
+                                {classification.cuisine.charAt(0).toUpperCase() + classification.cuisine.slice(1)}
+                            </FilterTag>
                         )}
                         {classification.cooking_time && (
-                            <div className="flex items-center bg-white border border-gray-300 shadow-sm rounded-full px-3 py-1">
-                                <span className="font-semibold mr-1">⏲️</span>
-                                <span>{classification.cooking_time}</span>
-                            </div>
+                            <FilterTag
+                                type="time"
+                                value={classification.cooking_time}
+                                icon="⏲️"
+                                className="flex items-center bg-white border border-gray-300 shadow-sm rounded-full px-3 py-1 hover:bg-gray-50 transition-colors"
+                            >
+                                {classification.cooking_time}
+                            </FilterTag>
                         )}
                         {classification.difficulty && (
-                            <div className="flex items-center bg-white border border-gray-300 shadow-sm rounded-full px-3 py-1">
-                                <span className="font-semibold mr-1">🧩</span>
-                                <span>
-                                    {classification.difficulty.charAt(0).toUpperCase() +
-                                        classification.difficulty.slice(1)}
-                                </span>
-                            </div>
+                            <FilterTag
+                                type="difficulty"
+                                value={classification.difficulty}
+                                icon="🧩"
+                                className="flex items-center bg-white border border-gray-300 shadow-sm rounded-full px-3 py-1 hover:bg-gray-50 transition-colors"
+                            >
+                                {classification.difficulty.charAt(0).toUpperCase() + classification.difficulty.slice(1)}
+                            </FilterTag>
                         )}
                     </div>
                 )}
@@ -118,7 +126,7 @@ export const RecipeMessage: React.FC<RecipeMessageProps> = ({
                         📝 Save Recipe
                     </button>
                     <button
-                        className="p-2 bg-blue-50 rounded-md hover:bg-blue-100 text-black"
+                        className="p-2 bg-amber-50 rounded-md hover:bg-amber-100 text-black"
                         onClick={async () => {
                             setLoading(true);
                             try {
@@ -144,7 +152,7 @@ export const RecipeMessage: React.FC<RecipeMessageProps> = ({
                         🍷 Get Dish Pairing
                     </button>
                     <button
-                        className="p-2 bg-blue-50 rounded-md hover:bg-blue-100 text-black"
+                        className="p-2 bg-amber-50 rounded-md hover:bg-amber-100 text-black"
                         onClick={async () => {
                             setLoading(true);
                             try {

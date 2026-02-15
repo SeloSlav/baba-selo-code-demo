@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { db } from '../firebase/firebase';
 import { SidebarLayout } from '../components/SidebarLayout';
 import { collection, query, orderBy, getDocs, getCountFromServer, doc, updateDoc, arrayUnion, Timestamp, increment, getDoc, startAfter, limit, where } from 'firebase/firestore';
@@ -10,6 +12,7 @@ import { Recipe } from '../recipe/types';
 import { SearchBar } from '../components/SearchBar';
 import { RecipeCard } from '../components/RecipeCard';
 import { RecipeCardSkeleton } from '../components/RecipeCardSkeleton';
+import { getExploreFilterUrl } from '../components/FilterTag';
 
 const POINTS_FOR_LIKE = 50; // Points awarded when someone likes your recipe
 
@@ -49,7 +52,16 @@ interface RecipeDocument {
   createdAt: any;
 }
 
+const QUICK_FILTERS = {
+  cuisine: ['Italian', 'Mexican', 'Japanese', 'Indian', 'Mediterranean', 'American', 'Thai', 'Chinese', 'Bulgarian', 'Croatian', 'Eastern European', 'Middle Eastern', 'Costa Rican'],
+  time: ['15 min', '30 min', '45 min', '1 hour', '1.5 hours'],
+  diet: ['Vegetarian', 'Vegan', 'Pescetarian', 'Omnivore', 'Gluten-free', 'Dairy-free', 'Keto', 'Paleo'],
+  difficulty: ['Easy', 'Medium', 'Hard'],
+} as const;
+
 export default function ExplorePage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [totalRecipes, setTotalRecipes] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
@@ -68,6 +80,51 @@ export default function ExplorePage() {
   lastVisibleRef.current = lastVisible;
 
   const RECIPES_PER_PAGE = 12;
+
+  // Build search term from URL params (cuisine, time, diet, difficulty)
+  const urlFilterTerms = [
+    searchParams.get('cuisine'),
+    searchParams.get('time'),
+    searchParams.get('diet'),
+    searchParams.get('difficulty'),
+  ].filter(Boolean) as string[];
+
+  const activeFilters = {
+    cuisine: searchParams.get('cuisine'),
+    time: searchParams.get('time'),
+    diet: searchParams.get('diet'),
+    difficulty: searchParams.get('difficulty'),
+  };
+
+  const hasUrlFilters = urlFilterTerms.length > 0;
+  const urlParamsKey = searchParams.toString(); // Unique key for URL changes
+
+  // Always sync URL params to search term when URL changes (fixes stale filters)
+  useEffect(() => {
+    if (hasUrlFilters) {
+      setSearchTerm(urlFilterTerms.join(' '));
+    } else {
+      setSearchTerm('');
+    }
+  }, [urlParamsKey]); // eslint-disable-line react-hooks/exhaustive-deps -- urlFilterTerms derived from searchParams
+
+  const clearAllFilters = () => {
+    setSearchTerm('');
+    router.replace('/explore');
+  };
+
+  const removeFilter = (type: 'cuisine' | 'time' | 'diet' | 'difficulty') => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete(type);
+    const newSearch = [
+      params.get('cuisine'),
+      params.get('time'),
+      params.get('diet'),
+      params.get('difficulty'),
+    ].filter(Boolean).join(' ');
+    setSearchTerm(newSearch);
+    router.replace(params.toString() ? `/explore?${params.toString()}` : '/explore');
+  };
 
   const isRecipeComplete = (recipe: Recipe) => {
     return recipe.recipeSummary && 
@@ -187,8 +244,13 @@ export default function ExplorePage() {
   };
 
   useEffect(() => {
+    if (hasUrlFilters) {
+      setRecipes([]);
+      setIsPageLoading(false);
+      return;
+    }
     fetchRecipes();
-  }, [fetchRecipes]);
+  }, [fetchRecipes, hasUrlFilters]);
 
   useEffect(() => {
     if (user) fetchCurrentUsername();
@@ -244,19 +306,16 @@ export default function ExplorePage() {
   };
 
   const searchRecipes = useCallback(async (searchTerms: string[]) => {
-    if (!user) return;
     setIsSearching(true);
-    
     try {
       const recipesQuery = query(
         collection(db, "recipes"),
         where("recipeSummary", "!=", ""),
-        orderBy("createdAt", "desc")
+        orderBy("createdAt", "desc"),
+        limit(150)
       );
-
       const querySnapshot = await getDocs(recipesQuery);
 
-      // Filter out recipes without images first
       const allRecipes = querySnapshot.docs
         .map(d => {
           const data = d.data() as RecipeDocument;
@@ -269,7 +328,6 @@ export default function ExplorePage() {
         })
         .filter(recipe => recipe.imageURL);
 
-      // Fetch only users for these recipes (Firestore "in" limit is 30)
       const userIds = [...new Set(allRecipes.map(r => r.userId).filter(Boolean))];
       const userMap = new Map<string, string>();
       for (let i = 0; i < userIds.length; i += 30) {
@@ -282,7 +340,6 @@ export default function ExplorePage() {
         userDocs.docs.forEach(d => userMap.set(d.id, d.data().username || ""));
       }
 
-      // Update usernames and perform search filtering
       const filtered = allRecipes
         .map(recipe => ({
           ...recipe,
@@ -291,7 +348,6 @@ export default function ExplorePage() {
         .filter((recipe) => {
           const diets = Array.isArray(recipe.diet) ? recipe.diet : [];
           const ingredients = Array.isArray(recipe.ingredients) ? recipe.ingredients : [];
-          
           const searchableFields = [
             recipe.recipeTitle?.toLowerCase() || "",
             recipe.username?.toLowerCase() || "",
@@ -302,7 +358,6 @@ export default function ExplorePage() {
             ...diets.map(d => d.toLowerCase()),
             ...ingredients.map(i => i.toLowerCase()),
           ].filter(Boolean);
-
           return searchTerms.every((term) =>
             searchableFields.some((field) => field.includes(term))
           );
@@ -315,9 +370,9 @@ export default function ExplorePage() {
     } finally {
       setIsSearching(false);
     }
-  }, [user]);
+  }, []);
 
-  // Debounced search effect - only refetch when user clears search (avoids infinite loop + double fetch on mount)
+  // Debounced search effect
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!searchTerm.trim()) {
@@ -327,9 +382,9 @@ export default function ExplorePage() {
         return;
       }
       prevSearchTermRef.current = searchTerm;
-      const terms = searchTerm.toLowerCase().split(" ");
-      searchRecipes(terms);
-    }, 300);
+      const terms = searchTerm.toLowerCase().split(" ").filter(Boolean);
+      if (terms.length > 0) searchRecipes(terms);
+    }, 150);
     return () => clearTimeout(timer);
   }, [searchTerm, fetchRecipes, searchRecipes]);
 
@@ -371,12 +426,73 @@ export default function ExplorePage() {
             totalCount={totalRecipes}
             isExplorePage={true}
           />
+
+          {/* Active filter chips */}
+          {hasUrlFilters && (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="text-sm text-amber-900/70">Filters:</span>
+              {activeFilters.cuisine && (
+                <span className="inline-flex items-center gap-1.5 bg-amber-100 border border-amber-200 rounded-full px-3 py-1 text-sm">
+                  🍽️ {activeFilters.cuisine}
+                  <button onClick={() => removeFilter('cuisine')} className="hover:text-amber-800" aria-label="Remove cuisine filter">×</button>
+                </span>
+              )}
+              {activeFilters.time && (
+                <span className="inline-flex items-center gap-1.5 bg-amber-100 border border-amber-200 rounded-full px-3 py-1 text-sm">
+                  ⏲️ {activeFilters.time}
+                  <button onClick={() => removeFilter('time')} className="hover:text-amber-800" aria-label="Remove time filter">×</button>
+                </span>
+              )}
+              {activeFilters.diet && (
+                <span className="inline-flex items-center gap-1.5 bg-amber-100 border border-amber-200 rounded-full px-3 py-1 text-sm">
+                  🍲 {activeFilters.diet}
+                  <button onClick={() => removeFilter('diet')} className="hover:text-amber-800" aria-label="Remove diet filter">×</button>
+                </span>
+              )}
+              {activeFilters.difficulty && (
+                <span className="inline-flex items-center gap-1.5 bg-amber-100 border border-amber-200 rounded-full px-3 py-1 text-sm">
+                  🧩 {activeFilters.difficulty}
+                  <button onClick={() => removeFilter('difficulty')} className="hover:text-amber-800" aria-label="Remove difficulty filter">×</button>
+                </span>
+              )}
+              <button onClick={clearAllFilters} className="text-sm text-amber-700 hover:text-amber-900 underline">
+                Clear all
+              </button>
+            </div>
+          )}
+
+          {/* Quick filter list */}
+          <div className="mt-4 space-y-2">
+            <p className="text-sm font-medium text-amber-900/80">Quick filters</p>
+            <div className="flex flex-wrap gap-2">
+              {QUICK_FILTERS.cuisine.map((v) => (
+                <Link key={v} href={getExploreFilterUrl('cuisine', v)} className="text-sm px-3 py-1.5 rounded-full border border-amber-200 bg-white hover:bg-amber-50 text-amber-900/80 transition-colors">
+                  {v}
+                </Link>
+              ))}
+              {QUICK_FILTERS.time.map((v) => (
+                <Link key={v} href={getExploreFilterUrl('time', v)} className="text-sm px-3 py-1.5 rounded-full border border-amber-200 bg-white hover:bg-amber-50 text-amber-900/80 transition-colors">
+                  {v}
+                </Link>
+              ))}
+              {QUICK_FILTERS.diet.map((v) => (
+                <Link key={v} href={getExploreFilterUrl('diet', v)} className="text-sm px-3 py-1.5 rounded-full border border-amber-200 bg-white hover:bg-amber-50 text-amber-900/80 transition-colors">
+                  {v}
+                </Link>
+              ))}
+              {QUICK_FILTERS.difficulty.map((v) => (
+                <Link key={v} href={getExploreFilterUrl('difficulty', v)} className="text-sm px-3 py-1.5 rounded-full border border-amber-200 bg-white hover:bg-amber-50 text-amber-900/80 transition-colors">
+                  {v}
+                </Link>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Content */}
       <div className="mt-8">
-        {isPageLoading ? (
+        {(isPageLoading || (isSearching && recipes.length === 0)) ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map((n) => (
               <RecipeCardSkeleton key={n} />

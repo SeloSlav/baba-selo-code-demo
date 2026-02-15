@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation"; // Use useParams and useRouter for navigation
 import { db, storage } from "../../firebase/firebase"; // Import Firestore db and storage
-import { doc, getDoc, deleteDoc, updateDoc, query, getDocs, collection, where, addDoc, serverTimestamp, arrayUnion, increment, Timestamp } from "firebase/firestore"; // Firestore methods
+import { doc, getDoc, deleteDoc, updateDoc, query, getDocs, collection, where, addDoc, serverTimestamp, arrayUnion, increment, Timestamp, orderBy, limit } from "firebase/firestore"; // Firestore methods
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { useEffect, useState, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -21,6 +21,7 @@ import { RecipeHeader } from "../components/RecipeHeader";
 import { RecipeImage } from "../components/RecipeImage";
 import { RecipeNavigation } from "../components/RecipeNavigation";
 import { RecipeFooter } from "../components/RecipeFooter";
+import { RecipeCard } from "../../components/RecipeCard";
 import { Recipe } from "../types";
 import { RecipeIngredients } from "../components/RecipeIngredients";
 import { RecipeDirections } from "../components/RecipeDirections";
@@ -97,6 +98,7 @@ const RecipeDetails = () => {
   const { showPointsToast } = usePoints();
   const [currentUsername, setCurrentUsername] = useState<string>('');
   const [isUserAdmin, setIsUserAdmin] = useState(false);
+  const [similarRecipes, setSimilarRecipes] = useState<Recipe[]>([]);
 
   useEffect(() => {
     if (!id) return; // If no id, do nothing
@@ -158,6 +160,83 @@ const RecipeDetails = () => {
 
     fetchRecipe();
   }, [id, auth]);
+
+  // Fetch similar recipes when recipe is loaded
+  useEffect(() => {
+    if (!recipe || !id) return;
+
+    const fetchSimilarRecipes = async () => {
+      try {
+        const recipesQuery = query(
+          collection(db, "recipes"),
+          orderBy("createdAt", "desc"),
+          limit(25)
+        );
+        const snapshot = await getDocs(recipesQuery);
+        const allRecipes = snapshot.docs
+          .filter(d => d.id !== id)
+          .map(d => {
+            const data = d.data();
+            const directions = Array.isArray(data.directions) ? data.directions : [];
+            const ingredients = Array.isArray(data.ingredients) ? data.ingredients : [];
+            return {
+              id: d.id,
+              recipeTitle: data.recipeTitle || "No title",
+              recipeContent: data.recipeContent || "",
+              userId: data.userId || "",
+              cuisineType: data.cuisineType || "Unknown",
+              cookingDifficulty: data.cookingDifficulty || "Unknown",
+              cookingTime: data.cookingTime || "Unknown",
+              diet: data.diet || [],
+              directions,
+              ingredients,
+              imageURL: data.imageURL || "",
+              recipeSummary: data.recipeSummary || "",
+              recipeNotes: data.recipeNotes || "",
+              macroInfo: data.macroInfo || null,
+              dishPairings: data.dishPairings || "",
+              pinned: data.pinned || false,
+              lastPinnedAt: data.lastPinnedAt || null,
+              likes: data.likes || [],
+              username: data.username || "Anonymous Chef"
+            } as Recipe;
+          });
+
+        // Prefer same cuisine: sort by cuisineType match first
+        const cuisine = recipe.cuisineType || "Unknown";
+        const similar = allRecipes
+          .sort((a, b) => {
+            const aMatch = a.cuisineType === cuisine ? 1 : 0;
+            const bMatch = b.cuisineType === cuisine ? 1 : 0;
+            return bMatch - aMatch;
+          })
+          .slice(0, 4);
+
+        // Fetch usernames for similar recipes
+        const userIds = new Set(similar.map(r => r.userId).filter(Boolean));
+        let userMap = new Map<string, string>();
+        if (userIds.size > 0) {
+          const usersQuery = query(
+            collection(db, "users"),
+            where("__name__", "in", Array.from(userIds).slice(0, 10))
+          );
+          const userDocs = await getDocs(usersQuery);
+          userDocs.docs.forEach(d => userMap.set(d.id, d.data().username || "Anonymous Chef"));
+        }
+
+        const withUsernames = similar.map(r => ({
+          ...r,
+          username: userMap.get(r.userId) || "Anonymous Chef"
+        }));
+
+        setSimilarRecipes(withUsernames);
+      } catch (error) {
+        console.error("Error fetching similar recipes:", error);
+      }
+    };
+
+    fetchSimilarRecipes();
+  }, [recipe, id]);
 
   // Scroll detection - update active tab as user scrolls (skip during programmatic scroll from click)
   useEffect(() => {
@@ -224,6 +303,7 @@ const RecipeDetails = () => {
         router.push("/recipes");
       } catch (error) {
         console.error("Error deleting recipe:", error);
+        showPointsToast(0, "Failed to delete recipe. Please try again.");
       } finally {
         setLoadingDeleteAction(false);
       }
@@ -263,7 +343,7 @@ const RecipeDetails = () => {
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
-                prompt: `A rustic dish representation for ${recipe.recipeTitle}`,
+                prompt: `A dish of ${recipe.recipeTitle}`,
                 userId: user.uid,
                 recipeId: id
             }),
@@ -280,12 +360,16 @@ const RecipeDetails = () => {
         }
 
         if (data.imageUrl) {
-            // Update Firestore with the permanent URL
+            // Update Firestore with the permanent URL (store clean URL)
             const recipeDocRef = doc(db, "recipes", id as string);
             await updateDoc(recipeDocRef, { imageURL: data.imageUrl });
 
-            // Update local state
-            setRecipe((prevRecipe) => prevRecipe && { ...prevRecipe, imageURL: data.imageUrl });
+            // Cache-bust: append timestamp so browser fetches fresh image (same storage path = same signed URL = stale cache)
+            const cacheBustedUrl = `${data.imageUrl}${data.imageUrl.includes('?') ? '&' : '?'}_t=${Date.now()}`;
+
+            // Update local state with cache-busted URL and show loading until new image loads
+            setIsImageLoading(true);
+            setRecipe((prevRecipe) => prevRecipe && { ...prevRecipe, imageURL: cacheBustedUrl });
 
             // Only try to award points if the action was available
             if (actionCheck.available) {
@@ -319,18 +403,21 @@ const RecipeDetails = () => {
     if (!id || !recipe?.imageURL) return;
 
     try {
-      // 1. Create a reference to the image in Firebase Storage
-      const storageRef = ref(storage, `recipe-images/${id}`);
-
-      try {
-        // 2. Delete the image from Firebase Storage
-        await deleteObject(storageRef);
-      } catch (error) {
-        // If the file doesn't exist in storage, just continue
-        console.log("Image might not exist in storage:", error);
+      // Try both paths: generateImage saves as .png, uploads may use no extension
+      const pathsToTry = [`recipe-images/${id}.png`, `recipe-images/${id}`];
+      for (const path of pathsToTry) {
+        try {
+          await deleteObject(ref(storage, path));
+          break;
+        } catch (storageError: any) {
+          if (storageError?.code === "storage/object-not-found" || storageError?.message?.includes("404")) {
+            continue;
+          }
+          console.warn("Storage delete failed for", path, storageError);
+        }
       }
 
-      // 3. Update Firestore to remove the image URL
+      // Update Firestore to remove the image URL
       const recipeDocRef = doc(db, "recipes", id as string);
       await updateDoc(recipeDocRef, { imageURL: "" });
 
@@ -415,12 +502,13 @@ const RecipeDetails = () => {
         timestamp: serverTimestamp(),
       });
 
-      // Update Firestore with the new image URL
+      // Update Firestore with the new image URL (store clean URL)
       const recipeDocRef = doc(db, "recipes", id as string);
       await updateDoc(recipeDocRef, { imageURL: downloadURL });
 
-      // Update local state
-      setRecipe((prevRecipe) => prevRecipe && { ...prevRecipe, imageURL: downloadURL });
+      // Cache-bust for display so browser fetches fresh image after overwrite
+      const cacheBustedUrl = `${downloadURL}${downloadURL.includes('?') ? '&' : '?'}_t=${Date.now()}`;
+      setRecipe((prevRecipe) => prevRecipe && { ...prevRecipe, imageURL: cacheBustedUrl });
       setImageError(false);
       setIsImageLoading(true);
 
@@ -811,6 +899,40 @@ const RecipeDetails = () => {
     }
   };
 
+  const handleLikeSimilar = async (likedRecipe: Recipe) => {
+    if (!user) return;
+    try {
+      const recipeRef = doc(db, "recipes", likedRecipe.id);
+      const currentLikes = likedRecipe.likes || [];
+      if (currentLikes.includes(user.uid)) return;
+
+      await updateDoc(recipeRef, { likes: arrayUnion(user.uid) });
+      setSimilarRecipes(prev =>
+        prev.map(r =>
+          r.id === likedRecipe.id
+            ? { ...r, likes: [...(r.likes || []), user.uid] }
+            : r
+        )
+      );
+
+      if (likedRecipe.userId !== user.uid) {
+        const spoonRef = doc(db, "spoonPoints", likedRecipe.userId);
+        await updateDoc(spoonRef, {
+          totalPoints: increment(POINTS_FOR_LIKE),
+          transactions: arrayUnion({
+            actionType: "RECIPE_SAVED_BY_OTHER",
+            points: POINTS_FOR_LIKE,
+            timestamp: Timestamp.now(),
+            targetId: likedRecipe.id,
+            details: `Recipe "${likedRecipe.recipeTitle}" liked by @${currentUsername}`
+          })
+        });
+      }
+    } catch (error) {
+      console.error("Error updating like:", error);
+    }
+  };
+
   // Add admin check effect
   useEffect(() => {
     const checkAdminStatus = async () => {
@@ -930,7 +1052,7 @@ const RecipeDetails = () => {
           />
 
           {/* Add the chat bubble with adjusted positioning and higher z-index */}
-          <div className="relative mb-16 md:mb-8">
+          <div className="relative mb-8 md:mb-6">
             <div className="fixed bottom-0 right-0 w-[25%] md:w-auto md:relative md:bottom-auto md:right-auto z-50">
               <RecipeChatBubble
                 recipeContent={`Title: ${recipe.recipeTitle}
@@ -949,6 +1071,24 @@ ${recipe.directions.map((direction, index) => `${index + 1}. ${direction}`).join
               />
             </div>
           </div>
+
+          {/* Similar Recipes */}
+          {similarRecipes.length > 0 && (
+            <div className="mt-12 pt-8 border-t border-amber-100">
+              <h2 className="text-xl font-semibold text-amber-900/90 mb-6">Similar Recipes</h2>
+              <div className="grid grid-cols-2 gap-4">
+                {similarRecipes.map((similar) => (
+                  <RecipeCard
+                    key={similar.id}
+                    recipe={similar}
+                    onLike={handleLikeSimilar}
+                    currentUser={user}
+                    showUsername={true}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
 
           <RecipeFooter />
         </div>

@@ -35,7 +35,7 @@ const imageStyleOptions: Record<string, { prompt: string }> = {
         prompt: "Vintage 1970s-80s cookbook food photography. Slightly faded warm tones, retro styling, old-fashioned plating. Nostalgic charm—like a well-loved recipe card from grandma's kitchen."
     },
     "whimsical-cartoon": {
-        prompt: "Whimsical animated food illustration. Bright cheerful colors, smooth rounded shapes. Studio Ghibli-inspired charm. Playful, friendly, inviting—like food from an animated film."
+        prompt: "IMPORTANT: This must be a 2D animated illustration, NOT a photograph. The dish is the clear focal point—large, prominent, center-frame, impossible to miss. Studio Ghibli style: painterly hand-drawn aesthetic with soft watercolor washes, gentle gouache-like layers, organic flowing lines. The dish itself rendered with care and warmth, rounded inviting shapes, rich appetizing detail. Background and setting are secondary—softly suggested, out of focus or simplified: a hint of warm wood, soft light, pastoral atmosphere. The food must dominate the composition. Hand-painted storybook quality of Spirited Away. Whimsical, nostalgic, inviting. No realism."
     }
 };
 
@@ -85,33 +85,40 @@ export async function POST(req: Request) {
         }
 
         // Get user's preferred style from Firebase (Admin SDK for server-side read)
-        let stylePrompt = imageStyleOptions["photorealistic-recipe"].prompt; // Default style
+        let stylePrompt = imageStyleOptions["photorealistic-recipe"].prompt;
+        let userStyle: string | null = null;
         if (userId) {
             try {
                 const userDoc = await admin.firestore().collection('users').doc(userId).get();
                 if (userDoc.exists) {
                     const userData = userDoc.data();
-                    const userStyle = userData?.preferredImageStyle;
+                    userStyle = userData?.preferredImageStyle || null;
                     if (userStyle && imageStyleOptions[userStyle]) {
                         stylePrompt = imageStyleOptions[userStyle].prompt;
                     }
                 }
             } catch (error) {
                 console.error("Error fetching user style preference:", error);
-                // Continue with default style if there's an error
             }
         }
 
-        console.log("Final style prompt being used:", stylePrompt);
+        // DALL-E 3 "natural" = photorealistic; "vivid" = artistic/illustration. Whimsical cartoon needs vivid.
+        const dalleStyle = userStyle === "whimsical-cartoon" ? "vivid" : "natural";
 
-        // Generate image with DALL-E 3 (standard quality for speed; natural style for photorealistic output)
+        console.log("Final style prompt being used:", stylePrompt, "| DALL-E style:", dalleStyle);
+
+        // For whimsical-cartoon, put style first to override "rustic" in base prompt
+        const fullPrompt = userStyle === "whimsical-cartoon"
+            ? `${stylePrompt} Depict: ${prompt}`
+            : `${prompt}. ${stylePrompt}`;
+
         const response = await openai.images.generate({
             model: "dall-e-3",
-            prompt: `${prompt}. ${stylePrompt}`,
+            prompt: fullPrompt,
             n: 1,
             size: "1024x1024",
             quality: "standard",
-            style: "natural"  // More photorealistic than "vivid"
+            style: dalleStyle
         });
 
         if (!response.data?.[0]?.url) {

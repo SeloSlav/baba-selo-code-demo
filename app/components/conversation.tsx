@@ -166,7 +166,7 @@ export function ConversationComponent() {
               transcript.map((line, index) => (
                 <div key={index} className={`flex ${line.role === 'user' ? 'justify-end' : 'justify-start'} mb-2`}>
                   <div
-                    className={`inline-block p-2 rounded-lg ${line.role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'}`}
+                    className={`inline-block p-2 rounded-lg ${line.role === 'user' ? 'bg-amber-600 text-white' : 'bg-[#fef3c7] text-[#171717]'}`}
                   >
                     {line.message}
                   </div>

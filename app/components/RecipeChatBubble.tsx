@@ -289,8 +289,8 @@ export const RecipeChatBubble: React.FC<RecipeChatBubbleProps> = ({ recipeConten
                         <div
                             className={`max-w-[80%] rounded-3xl px-5 py-2.5 ${
                                 msg.role === "user"
-                                    ? "bg-[#0284FE] text-white"
-                                    : "bg-[#F3F3F3] text-[#0d0d0d]"
+                                    ? "bg-amber-600 text-white"
+                                    : "bg-[#fef3c7] text-[#171717]"
                             }`}
                         >
                             {typeof msg.content === "string" 
