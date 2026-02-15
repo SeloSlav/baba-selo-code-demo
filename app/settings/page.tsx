@@ -8,31 +8,71 @@ import { LoadingSpinner } from '../components/LoadingSpinner';
 import { SidebarLayout } from '../components/SidebarLayout';
 import { validateUsername } from '../lib/usernameValidation';
 
-// Image style options with their prompts
+// Image style options—platform & vibe focused (photorealistic-recipe is default)
 const imageStyleOptions = {
-  "rustic-traditional": {
-    name: "Rustic Traditional",
-    description: "Warm, nostalgic scenes of traditional  kitchen settings with embroidered tablecloths",
-    prompt: "Create this in a rustic, traditional style with a focus on the food's homemade appeal. The dish should be presented on richly detailed traditional tablecloths with classic red and white embroidery patterns. Capture the food with soft, warm natural lighting that highlights its hearty, homestyle qualities. Use deep reds and cream whites in the food styling, with rustic garnishes and traditional serving pieces. The food should look lovingly prepared, with the kind of imperfect, handmade touches that make traditional cooking so appealing. The overall effect should make the food appear nostalgic and heartwarming, like a cherished family recipe brought to life."
+  "photorealistic-recipe": {
+    name: "Photorealistic Recipe",
+    description: "Real photo—authentic, appetizing. Universal default.",
+    prompt: "Photorealistic food photograph. Natural lighting, authentic styling, realistic textures. Professional food photography—genuine and appetizing. No artificial or exaggerated elements."
   },
-  "modern-cookbook": {
-    name: "Modern Cookbook",
-    description: "Clean, professional food photography style with soft lighting",
-    prompt: "Create this in a modern cookbook photography style with clean, professional lighting. Use soft, natural light with subtle shadows to highlight textures and details. The style should be crisp and appetizing with a shallow depth of field effect. Add a hint of styled food photography elements like carefully placed herbs or droplets. The overall effect should be contemporary and magazine-worthy."
+  "instagram-flatlay": {
+    name: "Instagram Flat-Lay",
+    description: "Top-down, clean aesthetic. Instagram & Pinterest feed staple.",
+    prompt: "Overhead flat-lay food photography for Instagram. Bird's-eye view, clean composition, minimal props, marble or wood surface. Soft natural light, shallow depth of field. Aesthetic, fresh, organized, highly shareable."
   },
-  "social-snap": {
-    name: "Social Snap",
-    description: "Modern social media style with vibrant, crisp details",
-    prompt: "Create this in a modern social media photography style. Use bright, even lighting with enhanced dynamic range to capture rich details and textures. Frame the shot from a slightly elevated angle with a lifestyle-focused composition. The colors should be vibrant yet natural, with crisp details and subtle depth of field. Add gentle highlights to create an appetizing glow, making the food look fresh and inviting. The overall effect should feel contemporary and shareable, like a professional food influencer's content."
+  "bright-viral": {
+    name: "Bright & Viral",
+    description: "TikTok & Reels—vibrant, punchy, made to stop the scroll.",
+    prompt: "Viral social media food photography. Bright punchy lighting, saturated colors, slight 45° angle. Steam rising if applicable. Fresh, eye-catching, thumbnail-worthy. The kind of food shot that gets saved and shared."
+  },
+  "dark-moody": {
+    name: "Dark & Moody",
+    description: "Instagram food blogger—dramatic, editorial, sophisticated.",
+    prompt: "Dark moody food photography. Deep shadows, dramatic side lighting, dark charcoal or black background. Sophisticated, atmospheric. Rich colors, fine dining editorial. Moody food blogger aesthetic."
+  },
+  "pinterest-cozy": {
+    name: "Pinterest Cozy",
+    description: "Warm, aspirational—recipe blog & Pinterest dream.",
+    prompt: "Cozy Pinterest-style food photography. Warm natural light, kitchen or dining table setting. Steam rising, casual plating, linen napkin or wooden cutting board. Aspirational but approachable. Recipe blog aesthetic."
+  },
+  "minimalist-white": {
+    name: "Minimalist White",
+    description: "Clean white—restaurant menu, premium, elegant.",
+    prompt: "Minimalist food photography on pure white background. Clean elegant plating, soft diffused lighting, no distractions. Sophisticated—like a high-end restaurant menu or cookbook cover."
+  },
+  "golden-hour": {
+    name: "Golden Hour",
+    description: "Warm sunset glow—romantic, fine dining, date-night vibes.",
+    prompt: "Food photography in golden hour lighting. Warm sunset glow through window, soft shadows, romantic restaurant ambiance. Dish bathed in amber light. Elegant, inviting, magazine-quality."
+  },
+  "street-food": {
+    name: "Street Food",
+    description: "Casual, authentic—paper plates, market stall, unpretentious.",
+    prompt: "Authentic street food photography. Casual setting—paper plate, market stall, or food truck. Natural daylight, unpretentious plating. Real, approachable, the way food actually looks when you buy it. No fancy styling."
+  },
+  "vintage-retro": {
+    name: "Vintage Retro",
+    description: "70s/80s cookbook—faded, nostalgic, unique.",
+    prompt: "Vintage 1970s-80s cookbook food photography. Slightly faded warm tones, retro styling, old-fashioned plating. Nostalgic charm—like a well-loved recipe card from grandma's kitchen."
   },
   "whimsical-cartoon": {
     name: "Whimsical Cartoon",
-    description: "Playful, animated style with charming character",
-    prompt: "Create this in a whimsical, animated style with exaggerated, friendly features. Use bright, cheerful colors and smooth, rounded shapes. The style should be reminiscent of modern animated films with a touch of Studio Ghibli charm. Add subtle textures and warm lighting effects. The overall effect should be playful and inviting."
+    description: "Playful illustration—Studio Ghibli charm, fun & different.",
+    prompt: "Whimsical animated food illustration. Bright cheerful colors, smooth rounded shapes. Studio Ghibli-inspired charm. Playful, friendly, inviting—like food from an animated film."
   }
 } as const;
 
 type ImageStyle = keyof typeof imageStyleOptions;
+
+// Map deprecated style keys to current ones (for users who had old styles saved)
+const styleMigration: Record<string, ImageStyle> = {
+  "overhead-flatlay": "instagram-flatlay",
+  "cozy-kitchen": "pinterest-cozy",
+  "vintage-recipe": "vintage-retro",
+  "rustic-traditional": "pinterest-cozy",
+  "modern-cookbook": "minimalist-white",
+  "social-snap": "bright-viral",
+};
 
 export default function SettingsPage() {
   const { user, loading } = useAuth();
@@ -41,7 +81,7 @@ export default function SettingsPage() {
   const [username, setUsername] = useState<string>("");
   const [dietaryPreferences, setDietaryPreferences] = useState<string[]>([]);
   const [preferredCookingOil, setPreferredCookingOil] = useState<string>("");
-  const [preferredImageStyle, setPreferredImageStyle] = useState<ImageStyle>("rustic-traditional");
+  const [preferredImageStyle, setPreferredImageStyle] = useState<ImageStyle>("photorealistic-recipe");
   const [plan, setPlan] = useState<"free" | "pro">("free");
   const [mealPlanEnabled, setMealPlanEnabled] = useState(false);
   const [mealPlanTime, setMealPlanTime] = useState("08:00");
@@ -224,7 +264,11 @@ export default function SettingsPage() {
           setUsername(userData.username || "");
           setDietaryPreferences(userData.dietaryPreferences || []);
           setPreferredCookingOil(userData.preferredCookingOil || "");
-          setPreferredImageStyle(userData.preferredImageStyle || "rustic-traditional");
+          const rawStyle = userData.preferredImageStyle || "photorealistic-recipe";
+          const migratedStyle = styleMigration[rawStyle] ?? rawStyle;
+          setPreferredImageStyle(
+            migratedStyle in imageStyleOptions ? (migratedStyle as ImageStyle) : "photorealistic-recipe"
+          );
           setOilSearch(userData.preferredCookingOil || "");
           setPlan(userData.plan || "free");
           const s = userData.mealPlanSchedule;
@@ -266,7 +310,7 @@ export default function SettingsPage() {
       <SidebarLayout>
       <div className="max-w-5xl mx-auto px-4 py-10">
         <h2 className="text-3xl font-bold text-center mb-12">Settings</h2>
-        <p className="text-center text-gray-600">
+        <p className="text-center text-amber-800/70">
           You need to be logged in to view settings.
         </p>
       </div>
@@ -342,7 +386,7 @@ export default function SettingsPage() {
               </div>
               <div className="flex-grow">
                 <h3 className="text-2xl font-bold">Username</h3>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-amber-800/70">
                   Choose how you'll appear on the leaderboard.
                 </p>
               </div>
@@ -366,7 +410,7 @@ export default function SettingsPage() {
               >
                 {savingUsername ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                    <div className="w-4 h-4 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />
                     <span>Saving...</span>
                   </>
                 ) : (
@@ -396,13 +440,13 @@ export default function SettingsPage() {
             </div>
             <div>
               <h3 className="text-2xl font-bold">Recipe Image Style</h3>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-amber-800/70">
                 Choose how Baba should generate images of your recipes.
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {Object.entries(imageStyleOptions).map(([key, style]) => (
               <div
                 key={key}
@@ -424,7 +468,7 @@ export default function SettingsPage() {
                   }`} />
                   <h4 className="font-semibold">{style.name}</h4>
                 </div>
-                <p className="text-sm text-gray-600 ml-6">{style.description}</p>
+                <p className="text-sm text-amber-800/70 ml-6">{style.description}</p>
               </div>
             ))}
           </div>
@@ -438,7 +482,7 @@ export default function SettingsPage() {
             </div>
             <div>
               <h3 className="text-2xl font-bold">Dietary Preferences</h3>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-amber-800/70">
                 Select multiple dietary restrictions or preferences.
               </p>
             </div>
@@ -486,7 +530,7 @@ export default function SettingsPage() {
                     setDietaryPreferences(newPreferences);
                     debouncedSave({ dietaryPreferences: newPreferences });
                   }}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  className="text-amber-600/70 hover:text-amber-800 transition-colors"
                 >
                   ×
                 </button>
@@ -503,7 +547,7 @@ export default function SettingsPage() {
             </div>
             <div>
               <h3 className="text-2xl font-bold">Preferred Cooking Oil</h3>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-amber-800/70">
                 Select a single cooking oil option.
               </p>
             </div>
@@ -547,7 +591,7 @@ export default function SettingsPage() {
                   setOilSearch("");
                   debouncedSave({ preferredCookingOil: "" });
                 }}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-amber-600/70 hover:text-amber-800 transition-colors"
               >
                 ×
               </button>
@@ -564,7 +608,7 @@ export default function SettingsPage() {
               </div>
               <div>
                 <h3 className="text-2xl font-bold">Custom Meal Plans</h3>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-amber-800/70">
                   Get personalized meal plans emailed daily on your schedule.
                 </p>
               </div>
@@ -589,7 +633,7 @@ export default function SettingsPage() {
               </label>
               {mealPlanEnabled && (
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">at</span>
+                  <span className="text-sm text-amber-800/70">at</span>
                   <input
                     type="time"
                     value={mealPlanTime}
@@ -600,13 +644,13 @@ export default function SettingsPage() {
                         mealPlanSchedule: { enabled: mealPlanEnabled, time: t },
                       });
                     }}
-                    className="p-2 border border-gray-300 rounded-lg"
+                    className="p-2 border border-amber-200 rounded-lg focus:outline-none focus:border-amber-500"
                   />
-                  <span className="text-xs text-gray-500">(UTC)</span>
+                  <span className="text-xs text-amber-800/60">(UTC)</span>
                 </div>
               )}
             </div>
-            <p className="mt-3 text-xs text-gray-500">
+            <p className="mt-3 text-xs text-amber-800/60">
               A cron job should hit /api/cron/meal-plans every minute. Configure CRON_SECRET in env.
             </p>
             <button

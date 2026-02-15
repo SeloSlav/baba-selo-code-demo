@@ -12,9 +12,9 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     const recipeDoc = await getDoc(doc(db, "recipes", id));
     const recipe = recipeDoc.exists() ? recipeDoc.data() : null;
 
-    // Default values
-    const defaultTitle = "Recipe | Baba Selo";
-    const defaultDescription = "Discover delicious recipes with Baba Selo";
+    // Default values (SEO: AI Recipe Generator keyword)
+    const defaultTitle = "Recipe | AI Recipe Generator | Baba Selo";
+    const defaultDescription = "AI Recipe Generator - Discover and save delicious recipes created with Baba Selo's AI assistant.";
     const defaultImage = "https://www.babaselo.com/baba-removebg.png";
 
     if (!recipe) {
@@ -37,7 +37,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     }
 
     const title = `${recipe.recipeTitle} | Baba Selo`;
-    const description = recipe.recipeSummary || `A delicious ${recipe.cuisineType} recipe for ${recipe.recipeTitle}`;
+    const description = recipe.recipeSummary || `A delicious ${recipe.cuisineType} recipe for ${recipe.recipeTitle}. Create and save with AI Recipe Generator | Baba Selo.`;
     const image = recipe.imageURL || defaultImage;
 
     return {
@@ -61,8 +61,8 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     console.error('Error generating metadata:', error);
     return {
       metadataBase: new URL('https://www.babaselo.com'),
-      title: 'Recipe | Baba Selo',
-      description: 'Discover delicious recipes with Baba Selo',
+      title: 'Recipe | AI Recipe Generator | Baba Selo',
+      description: 'AI Recipe Generator - Discover and save delicious recipes with Baba Selo.',
     };
   }
 }

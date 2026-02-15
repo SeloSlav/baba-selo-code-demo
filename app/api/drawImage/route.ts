@@ -24,14 +24,14 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Missing prompt or recipeId" }, { status: 400 });
         }
 
-        // Generate image with DALL-E
+        // Generate image with DALL-E 3 (standard quality for speed; natural style for photorealistic output)
         const response = await openai.images.generate({
             model: "dall-e-3",
             prompt: prompt,
             n: 1,
             size: "1024x1024",
             quality: "standard",
-            style: "vivid"
+            style: "natural"  // More photorealistic than "vivid"
         });
 
         if (!response.data?.[0]?.url) {

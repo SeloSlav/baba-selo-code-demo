@@ -12,11 +12,10 @@ export const viewport = {
 };
 
 export const metadata = {
-  title: "Baba Selo - Your Magical Recipe Companion",
-
+  title: "AI Recipe Generator | Baba Selo - Create & Save Recipes with AI",
   description:
-    "Discover and save amazing recipes with Baba Selo's magical guidance.",
-
+    "AI Recipe Generator that creates personalized recipes, generates food images, and helps you save & share your culinary creations. Chat with Baba Selo for magical recipe guidance.",
+  keywords: ["AI recipe generator", "AI recipes", "recipe generator", "Baba Selo", "AI cooking assistant"],
   icons: {
     icon: [
       {
@@ -25,46 +24,32 @@ export const metadata = {
         sizes: "96x96",
         url: "/favicon-96x96.png",
       },
-
       { rel: "icon", type: "image/svg+xml", url: "/favicon.svg" },
     ],
-
     apple: "/apple-touch-icon.png",
   },
-
   manifest: "/site.webmanifest",
-
   openGraph: {
-    title: "Baba Selo - Your Magical Recipe Companion",
-
+    title: "AI Recipe Generator | Baba Selo - Create & Save Recipes with AI",
     description:
-      "Discover and save amazing recipes with Baba Selo's magical guidance.",
-
+      "AI Recipe Generator that creates personalized recipes, generates food images, and helps you save & share your culinary creations. Chat with Baba Selo for magical recipe guidance.",
     url: "https://babaselo.com",
-
     type: "website",
-
+    siteName: "Baba Selo",
     images: [
       {
         url: "https://babaselo.com/og-image.jpg",
-
         width: 1200,
-
         height: 630,
-
-        alt: "Baba Selo Recipe Preview",
+        alt: "AI Recipe Generator - Baba Selo creates and saves recipes with AI",
       },
     ],
   },
-
   twitter: {
     card: "summary_large_image",
-
-    title: "Baba Selo - Your Magical Recipe Companion",
-
+    title: "AI Recipe Generator | Baba Selo - Create & Save Recipes with AI",
     description:
-      "Discover and save amazing recipes with Baba Selo's magical guidance.",
-
+      "AI Recipe Generator that creates personalized recipes, generates food images, and helps you save & share your culinary creations.",
     images: ["https://babaselo.com/twitter-image.jpg"],
   },
 };

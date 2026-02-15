@@ -1,24 +1,41 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { db } from '../../firebase/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { admin } from '../../firebase/firebaseAdmin';
 import { getStorage } from 'firebase-admin/storage';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { SpoonPointSystem } from '../../lib/spoonPoints';
 
-// Image style options with their prompts - must match settings page
-const imageStyleOptions = {
-    "rustic-traditional": {
-        prompt: "Create this in a rustic, traditional style with a focus on the food's homemade appeal. The dish should be presented on richly detailed traditional tablecloths with classic red and white embroidery patterns. Capture the food with soft, warm natural lighting that highlights its hearty, homestyle qualities. Use deep reds and cream whites in the food styling, with rustic garnishes and traditional serving pieces. The food should look lovingly prepared, with the kind of imperfect, handmade touches that make traditional cooking so appealing. The overall effect should make the food appear nostalgic and heartwarming, like a cherished family recipe brought to life."
+// Image style options - must match settings page (platform & vibe focused)
+const imageStyleOptions: Record<string, { prompt: string }> = {
+    "photorealistic-recipe": {
+        prompt: "Photorealistic food photograph. Natural lighting, authentic styling, realistic textures. Professional food photography—genuine and appetizing. No artificial or exaggerated elements."
     },
-    "modern-cookbook": {
-        prompt: "Create this in a modern cookbook photography style with clean, professional lighting. Use soft, natural light with subtle shadows to highlight textures and details. The style should be crisp and appetizing with a shallow depth of field effect. Add a hint of styled food photography elements like carefully placed herbs or droplets. The overall effect should be contemporary and magazine-worthy."
+    "instagram-flatlay": {
+        prompt: "Overhead flat-lay food photography for Instagram. Bird's-eye view, clean composition, minimal props, marble or wood surface. Soft natural light, shallow depth of field. Aesthetic, fresh, organized, highly shareable."
     },
-    "social-snap": {
-        prompt: "Create this in a modern social media photography style. Use bright, even lighting with enhanced dynamic range to capture rich details and textures. Frame the shot from a slightly elevated angle with a lifestyle-focused composition. The colors should be vibrant yet natural, with crisp details and subtle depth of field. Add gentle highlights to create an appetizing glow, making the food look fresh and inviting. The overall effect should feel contemporary and shareable, like a professional food influencer's content."
+    "bright-viral": {
+        prompt: "Viral social media food photography. Bright punchy lighting, saturated colors, slight 45° angle. Steam rising if applicable. Fresh, eye-catching, thumbnail-worthy. The kind of food shot that gets saved and shared."
+    },
+    "dark-moody": {
+        prompt: "Dark moody food photography. Deep shadows, dramatic side lighting, dark charcoal or black background. Sophisticated, atmospheric. Rich colors, fine dining editorial. Moody food blogger aesthetic."
+    },
+    "pinterest-cozy": {
+        prompt: "Cozy Pinterest-style food photography. Warm natural light, kitchen or dining table setting. Steam rising, casual plating, linen napkin or wooden cutting board. Aspirational but approachable. Recipe blog aesthetic."
+    },
+    "minimalist-white": {
+        prompt: "Minimalist food photography on pure white background. Clean elegant plating, soft diffused lighting, no distractions. Sophisticated—like a high-end restaurant menu or cookbook cover."
+    },
+    "golden-hour": {
+        prompt: "Food photography in golden hour lighting. Warm sunset glow through window, soft shadows, romantic restaurant ambiance. Dish bathed in amber light. Elegant, inviting, magazine-quality."
+    },
+    "street-food": {
+        prompt: "Authentic street food photography. Casual setting—paper plate, market stall, or food truck. Natural daylight, unpretentious plating. Real, approachable, the way food actually looks when you buy it. No fancy styling."
+    },
+    "vintage-retro": {
+        prompt: "Vintage 1970s-80s cookbook food photography. Slightly faded warm tones, retro styling, old-fashioned plating. Nostalgic charm—like a well-loved recipe card from grandma's kitchen."
     },
     "whimsical-cartoon": {
-        prompt: "Create this in a whimsical, animated style with exaggerated, friendly features. Use bright, cheerful colors and smooth, rounded shapes. The style should be reminiscent of modern animated films with a touch of Studio Ghibli charm. Add subtle textures and warm lighting effects. The overall effect should be playful and inviting."
+        prompt: "Whimsical animated food illustration. Bright cheerful colors, smooth rounded shapes. Studio Ghibli-inspired charm. Playful, friendly, inviting—like food from an animated film."
     }
 };
 
@@ -67,44 +84,34 @@ export async function POST(req: Request) {
             canAwardPoints = actionCheck.available;
         }
 
-        // Get user's preferred style from Firebase
-        let stylePrompt = imageStyleOptions["rustic-traditional"].prompt; // Default style
+        // Get user's preferred style from Firebase (Admin SDK for server-side read)
+        let stylePrompt = imageStyleOptions["photorealistic-recipe"].prompt; // Default style
         if (userId) {
             try {
-                console.log("Fetching user preferences for userId:", userId);
-                const userDocRef = doc(db, "users", userId);
-                const userDocSnap = await getDoc(userDocRef);
-                console.log("User doc exists:", userDocSnap.exists());
-                if (userDocSnap.exists()) {
-                    const userData = userDocSnap.data();
-                    console.log("User data:", userData);
-                    const userStyle = userData.preferredImageStyle;
-                    console.log("User's preferred style:", userStyle);
+                const userDoc = await admin.firestore().collection('users').doc(userId).get();
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    const userStyle = userData?.preferredImageStyle;
                     if (userStyle && imageStyleOptions[userStyle]) {
                         stylePrompt = imageStyleOptions[userStyle].prompt;
-                        console.log("Using style prompt:", userStyle);
-                    } else {
-                        console.log("No valid style found, using default");
                     }
                 }
             } catch (error) {
                 console.error("Error fetching user style preference:", error);
                 // Continue with default style if there's an error
             }
-        } else {
-            console.log("No userId provided, using default style");
         }
 
         console.log("Final style prompt being used:", stylePrompt);
 
-        // Generate image with DALL-E
+        // Generate image with DALL-E 3 (standard quality for speed; natural style for photorealistic output)
         const response = await openai.images.generate({
             model: "dall-e-3",
             prompt: `${prompt}. ${stylePrompt}`,
             n: 1,
             size: "1024x1024",
             quality: "standard",
-            style: "vivid"
+            style: "natural"  // More photorealistic than "vivid"
         });
 
         if (!response.data?.[0]?.url) {
