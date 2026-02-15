@@ -47,6 +47,41 @@ const MEAL_PLAN_FAQ = [
   },
 ];
 
+function MealPlanFaqItem({ question, answer, isOpen, onToggle }: { question: string; answer: string; isOpen: boolean; onToggle: () => void }) {
+  return (
+    <div
+      className={`group border-b border-gray-100 last:border-0 transition-colors ${
+        isOpen ? "bg-amber-50/60" : "hover:bg-gray-50/80"
+      }`}
+    >
+      <button
+        onClick={onToggle}
+        className="w-full px-6 py-5 flex items-center justify-between gap-4 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:ring-inset rounded-lg mx-2 my-1"
+      >
+        <span className={`font-semibold text-base pr-4 transition-colors ${isOpen ? "text-amber-900" : "text-gray-900 group-hover:text-amber-800"}`}>
+          {question}
+        </span>
+        <span
+          className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${
+            isOpen ? "bg-amber-600 text-white rotate-180" : "bg-amber-100 text-amber-700 group-hover:bg-amber-200"
+          }`}
+        >
+          <FontAwesomeIcon icon={faChevronDown} className="text-sm" />
+        </span>
+      </button>
+      <div
+        className={`overflow-hidden transition-all duration-200 ease-out ${
+          isOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+        }`}
+      >
+        <p className="px-6 pb-5 pt-0 text-gray-600 text-[15px] leading-relaxed max-w-[90%]">
+          {answer}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 const WEEKDAYS = [
   { value: 0, label: "Sunday" },
   { value: 1, label: "Monday" },
@@ -408,27 +443,18 @@ export default function MealPlansPage() {
                 <FontAwesomeIcon icon={faArrowRight} className="text-sm" />
               </Link>
 
-              <div className="mt-16 pt-12 border-t border-amber-100 w-full max-w-2xl">
-                <h2 className="text-xl font-semibold text-gray-900 mb-6">How it works</h2>
-                <div className="space-y-2">
+              <div className="mt-16 pt-12 w-full max-w-2xl">
+                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 text-center mb-3">How it works</h2>
+                <p className="text-gray-500 text-center mb-10 text-sm md:text-base">Everything you need to know about meal plans</p>
+                <div className="bg-white rounded-2xl border border-amber-100 shadow-lg shadow-amber-900/5 overflow-hidden">
                   {MEAL_PLAN_FAQ.map((item, i) => (
-                    <div key={i} className="bg-white rounded-xl border border-amber-100 overflow-hidden">
-                      <button
-                        onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                        className="w-full px-5 py-4 flex items-center justify-between gap-4 text-left hover:bg-amber-50/50 transition-colors"
-                      >
-                        <span className="font-medium text-gray-900">{item.q}</span>
-                        <FontAwesomeIcon
-                          icon={faChevronDown}
-                          className={`text-amber-600 transition-transform ${openFaq === i ? "rotate-180" : ""}`}
-                        />
-                      </button>
-                      {openFaq === i && (
-                        <div className="px-5 pb-4 pt-0">
-                          <p className="text-gray-600 text-sm leading-relaxed">{item.a}</p>
-                        </div>
-                      )}
-                    </div>
+                    <MealPlanFaqItem
+                      key={i}
+                      question={item.q}
+                      answer={item.a}
+                      isOpen={openFaq === i}
+                      onToggle={() => setOpenFaq(openFaq === i ? null : i)}
+                    />
                   ))}
                 </div>
               </div>
@@ -873,30 +899,18 @@ export default function MealPlansPage() {
             )}
 
             {/* FAQ */}
-            <div className="mt-16 pt-12 border-t border-amber-100">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">Common questions</h2>
-              <div className="space-y-2">
+            <div className="mt-16 pt-12">
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 text-center mb-3">Common questions</h2>
+              <p className="text-gray-500 text-center mb-10 text-sm md:text-base">Everything you need to know about meal plans</p>
+              <div className="bg-white rounded-2xl border border-amber-100 shadow-lg shadow-amber-900/5 overflow-hidden">
                 {MEAL_PLAN_FAQ.map((item, i) => (
-                  <div
+                  <MealPlanFaqItem
                     key={i}
-                    className="bg-white rounded-xl border border-amber-100 overflow-hidden"
-                  >
-                    <button
-                      onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                      className="w-full px-5 py-4 flex items-center justify-between gap-4 text-left hover:bg-amber-50/50 transition-colors"
-                    >
-                      <span className="font-medium text-gray-900">{item.q}</span>
-                      <FontAwesomeIcon
-                        icon={faChevronDown}
-                        className={`text-amber-600 transition-transform ${openFaq === i ? "rotate-180" : ""}`}
-                      />
-                    </button>
-                    {openFaq === i && (
-                      <div className="px-5 pb-4 pt-0">
-                        <p className="text-gray-600 text-sm leading-relaxed">{item.a}</p>
-                      </div>
-                    )}
-                  </div>
+                    question={item.q}
+                    answer={item.a}
+                    isOpen={openFaq === i}
+                    onToggle={() => setOpenFaq(openFaq === i ? null : i)}
+                  />
                 ))}
               </div>
             </div>
@@ -910,11 +924,14 @@ export default function MealPlansPage() {
   return (
     <SidebarLayout>
       <div className="min-h-screen bg-gradient-to-b from-amber-50/50 to-white">
-        <div className="max-w-4xl mx-auto px-4 py-16 flex flex-col md:flex-row items-center gap-12">
-          <div className="flex-shrink-0">
-            <Image src="/baba-removebg.png" alt="Baba Selo" width={160} height={160} className="object-contain" />
+        <div className="max-w-4xl mx-auto px-4 py-12">
+          {/* Logo at top */}
+          <div className="flex justify-center mb-10">
+            <Image src="/baba-removebg.png" alt="Baba Selo" width={140} height={140} className="object-contain" />
           </div>
-          <div className="flex-1 text-center md:text-left">
+
+          {/* Content */}
+          <div className="text-center md:text-left max-w-2xl mx-auto md:mx-0">
             <p className="text-amber-600 font-semibold text-sm uppercase tracking-wider mb-2">Pro</p>
             <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
               Weekly plans, shopping lists, your way
@@ -923,53 +940,43 @@ export default function MealPlansPage() {
               Choose daily or weekly. Get a consolidated shopping list. Tell Baba what you like—in plain language.
             </p>
             <div className="flex flex-wrap gap-4 justify-center md:justify-start mb-8">
-              {["Daily or weekly", "Shopping list", "Natural language prefs"].map((item) => (
+              {["Daily or weekly", "Shopping list", "Tell Baba in plain words"].map((item) => (
                 <span key={item} className="flex items-center gap-2 text-gray-700">
                   <FontAwesomeIcon icon={faCheck} className="text-amber-500" />
                   {item}
                 </span>
               ))}
             </div>
-            <Link
-              href="/upgrade"
-              className="inline-flex items-center gap-2 px-10 py-4 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl"
-            >
-              Upgrade to Pro
-              <FontAwesomeIcon icon={faArrowRight} className="text-sm" />
-            </Link>
-            <p className="mt-4 text-sm text-gray-500">30-day guarantee · Cancel anytime</p>
-
-            {/* FAQ for free users too */}
-            <div className="mt-16 pt-12 border-t border-amber-100 w-full max-w-2xl">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">How it works</h2>
-              <div className="space-y-2">
-                {MEAL_PLAN_FAQ.map((item, i) => (
-                  <div
-                    key={i}
-                    className="bg-white rounded-xl border border-amber-100 overflow-hidden"
-                  >
-                    <button
-                      onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                      className="w-full px-5 py-4 flex items-center justify-between gap-4 text-left hover:bg-amber-50/50 transition-colors"
-                    >
-                      <span className="font-medium text-gray-900">{item.q}</span>
-                      <FontAwesomeIcon
-                        icon={faChevronDown}
-                        className={`text-amber-600 transition-transform ${openFaq === i ? "rotate-180" : ""}`}
-                      />
-                    </button>
-                    {openFaq === i && (
-                      <div className="px-5 pb-4 pt-0">
-                        <p className="text-gray-600 text-sm leading-relaxed">{item.a}</p>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+            <div className="flex flex-col items-center md:items-start">
+              <Link
+                href="/upgrade"
+                className="inline-flex items-center gap-2 px-10 py-4 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl"
+              >
+                Upgrade to Pro
+                <FontAwesomeIcon icon={faArrowRight} className="text-sm" />
+              </Link>
+              <p className="mt-4 text-sm text-gray-500">30-day guarantee · Cancel anytime</p>
             </div>
           </div>
+
+          {/* FAQ for free users too */}
+          <div className="mt-16 pt-12 w-full max-w-2xl mx-auto md:mx-0">
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 text-center mb-3">How it works</h2>
+            <p className="text-gray-500 text-center mb-10 text-sm md:text-base">Everything you need to know about meal plans</p>
+            <div className="bg-white rounded-2xl border border-amber-100 shadow-lg shadow-amber-900/5 overflow-hidden">
+              {MEAL_PLAN_FAQ.map((item, i) => (
+                <MealPlanFaqItem
+                  key={i}
+                  question={item.q}
+                  answer={item.a}
+                  isOpen={openFaq === i}
+                  onToggle={() => setOpenFaq(openFaq === i ? null : i)}
+                />
+              ))}
+            </div>
+          </div>
+          </div>
         </div>
-      </div>
     </SidebarLayout>
   );
 }
