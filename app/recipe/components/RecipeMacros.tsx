@@ -7,6 +7,7 @@ import { LoadingSpinner } from "../../components/LoadingSpinner";
 interface RecipeMacrosProps {
   recipe: Recipe;
   isOwner: boolean;
+  isUserAdmin?: boolean;
   loadingMacros: boolean;
   macroInfoRef: RefObject<HTMLDivElement>;
   handleMacroCalculation: () => void;
@@ -15,10 +16,12 @@ interface RecipeMacrosProps {
 export const RecipeMacros = ({
   recipe,
   isOwner,
+  isUserAdmin,
   loadingMacros,
   macroInfoRef,
   handleMacroCalculation,
 }: RecipeMacrosProps) => {
+  const canRegenerate = isOwner || isUserAdmin;
   return (
     <div ref={macroInfoRef} className="mb-6 scroll-mt-44">
       <h3 className="text-xl font-semibold mb-2">
@@ -72,7 +75,7 @@ export const RecipeMacros = ({
                 </div>
               </div>
             </div>
-            {isOwner && (
+            {canRegenerate && (
               <button
                 onClick={handleMacroCalculation}
                 disabled={loadingMacros}
@@ -94,6 +97,7 @@ export const RecipeMacros = ({
           </div>
         ) : (
           <div className="flex justify-left">
+            {canRegenerate && (
             <button
               onClick={handleMacroCalculation}
               disabled={loadingMacros}
@@ -108,6 +112,7 @@ export const RecipeMacros = ({
                 'Calculate Nutrition Info 🥄✨'
               )}
             </button>
+            )}
           </div>
         )}
       </div>

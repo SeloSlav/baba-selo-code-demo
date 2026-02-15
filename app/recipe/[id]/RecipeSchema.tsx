@@ -65,19 +65,20 @@ export async function RecipeSchema({ recipeId }: RecipeSchemaProps) {
     ...(cookTime && { cookTime }),
     ...(servings && { recipeYield: `${servings} servings` }),
     ...(data.cuisineType && { recipeCuisine: data.cuisineType }),
-    ...(Array.isArray(data.diet) &&
-      (() => {
-        const dietMap: Record<string, string> = {
-          Vegetarian: "https://schema.org/VegetarianDiet",
-          Vegan: "https://schema.org/VeganDiet",
-          "Gluten-free": "https://schema.org/GlutenFreeDiet",
-          "Dairy-free": "https://schema.org/DairyFreeDiet",
-        };
-        const suitableForDiet = data.diet
-          .filter((d: string) => typeof d === "string" && dietMap[d])
-          .map((d: string) => dietMap[d]);
-        return suitableForDiet.length > 0 ? { suitableForDiet } : {};
-      })(),
+    ...(Array.isArray(data.diet)
+      ? (() => {
+          const dietMap: Record<string, string> = {
+            Vegetarian: "https://schema.org/VegetarianDiet",
+            Vegan: "https://schema.org/VeganDiet",
+            "Gluten-free": "https://schema.org/GlutenFreeDiet",
+            "Dairy-free": "https://schema.org/DairyFreeDiet",
+          };
+          const suitableForDiet = data.diet
+            .filter((d: string) => typeof d === "string" && dietMap[d])
+            .map((d: string) => dietMap[d]);
+          return suitableForDiet.length > 0 ? { suitableForDiet } : {};
+        })()
+      : {}),
   };
 
   return (

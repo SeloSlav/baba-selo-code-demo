@@ -65,14 +65,18 @@ service cloud.firestore {
       // Reverting diagnostic rule, adding userId check back
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
 
-      // Allow update if user is owner OR if only the 'likes' field is being changed by an authenticated user
+      // Allow update if user is owner, admin, OR if only the 'likes' field is being changed
       allow update: if request.auth != null && 
                        (
                          // Condition 1: Owner is updating (and not changing owner)
                          (resource.data.userId == request.auth.uid && 
                           request.resource.data.userId == request.auth.uid) 
                          || 
-                         // Condition 2: Any authenticated user is ONLY updating the 'likes' field
+                         // Condition 2: Admin can update any recipe
+                         (exists(/databases/$(database)/documents/admins/$(request.auth.uid)) && 
+                          get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.active == true)
+                         || 
+                         // Condition 3: Any authenticated user is ONLY updating the 'likes' field
                          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes']))
                        );
 

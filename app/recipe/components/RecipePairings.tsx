@@ -7,6 +7,7 @@ import { LoadingSpinner } from "../../components/LoadingSpinner";
 interface RecipePairingsProps {
   recipe: Recipe;
   isOwner: boolean;
+  isUserAdmin?: boolean;
   loadingPairings: boolean;
   pairingsRef: RefObject<HTMLDivElement>;
   handleGetPairings: () => void;
@@ -15,10 +16,12 @@ interface RecipePairingsProps {
 export const RecipePairings = ({
   recipe,
   isOwner,
+  isUserAdmin,
   loadingPairings,
   pairingsRef,
   handleGetPairings,
 }: RecipePairingsProps) => {
+  const canRegenerate = isOwner || isUserAdmin;
   return (
     <div ref={pairingsRef} className="mb-6 scroll-mt-44">
       <h3 className="text-xl font-semibold mb-2">
@@ -29,7 +32,7 @@ export const RecipePairings = ({
         {recipe.dishPairings ? (
           <div className="bg-white border border-amber-100 rounded-lg p-4 shadow-sm">
             <div className="whitespace-pre-wrap">{recipe.dishPairings}</div>
-            {isOwner && (
+            {canRegenerate && (
               <button
                 onClick={handleGetPairings}
                 disabled={loadingPairings}
@@ -51,6 +54,7 @@ export const RecipePairings = ({
           </div>
         ) : (
           <div className="flex justify-left">
+            {canRegenerate && (
             <button
               onClick={handleGetPairings}
               disabled={loadingPairings}
@@ -65,6 +69,7 @@ export const RecipePairings = ({
                 'Get Pairing Suggestions 🥄✨'
               )}
             </button>
+            )}
           </div>
         )}
       </div>

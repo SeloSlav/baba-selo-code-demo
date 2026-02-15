@@ -9,19 +9,23 @@ export async function POST(request: Request) {
   try {
     const { title, ingredients, directions, cuisineType, diet, cookingTime, cookingDifficulty } = await request.json();
 
+    const safeDiet = Array.isArray(diet) ? diet.join(', ') : '';
+    const safeIngredients = Array.isArray(ingredients) ? ingredients : [];
+    const safeDirections = Array.isArray(directions) ? directions : [];
+
     const prompt = `Generate a brief, SEO-optimized description for a recipe with the following details:
 
-Title: ${title}
-Cuisine: ${cuisineType}
-Diet: ${diet.join(', ')}
-Cooking Time: ${cookingTime}
-Difficulty: ${cookingDifficulty}
+Title: ${title || 'Recipe'}
+Cuisine: ${cuisineType || 'Unknown'}
+Diet: ${safeDiet}
+Cooking Time: ${cookingTime || 'Unknown'}
+Difficulty: ${cookingDifficulty || 'Unknown'}
 
 Ingredients:
-${ingredients.map((ingredient: string) => `- ${ingredient}`).join('\n')}
+${safeIngredients.map((ingredient: string) => `- ${ingredient}`).join('\n')}
 
 Directions:
-${directions.map((direction: string, index: number) => `${index + 1}. ${direction}`).join('\n')}
+${safeDirections.map((direction: string, index: number) => `${index + 1}. ${direction}`).join('\n')}
 
 IMPORTANT RULES:
 1. Write a single paragraph (2-3 sentences)

@@ -6,6 +6,7 @@ import { LoadingSpinner } from "../../components/LoadingSpinner";
 interface RecipeSummaryProps {
   recipe: Recipe;
   isOwner: boolean;
+  isUserAdmin?: boolean;
   loadingSummary: boolean;
   generateSummary: () => void;
 }
@@ -13,9 +14,11 @@ interface RecipeSummaryProps {
 export const RecipeSummary = ({
   recipe,
   isOwner,
+  isUserAdmin,
   loadingSummary,
   generateSummary,
 }: RecipeSummaryProps) => {
+  const canRegenerate = isOwner || isUserAdmin;
   return (
     <div className="relative group mb-6">
       <div className="flex flex-col md:flex-row md:justify-between md:items-start">
@@ -24,7 +27,7 @@ export const RecipeSummary = ({
             <div className="relative">
               <div className="bg-white">
                 <p className="text-[#767677] text-[0.875rem] md:text-[1.25rem] leading-[1.4] md:tracking-[-0.5px]">{recipe.recipeSummary}</p> 
-                {isOwner && (
+                {canRegenerate && (
                   <button
                     onClick={generateSummary}
                     disabled={loadingSummary}
@@ -47,6 +50,7 @@ export const RecipeSummary = ({
             </div>
           ) : (
             <div className="flex justify-left">
+              {canRegenerate && (
               <button
                 onClick={generateSummary}
                 disabled={loadingSummary}
@@ -61,6 +65,7 @@ export const RecipeSummary = ({
                   'Generate Recipe Summary 🥄✨'
                 )}
               </button>
+              )}
             </div>
           )}
         </div>

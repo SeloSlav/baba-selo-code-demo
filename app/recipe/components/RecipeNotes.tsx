@@ -7,6 +7,7 @@ import { LoadingSpinner } from "../../components/LoadingSpinner";
 interface RecipeNotesProps {
   recipe: Recipe;
   isOwner: boolean;
+  isUserAdmin?: boolean;
   notes: string;
   savingNotes: boolean;
   hasNoteChanges: boolean;
@@ -19,6 +20,7 @@ interface RecipeNotesProps {
 export const RecipeNotes = ({
   recipe,
   isOwner,
+  isUserAdmin,
   notes,
   savingNotes,
   hasNoteChanges,
@@ -34,7 +36,7 @@ export const RecipeNotes = ({
         Notes
       </h3>
       <div className="relative">
-        {isOwner ? (
+        {(isOwner || isUserAdmin) ? (
           <>
             <textarea
               value={notes}

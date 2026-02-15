@@ -60,6 +60,13 @@ export const POINT_ACTIONS: Record<string, PointAction> = {
     requiresUnique: true,
     displayName: 'Pairings Generated'
   },
+  GENERATE_TAGS: {
+    type: 'GENERATE_TAGS',
+    points: 15,
+    cooldown: 30,
+    requiresUnique: true,
+    displayName: 'Recipe Tags Generated'
+  },
   GENERATE_IMAGE: {
     type: 'GENERATE_IMAGE',
     points: 20,

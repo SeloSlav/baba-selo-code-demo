@@ -8,11 +8,14 @@ import { FilterTag } from "../../components/FilterTag";
 interface RecipeHeaderProps {
   recipe: Recipe;
   isOwner: boolean;
+  isUserAdmin?: boolean;
   copySuccess: boolean;
   handleCopyRecipe: () => void;
   handlePinToggle: () => void;
   handleDelete: () => void;
   handleLike?: () => void;
+  handleRegenerateTags?: () => void;
+  loadingRegenerateTags?: boolean;
   currentUser?: any;
   loadingPinAction?: boolean;
   loadingDeleteAction?: boolean;
@@ -21,21 +24,28 @@ interface RecipeHeaderProps {
 export const RecipeHeader = ({
   recipe,
   isOwner,
+  isUserAdmin,
   copySuccess,
   handleCopyRecipe,
   handlePinToggle,
   handleDelete,
   handleLike,
+  handleRegenerateTags,
+  loadingRegenerateTags,
   currentUser,
   loadingPinAction,
   loadingDeleteAction,
 }: RecipeHeaderProps) => {
   const hasLiked = recipe.likes?.includes(currentUser?.uid || '');
+  const canManage = isOwner || isUserAdmin;
+  const hasUnknownTags = !recipe.cuisineType || recipe.cuisineType === 'Unknown' ||
+    !recipe.cookingTime || recipe.cookingTime === 'Unknown' ||
+    !recipe.cookingDifficulty || recipe.cookingDifficulty === 'Unknown';
 
   return (
     <>
       {/* Recipe Classifications */}
-      <div className="mb-6 flex flex-wrap gap-3">
+      <div className="mb-6 flex flex-wrap gap-3 items-center">
         {recipe.diet.length > 0 && recipe.diet.map((d) => (
           <FilterTag key={d} type="diet" value={d} icon="🍲">
             {d.charAt(0).toUpperCase() + d.slice(1)}
@@ -55,6 +65,29 @@ export const RecipeHeader = ({
           <FilterTag type="difficulty" value={recipe.cookingDifficulty} icon="🧩">
             {recipe.cookingDifficulty.charAt(0).toUpperCase() + recipe.cookingDifficulty.slice(1)}
           </FilterTag>
+        )}
+        {canManage && handleRegenerateTags && (
+          <button
+            onClick={handleRegenerateTags}
+            disabled={loadingRegenerateTags}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+              hasUnknownTags
+                ? 'bg-amber-200 text-amber-900 hover:bg-amber-300'
+                : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
+          >
+            {loadingRegenerateTags ? (
+              <>
+                <span className="animate-spin">⟳</span>
+                <span>Regenerating...</span>
+              </>
+            ) : (
+              <>
+                <span>🔄</span>
+                <span>Regenerate tags</span>
+              </>
+            )}
+          </button>
         )}
       </div>
 
@@ -92,7 +125,7 @@ export const RecipeHeader = ({
           </div>
         )}
 
-        {isOwner && (
+        {canManage && (
           <>
             <div className="w-px h-6 bg-amber-200" /> {/* Divider */}
             <button

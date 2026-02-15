@@ -6,6 +6,7 @@ import { LoadingSpinner } from "../../components/LoadingSpinner";
 interface RecipeTitleProps {
   recipe: Recipe;
   isOwner: boolean;
+  isUserAdmin?: boolean;
   loadingTitle: boolean;
   handleGenerateTitle: () => void;
 }
@@ -13,14 +14,16 @@ interface RecipeTitleProps {
 export const RecipeTitle = ({
   recipe,
   isOwner,
+  isUserAdmin,
   loadingTitle,
   handleGenerateTitle,
 }: RecipeTitleProps) => {
+  const canRegenerate = isOwner || isUserAdmin;
   return (
     <div className="relative group">
       <div className="flex justify-between items-start">
         <h1 className="text-[1.875rem] md:text-[3.125rem] mb-[0.75rem] leading-[1.07] tracking-[-0.5px] font-semibold text-[#333333]">{recipe.recipeTitle}</h1>
-        {isOwner && (
+        {canRegenerate && (
           <button
             onClick={handleGenerateTitle}
             disabled={loadingTitle}

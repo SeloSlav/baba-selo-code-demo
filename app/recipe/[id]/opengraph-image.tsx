@@ -9,9 +9,14 @@ export const size = {
   height: 630,
 };
 
-export default async function Image({ params }: { params: { id: string } }) {
+export default async function Image({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   try {
-    const recipeDoc = await getDoc(doc(db, "recipes", params.id));
+    const { id } = await params;
+    const recipeDoc = await getDoc(doc(db, "recipes", id));
     const recipe = recipeDoc.exists() ? recipeDoc.data() : null;
 
     return new ImageResponse(

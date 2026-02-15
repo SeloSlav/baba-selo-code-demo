@@ -122,8 +122,15 @@ Rules:
           throw new Error(classifyData?.error || 'Classification request failed: No valid response');
         }
 
-        // Store classification data with validation
-        result.cookingTime = classifyData.cookingTime;
+        // Store classification data with validation (classify returns snake_case)
+        const timeMap: Record<string, string> = {
+          "15 minutes": "15 min",
+          "30 minutes": "30 min",
+          "45 minutes": "45 min",
+          "1 hour": "1 hour",
+          "2 hours": "1.5 hours",
+        };
+        result.cookingTime = timeMap[classifyData.cooking_time] || classifyData.cooking_time;
         result.cuisineType = classifyData.cuisine;
         result.cookingDifficulty = classifyData.difficulty;
         result.diet = classifyData.diet;

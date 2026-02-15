@@ -30,10 +30,18 @@ declare module 'next/server' {
 const ALLOWED_COUNTRIES = ['US', 'CA', 'GB', 'FR', 'DE', 'IT', 'ES', 'NL', 'SE', 'PL', 'RO', 'BE', 'CZ', 'GR', 'PT', 'HU', 'IE', 'DK', 'FI', 'SK', 'BG', 'HR', 'LT', 'SI', 'LV', 'EE', 'LU', 'MT', 'CY', 'AE']
 
 export function middleware(request: NextRequest) {
-  // 301 redirect: babaselo.com → www.babaselo.com (SEO canonical consistency)
   const host = request.headers.get('host') || '';
+  const url = request.nextUrl.clone();
+
+  // 301 redirect: http → https (SEO + security)
+  const proto = request.headers.get('x-forwarded-proto') ?? (request.url.startsWith('https://') ? 'https' : 'http');
+  if (proto === 'http' && (host === 'babaselo.com' || host === 'www.babaselo.com')) {
+    url.protocol = 'https:';
+    return NextResponse.redirect(url, 301);
+  }
+
+  // 301 redirect: babaselo.com → www.babaselo.com (SEO canonical consistency)
   if (host === 'babaselo.com') {
-    const url = request.nextUrl.clone();
     url.host = 'www.babaselo.com';
     url.protocol = 'https:';
     return NextResponse.redirect(url, 301);

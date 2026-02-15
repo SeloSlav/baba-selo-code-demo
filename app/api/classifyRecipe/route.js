@@ -1,7 +1,16 @@
 import { NextResponse } from 'next/server';
 
 export async function POST(req) {
-  const { message } = await req.json();
+  const body = await req.json();
+  let message = body.message;
+
+  if (!message && (body.title || body.ingredients || body.directions)) {
+    message = [
+      body.title && `Recipe: ${body.title}`,
+      body.ingredients && `Ingredients:\n${typeof body.ingredients === 'string' ? body.ingredients : (Array.isArray(body.ingredients) ? body.ingredients.join('\n') : '')}`,
+      body.directions && `Directions:\n${typeof body.directions === 'string' ? body.directions : (Array.isArray(body.directions) ? body.directions.join('\n') : '')}`
+    ].filter(Boolean).join('\n\n');
+  }
 
   if (!message) {
     return NextResponse.json({ error: "No message provided" }, { status: 400 });

@@ -35,6 +35,8 @@ const getActionEmoji = (actionType: string): string => {
       return '📊';
     case 'GENERATE_PAIRINGS':
       return '🍷';
+    case 'GENERATE_TAGS':
+      return '🏷️';
     case 'GENERATE_IMAGE':
       return '🎨';
     case 'UPLOAD_IMAGE':
@@ -75,7 +77,7 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
       );
     }
 
-    if (['GENERATE_SUMMARY', 'GENERATE_NUTRITION', 'GENERATE_PAIRINGS', 'GENERATE_IMAGE', 'UPLOAD_IMAGE', 'SAVE_RECIPE'].includes(transaction.actionType) && transaction.targetId) {
+    if (['GENERATE_SUMMARY', 'GENERATE_NUTRITION', 'GENERATE_PAIRINGS', 'GENERATE_TAGS', 'GENERATE_IMAGE', 'UPLOAD_IMAGE', 'SAVE_RECIPE'].includes(transaction.actionType) && transaction.targetId) {
       return (
         <Link 
           href={`/recipe/${transaction.targetId}`}

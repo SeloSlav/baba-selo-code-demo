@@ -70,8 +70,10 @@ const RecipeDetails = () => {
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [loadingMacros, setLoadingMacros] = useState(false);
   const [loadingPairings, setLoadingPairings] = useState(false);
+  const [loadingIngredientsDirections, setLoadingIngredientsDirections] = useState(false);
   const [loadingPinAction, setLoadingPinAction] = useState(false);
   const [loadingDeleteAction, setLoadingDeleteAction] = useState(false);
+  const [loadingRegenerateTags, setLoadingRegenerateTags] = useState(false);
   const [macroInfo, setMacroInfo] = useState(null);
   const [dishPairings, setDishPairings] = useState("");
   const { id } = useParams();
@@ -656,21 +658,26 @@ const RecipeDetails = () => {
         }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
+      const data = await response.json();
+      if (response.ok && data.summary) {
         const recipeRef = doc(db, "recipes", id);
         await updateDoc(recipeRef, { recipeSummary: data.summary });
         setRecipe((prev) => (prev ? { ...prev, recipeSummary: data.summary } : null));
 
-        // Award points for generating summary
-        await handlePointsAward(
-          'GENERATE_SUMMARY',
-          id,
-          'Recipe summary generated!'
-        );
+        // Award points for generating summary (skip for admin - they're fixing others' recipes)
+        if (!isUserAdmin) {
+          await handlePointsAward(
+            'GENERATE_SUMMARY',
+            id,
+            'Recipe summary generated!'
+          );
+        }
+      } else if (!response.ok && data.error) {
+        showPointsToast(0, data.error);
       }
     } catch (error) {
-      console.error("Error generating summary:", error);
+      const msg = error instanceof Error ? error.message : 'Failed to generate summary';
+      showPointsToast(0, msg);
     } finally {
       setLoadingSummary(false);
     }
@@ -702,17 +709,118 @@ const RecipeDetails = () => {
           setRecipe(prev => prev ? { ...prev, macroInfo: data.macros } : null);
         }
 
-        // Award points for generating nutrition info
-        await handlePointsAward(
-          'GENERATE_NUTRITION',
-          id,
-          'Nutritional information calculated!'
-        );
+        // Award points (skip for admin)
+        if (!isUserAdmin) {
+          await handlePointsAward(
+            'GENERATE_NUTRITION',
+            id,
+            'Nutritional information calculated!'
+          );
+        }
       }
     } catch (error) {
       console.error("Error calculating macros:", error);
     } finally {
       setLoadingMacros(false);
+    }
+  };
+
+  // Regenerate tags (cuisine, time, difficulty, diet) - owner or admin
+  const handleRegenerateTags = async () => {
+    if (!recipe || !id || typeof id !== 'string' || (!isOwner && !isUserAdmin)) return;
+
+    setLoadingRegenerateTags(true);
+    try {
+      const message = [
+        `Recipe: ${recipe.recipeTitle}`,
+        `Ingredients:\n${(recipe.ingredients || []).join('\n')}`,
+        `Directions:\n${(recipe.directions || []).join('\n')}`
+      ].join('\n\n');
+
+      const response = await fetch("/api/classifyRecipe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        showPointsToast(0, data.error || "Failed to classify recipe");
+        return;
+      }
+
+      // Map cooking_time from classify format to explore filter format
+      const timeMap: Record<string, string> = {
+        "15 minutes": "15 min",
+        "30 minutes": "30 min",
+        "45 minutes": "45 min",
+        "1 hour": "1 hour",
+        "2 hours": "1.5 hours",
+      };
+      const cookingTime = timeMap[data.cooking_time] || data.cooking_time;
+
+      const recipeRef = doc(db, "recipes", id);
+      const updates = {
+        cuisineType: data.cuisine || recipe.cuisineType,
+        cookingTime: cookingTime || recipe.cookingTime,
+        cookingDifficulty: (data.difficulty || recipe.cookingDifficulty)?.toLowerCase() || recipe.cookingDifficulty,
+        diet: Array.isArray(data.diet) ? data.diet : (recipe.diet || []),
+      };
+
+      await updateDoc(recipeRef, updates);
+      setRecipe((prev) =>
+        prev ? { ...prev, ...updates } : null
+      );
+
+      if (!isUserAdmin) {
+        await handlePointsAward("GENERATE_TAGS", id, "Recipe tags updated!");
+      }
+    } catch (error) {
+      console.error("Error regenerating tags:", error);
+      showPointsToast(0, "Failed to regenerate tags. Please try again.");
+    } finally {
+      setLoadingRegenerateTags(false);
+    }
+  };
+
+  // Regenerate ingredients and directions (admin only)
+  const handleRegenerateIngredientsDirections = async () => {
+    if (!recipe || !id || typeof id !== 'string' || !isUserAdmin) return;
+
+    setLoadingIngredientsDirections(true);
+    try {
+      const response = await fetch("/api/generateRecipeDetails", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipeTitle: recipe.recipeTitle,
+          recipeContent: recipe.recipeContent || '',
+          generateAll: false,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.ingredients?.length && data.directions?.length) {
+          const recipeRef = doc(db, "recipes", id);
+          await updateDoc(recipeRef, {
+            ingredients: data.ingredients,
+            directions: data.directions,
+          });
+          setRecipe(prev => prev ? {
+            ...prev,
+            ingredients: data.ingredients,
+            directions: data.directions,
+          } : null);
+          setCheckedIngredients(new Array(data.ingredients.length).fill(false));
+          setCheckedDirections(new Array(data.directions.length).fill(false));
+        }
+      }
+    } catch (error) {
+      console.error("Error regenerating ingredients/directions:", error);
+    } finally {
+      setLoadingIngredientsDirections(false);
     }
   };
 
@@ -740,12 +848,14 @@ const RecipeDetails = () => {
           setDishPairings(data.suggestion);
           setRecipe(prev => prev ? { ...prev, dishPairings: data.suggestion } : null);
 
-          // Award points for generating pairings
-          await handlePointsAward(
-            'GENERATE_PAIRINGS',
-            id,
-            'Perfect pairings discovered!'
-          );
+          // Award points (skip for admin)
+          if (!isUserAdmin) {
+            await handlePointsAward(
+              'GENERATE_PAIRINGS',
+              id,
+              'Perfect pairings discovered!'
+            );
+          }
         }
       }
     } catch (error) {
@@ -769,7 +879,7 @@ const RecipeDetails = () => {
 
   // Function to handle pinning/unpinning
   const handlePinToggle = async () => {
-    if (!id || !isOwner) return;
+    if (!id || (!isOwner && !isUserAdmin)) return;
     try {
       setLoadingPinAction(true);
       const recipeDocRef = doc(db, "recipes", id as string);
@@ -958,6 +1068,7 @@ const RecipeDetails = () => {
           <RecipeTitle
             recipe={recipe}
             isOwner={isOwner}
+            isUserAdmin={isUserAdmin}
             loadingTitle={loadingTitle}
             handleGenerateTitle={handleGenerateTitle}
           />
@@ -965,6 +1076,7 @@ const RecipeDetails = () => {
           <RecipeSummary
             recipe={recipe}
             isOwner={isOwner}
+            isUserAdmin={isUserAdmin}
             loadingSummary={loadingSummary}
             generateSummary={generateSummary}
           />
@@ -972,11 +1084,14 @@ const RecipeDetails = () => {
           <RecipeHeader
             recipe={recipe}
             isOwner={isOwner}
+            isUserAdmin={isUserAdmin}
             copySuccess={copySuccess}
             handleCopyRecipe={handleCopyRecipe}
             handlePinToggle={handlePinToggle}
             handleDelete={handleDelete}
             handleLike={handleLike}
+            handleRegenerateTags={handleRegenerateTags}
+            loadingRegenerateTags={loadingRegenerateTags}
             currentUser={user}
             loadingPinAction={loadingPinAction}
             loadingDeleteAction={loadingDeleteAction}
@@ -1017,6 +1132,9 @@ const RecipeDetails = () => {
             checkedIngredients={checkedIngredients}
             toggleIngredientCheck={toggleIngredientCheck}
             ingredientsRef={ingredientsRef}
+            isUserAdmin={isUserAdmin}
+            loadingIngredientsDirections={loadingIngredientsDirections}
+            handleRegenerateIngredientsDirections={handleRegenerateIngredientsDirections}
           />
 
           <RecipeDirections 
@@ -1029,6 +1147,7 @@ const RecipeDetails = () => {
           <RecipeNotes
             recipe={recipe}
             isOwner={isOwner}
+            isUserAdmin={isUserAdmin}
             notes={notes}
             savingNotes={savingNotes}
             hasNoteChanges={hasNoteChanges}
@@ -1041,6 +1160,7 @@ const RecipeDetails = () => {
           <RecipeMacros
             recipe={recipe}
             isOwner={isOwner}
+            isUserAdmin={isUserAdmin}
             loadingMacros={loadingMacros}
             macroInfoRef={macroInfoRef}
             handleMacroCalculation={handleMacroCalculation}
@@ -1049,6 +1169,7 @@ const RecipeDetails = () => {
           <RecipePairings
             recipe={recipe}
             isOwner={isOwner}
+            isUserAdmin={isUserAdmin}
             loadingPairings={loadingPairings}
             pairingsRef={pairingsRef}
             handleGetPairings={handleGetPairings}
