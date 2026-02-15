@@ -6,7 +6,7 @@ interface RecipeNavigationProps {
   activeSection: string;
   ingredientsProgress: number;
   directionsProgress: number;
-  scrollToSection: (ref: RefObject<HTMLDivElement>) => void;
+  scrollToSection: (ref: RefObject<HTMLDivElement>, sectionId: string) => void;
   ingredientsRef: RefObject<HTMLDivElement>;
   directionsRef: RefObject<HTMLDivElement>;
   notesRef: RefObject<HTMLDivElement>;
@@ -26,14 +26,14 @@ export const RecipeNavigation = ({
   pairingsRef,
 }: RecipeNavigationProps) => {
   return (
-    <div className="md:sticky md:top-4 fixed bottom-0 left-0 right-0 md:relative z-30">
+    <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm -mx-6 px-6 py-4 -mt-2 mb-4 rounded-b-lg shadow-sm border-b border-gray-100">
       {/* Desktop version */}
-      <div className="hidden md:block bg-white/80 backdrop-blur-sm rounded-lg shadow-sm mb-6 transition-all duration-300 ease-in-out">
-        <div className="p-4">
-          <div className="flex justify-between items-center mb-4">
+      <div className="hidden md:block">
+        <div className="mb-4">
+          <div className="flex flex-wrap gap-2 items-center">
             <div className="flex space-x-4">
               <button
-                onClick={() => scrollToSection(ingredientsRef)}
+                onClick={() => scrollToSection(ingredientsRef, 'ingredients')}
                 className={`px-4 py-2 rounded-full transition-all duration-200 ${
                   activeSection === 'ingredients'
                     ? 'bg-black text-white'
@@ -43,7 +43,7 @@ export const RecipeNavigation = ({
                 📝 Ingredients
               </button>
               <button
-                onClick={() => scrollToSection(directionsRef)}
+                onClick={() => scrollToSection(directionsRef, 'directions')}
                 className={`px-4 py-2 rounded-full transition-all duration-200 ${
                   activeSection === 'directions'
                     ? 'bg-black text-white'
@@ -53,7 +53,7 @@ export const RecipeNavigation = ({
                 👩‍🍳 Directions
               </button>
               <button
-                onClick={() => scrollToSection(notesRef)}
+                onClick={() => scrollToSection(notesRef, 'notes')}
                 className={`px-4 py-2 rounded-full transition-all duration-200 ${
                   activeSection === 'notes'
                     ? 'bg-black text-white'
@@ -63,7 +63,7 @@ export const RecipeNavigation = ({
                 📝 Notes
               </button>
               <button
-                onClick={() => scrollToSection(macroInfoRef)}
+                onClick={() => scrollToSection(macroInfoRef, 'macros')}
                 className={`px-4 py-2 rounded-full transition-all duration-200 ${
                   activeSection === 'macros'
                     ? 'bg-black text-white'
@@ -73,7 +73,7 @@ export const RecipeNavigation = ({
                 📊 Nutrition
               </button>
               <button
-                onClick={() => scrollToSection(pairingsRef)}
+                onClick={() => scrollToSection(pairingsRef, 'pairings')}
                 className={`px-4 py-2 rounded-full transition-all duration-200 ${
                   activeSection === 'pairings'
                     ? 'bg-black text-white'
@@ -84,7 +84,7 @@ export const RecipeNavigation = ({
               </button>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4 mt-4">
             <div>
               <div className="flex justify-between text-sm text-gray-600 mb-1">
                 <span>Ingredients</span>
@@ -114,7 +114,7 @@ export const RecipeNavigation = ({
       </div>
 
       {/* Mobile version */}
-      <div className="md:hidden bg-white shadow-[0_-4px_6px_-1px_rgb(0,0,0,0.1)] rounded-t-xl w-[75%]">
+      <div className="md:hidden rounded-lg">
         <div className="safe-area-inset-bottom">
           <div className="p-3">
             {/* Progress bars in a more compact format */}
@@ -146,7 +146,7 @@ export const RecipeNavigation = ({
             <div className="overflow-x-auto scrollbar-hide -mx-3">
               <div className="flex space-x-2 min-w-max px-3">
                 <button
-                  onClick={() => scrollToSection(ingredientsRef)}
+                  onClick={() => scrollToSection(ingredientsRef, 'ingredients')}
                   className={`px-3 py-1.5 rounded-full text-sm transition-all duration-200 whitespace-nowrap ${
                     activeSection === 'ingredients'
                       ? 'bg-black text-white'
@@ -156,7 +156,7 @@ export const RecipeNavigation = ({
                   📝 Ingredients
                 </button>
                 <button
-                  onClick={() => scrollToSection(directionsRef)}
+                  onClick={() => scrollToSection(directionsRef, 'directions')}
                   className={`px-3 py-1.5 rounded-full text-sm transition-all duration-200 whitespace-nowrap ${
                     activeSection === 'directions'
                       ? 'bg-black text-white'
@@ -166,7 +166,7 @@ export const RecipeNavigation = ({
                   👩‍🍳 Directions
                 </button>
                 <button
-                  onClick={() => scrollToSection(notesRef)}
+                  onClick={() => scrollToSection(notesRef, 'notes')}
                   className={`px-3 py-1.5 rounded-full text-sm transition-all duration-200 whitespace-nowrap ${
                     activeSection === 'notes'
                       ? 'bg-black text-white'
@@ -176,7 +176,7 @@ export const RecipeNavigation = ({
                   📝 Notes
                 </button>
                 <button
-                  onClick={() => scrollToSection(macroInfoRef)}
+                  onClick={() => scrollToSection(macroInfoRef, 'macros')}
                   className={`px-3 py-1.5 rounded-full text-sm transition-all duration-200 whitespace-nowrap ${
                     activeSection === 'macros'
                       ? 'bg-black text-white'
@@ -186,7 +186,7 @@ export const RecipeNavigation = ({
                   📊 Nutrition
                 </button>
                 <button
-                  onClick={() => scrollToSection(pairingsRef)}
+                  onClick={() => scrollToSection(pairingsRef, 'pairings')}
                   className={`px-3 py-1.5 rounded-full text-sm transition-all duration-200 whitespace-nowrap ${
                     activeSection === 'pairings'
                       ? 'bg-black text-white'

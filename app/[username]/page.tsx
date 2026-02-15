@@ -2,6 +2,7 @@ import React from 'react';
 import { isReservedPath } from '../config/reservedPaths';
 import { notFound } from 'next/navigation';
 import UserProfileClient from './UserProfileClient';
+import { SidebarLayout } from '../components/SidebarLayout';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
 
@@ -30,5 +31,9 @@ export default async function UserProfile(props: Props) {
 
     const userId = userSnapshot.docs[0].id;
 
-    return <UserProfileClient userId={userId} username={username} />;
+    return (
+        <SidebarLayout>
+            <UserProfileClient userId={userId} username={username} />
+        </SidebarLayout>
+    );
 } 

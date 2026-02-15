@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
+import Image from 'next/image';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowUp, faXmark, faComment } from "@fortawesome/free-solid-svg-icons";
+import { faArrowUp, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { renderNutritionInfo } from './messageUtils';
 
 interface Message {
@@ -213,15 +214,32 @@ export const RecipeChatBubble: React.FC<RecipeChatBubbleProps> = ({ recipeConten
         return (
             <button
                 onClick={() => setIsOpen(true)}
-                className="fixed bottom-6 right-6 bg-black text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-gray-800 transition-all z-50"
+                className="fixed bottom-6 right-6 bg-white rounded-full w-20 h-20 md:w-auto md:h-auto md:px-5 md:py-3 md:gap-2 flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-105 transition-all z-50 animate-chat-bubble-pulse border-2 border-gray-100"
+                aria-label="Chat with Baba Selo about this recipe"
             >
-                <FontAwesomeIcon icon={faComment} className="text-xl" />
+                <Image
+                    src="/apple-touch-icon.png"
+                    alt="Baba Selo"
+                    width={56}
+                    height={56}
+                    className="object-contain md:w-10 md:h-10 shrink-0"
+                />
+                <span className="hidden md:inline text-sm font-medium text-gray-900 whitespace-nowrap">
+                    Chat with me about this recipe
+                </span>
             </button>
         );
     }
 
     return (
-        <div className="fixed bottom-6 right-6 w-96 bg-white rounded-lg shadow-xl z-50 flex flex-col max-h-[calc(100vh-6rem)]">
+        <>
+            {/* Backdrop - click outside to minimize */}
+            <div
+                className="fixed inset-0 z-40"
+                onClick={() => setIsOpen(false)}
+                aria-hidden="true"
+            />
+            <div className="fixed bottom-6 right-6 w-96 bg-white rounded-lg shadow-xl z-50 flex flex-col max-h-[calc(100vh-6rem)]">
             {/* Header */}
             <div className="flex items-center justify-between p-3 border-b shrink-0">
                 <div className="flex items-center">
@@ -327,5 +345,6 @@ export const RecipeChatBubble: React.FC<RecipeChatBubbleProps> = ({ recipeConten
                 </div>
             </div>
         </div>
+        </>
     );
 }; 

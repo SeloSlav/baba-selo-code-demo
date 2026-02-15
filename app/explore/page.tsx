@@ -1,39 +1,16 @@
 "use client";
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { db } from '../firebase/firebase';
-import { collection, query, orderBy, getDocs, doc, updateDoc, arrayUnion, arrayRemove, Timestamp, increment, getDoc, startAfter, limit, where } from 'firebase/firestore';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSearch, faHeart } from '@fortawesome/free-solid-svg-icons';
+import { SidebarLayout } from '../components/SidebarLayout';
+import { collection, query, orderBy, getDocs, getCountFromServer, doc, updateDoc, arrayUnion, Timestamp, increment, getDoc, startAfter, limit, where } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import { usePoints } from '../context/PointsContext';
 import { Recipe } from '../recipe/types';
-import Link from 'next/link';
-import Image from 'next/image';
 import { SearchBar } from '../components/SearchBar';
 import { RecipeCard } from '../components/RecipeCard';
-import { SpoonPointSystem } from '../lib/spoonPoints';
 
 const POINTS_FOR_LIKE = 50; // Points awarded when someone likes your recipe
-
-const shimmer = (w: number, h: number) => `
-<svg width="${w}" height="${h}" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-  <defs>
-    <linearGradient id="g">
-      <stop stop-color="#f6f7f8" offset="0%" />
-      <stop stop-color="#edeef1" offset="50%" />
-      <stop stop-color="#f6f7f8" offset="100%" />
-    </linearGradient>
-  </defs>
-  <rect width="${w}" height="${h}" fill="#f6f7f8" />
-  <rect id="r" width="${w}" height="${h}" fill="url(#g)" />
-  <animate xlink:href="#r" attributeName="x" from="-${w}" to="${w}" dur="1s" repeatCount="indefinite" />
-</svg>`;
-
-const toBase64 = (str: string) =>
-  typeof window === 'undefined'
-    ? Buffer.from(str).toString('base64')
-    : window.btoa(str);
 
 // Add type for Firestore document data
 interface RecipeDocument {
@@ -85,6 +62,9 @@ export default function ExplorePage() {
   const { showPointsToast } = usePoints();
   const [currentUsername, setCurrentUsername] = useState<string>('');
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const lastVisibleRef = useRef<any>(null);
+  const prevSearchTermRef = useRef(searchTerm);
+  lastVisibleRef.current = lastVisible;
 
   const RECIPES_PER_PAGE = 12;
 
@@ -93,7 +73,7 @@ export default function ExplorePage() {
            recipe.imageURL; // Simplified conditions to just require summary and image
   };
 
-  const fetchRecipes = async (loadMore = false) => {
+  const fetchRecipes = useCallback(async (loadMore = false) => {
     try {
       if (loadMore) {
         setLoadingMore(true);
@@ -102,32 +82,31 @@ export default function ExplorePage() {
         setIsPageLoading(true);
       }
 
-      // Create a query for all recipes, ordered by completeness and creation date
-      let recipesQuery = query(
-        collection(db, "recipes"),
-        orderBy("createdAt", "desc"),
-        limit(RECIPES_PER_PAGE)
-      );
+      const cursor = loadMore ? lastVisibleRef.current : null;
 
-      if (loadMore && lastVisible) {
-        recipesQuery = query(
-          collection(db, "recipes"),
-          orderBy("createdAt", "desc"),
-          startAfter(lastVisible),
-          limit(RECIPES_PER_PAGE)
-        );
-      }
+      // Create a query for recipes, ordered by creation date
+      const recipesQuery = cursor
+        ? query(
+            collection(db, "recipes"),
+            orderBy("createdAt", "desc"),
+            startAfter(cursor),
+            limit(RECIPES_PER_PAGE)
+          )
+        : query(
+            collection(db, "recipes"),
+            orderBy("createdAt", "desc"),
+            limit(RECIPES_PER_PAGE)
+          );
 
-      // Get total count of all recipes
-      const totalCountQuery = query(collection(db, "recipes"));
-      
-      // Run both queries in parallel
-      const [recipeDocs, totalSnapshot] = await Promise.all([
+      // Use getCountFromServer - 1000x cheaper than fetching all docs
+      const countQuery = query(collection(db, "recipes"));
+
+      const [recipeDocs, countSnapshot] = await Promise.all([
         getDocs(recipesQuery),
-        getDocs(totalCountQuery)
+        getCountFromServer(countQuery)
       ]);
-      
-      setTotalRecipes(totalSnapshot.size);
+
+      setTotalRecipes(countSnapshot.data().count);
 
       // Process all recipes
       const fetchedRecipes = recipeDocs.docs.map(doc => {
@@ -192,7 +171,7 @@ export default function ExplorePage() {
         setIsPageLoading(false);
       }
     }
-  };
+  }, []);
 
   const fetchCurrentUsername = async () => {
     if (!user) return;
@@ -208,8 +187,11 @@ export default function ExplorePage() {
 
   useEffect(() => {
     fetchRecipes();
-    fetchCurrentUsername();
-  }, []);
+  }, [fetchRecipes]);
+
+  useEffect(() => {
+    if (user) fetchCurrentUsername();
+  }, [user]);
 
   const handleLike = async (recipe: Recipe) => {
     if (!user) return;
@@ -260,8 +242,7 @@ export default function ExplorePage() {
     }
   };
 
-  // Update search function to use the same optimized querying
-  const searchRecipes = async (searchTerms: string[]) => {
+  const searchRecipes = useCallback(async (searchTerms: string[]) => {
     if (!user) return;
     setIsSearching(true);
     
@@ -272,17 +253,14 @@ export default function ExplorePage() {
         orderBy("createdAt", "desc")
       );
 
-      const [querySnapshot, userDocs] = await Promise.all([
-        getDocs(recipesQuery),
-        getDocs(query(collection(db, "users")))
-      ]);
+      const querySnapshot = await getDocs(recipesQuery);
 
       // Filter out recipes without images first
       const allRecipes = querySnapshot.docs
-        .map(doc => {
-          const data = doc.data() as RecipeDocument;
+        .map(d => {
+          const data = d.data() as RecipeDocument;
           return {
-            id: doc.id,
+            id: d.id,
             ...data,
             username: 'Anonymous Chef',
             likes: data.likes || []
@@ -290,11 +268,18 @@ export default function ExplorePage() {
         })
         .filter(recipe => recipe.imageURL);
 
-      // Get usernames
-      const userMap = new Map();
-      userDocs.docs.forEach(doc => {
-        userMap.set(doc.id, doc.data().username);
-      });
+      // Fetch only users for these recipes (Firestore "in" limit is 30)
+      const userIds = [...new Set(allRecipes.map(r => r.userId).filter(Boolean))];
+      const userMap = new Map<string, string>();
+      for (let i = 0; i < userIds.length; i += 30) {
+        const batch = userIds.slice(i, i + 30);
+        const usersQuery = query(
+          collection(db, "users"),
+          where("__name__", "in", batch)
+        );
+        const userDocs = await getDocs(usersQuery);
+        userDocs.docs.forEach(d => userMap.set(d.id, d.data().username || ""));
+      }
 
       // Update usernames and perform search filtering
       const filtered = allRecipes
@@ -329,50 +314,48 @@ export default function ExplorePage() {
     } finally {
       setIsSearching(false);
     }
-  };
+  }, [user]);
 
-  // Add debounced search effect
+  // Debounced search effect - only refetch when user clears search (avoids infinite loop + double fetch on mount)
   useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
+    const timer = setTimeout(() => {
       if (!searchTerm.trim()) {
-        if (!isPageLoading) fetchRecipes();
+        const hadSearchTerm = prevSearchTermRef.current.trim() !== "";
+        prevSearchTermRef.current = searchTerm;
+        if (hadSearchTerm) fetchRecipes();
         return;
       }
-      const searchTerms = searchTerm.toLowerCase().split(" ");
-      searchRecipes(searchTerms);
+      prevSearchTermRef.current = searchTerm;
+      const terms = searchTerm.toLowerCase().split(" ");
+      searchRecipes(terms);
     }, 300);
-
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchTerm]);
+    return () => clearTimeout(timer);
+  }, [searchTerm, fetchRecipes, searchRecipes]);
 
   // Remove the old searchRecipes function and filteredRecipes constant
   const displayedRecipes = searchTerm ? recipes : recipes;
 
-  // Add intersection observer for infinite scroll
+  // Intersection observer for infinite scroll
   useEffect(() => {
+    const currentRef = loadMoreRef.current;
+    if (!currentRef) return;
+
     const observer = new IntersectionObserver(
       (entries) => {
-        const first = entries[0];
-        if (first.isIntersecting && hasMore && !loadingMore && !searchTerm && !isPageLoading) {
+        const entry = entries[0];
+        if (entry?.isIntersecting && hasMore && !loadingMore && !searchTerm && !isPageLoading) {
           fetchRecipes(true);
         }
       },
       { threshold: 0.1, rootMargin: '100px' }
     );
 
-    const currentRef = loadMoreRef.current;
-    if (currentRef) {
-      observer.observe(currentRef);
-    }
-
-    return () => {
-      if (currentRef) {
-        observer.unobserve(currentRef);
-      }
-    };
-  }, [hasMore, loadingMore, searchTerm, isPageLoading]);
+    observer.observe(currentRef);
+    return () => observer.unobserve(currentRef);
+  }, [hasMore, loadingMore, searchTerm, isPageLoading, fetchRecipes]);
 
   return (
+    <SidebarLayout>
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Sticky header */}
       <div className="sticky top-0 bg-white z-10 py-4 -mx-4 px-4 shadow-sm">
@@ -442,5 +425,6 @@ export default function ExplorePage() {
         )}
       </div>
     </div>
+    </SidebarLayout>
   );
 } 

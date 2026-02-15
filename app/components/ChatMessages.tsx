@@ -104,7 +104,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
         const currentUser = auth.currentUser;
 
         if (!currentUser) { // Check currentUser directly
-            onAssistantResponse(`Oh dear, I see you'd like to save this wonderful recipe! 🤗 But first, you'll need to <a href="/login" class="underline text-blue-600">create an account</a> or <a href="/login" class="underline text-blue-600">sign in</a>. That way, I can keep all your recipes safe and organized in your personal recipe vault! Plus, you'll earn special spoon points for each recipe you save. Shall we get you set up, dear? 👩‍🍳✨`);
+            onAssistantResponse(`Oh dear, I see you'd like to save this wonderful recipe! 🤗 But first, you'll need to <a href="/login" class="underline text-blue-600">continue with Google</a> to get set up. That way, I can keep all your recipes safe and organized in your personal recipe vault! Plus, you'll earn special spoon points for each recipe you save. Shall we get you set up, dear? 👩‍🍳✨`);
             setLoading(false);
             return;
         }
@@ -238,7 +238,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
         "Create a traditional recipe",
         "What's your secret to perfect homemade meals?", 
         "Help me use up these leftovers",
-        "Tell me a funny cooking disaster story",
+        "Tell me a funny story",
         "Give me a recipe for my date",
         "Tell me about SELO olive oil", 
         "Set a timer for 15 minutes",

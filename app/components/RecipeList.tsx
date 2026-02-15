@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
-import Link from "next/link"; // Import Link from next/link
-import { db } from "../firebase/firebase"; // Import Firestore db
+import Link from "next/link";
+import Image from "next/image";
+import { db } from "../firebase/firebase";
 import { collection, query, where, orderBy, limit, onSnapshot, doc, updateDoc, deleteDoc } from "firebase/firestore"; // Firestore methods
 import { useAuth } from "../context/AuthContext"; // Import the AuthContext hook
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -177,21 +178,28 @@ export const RecipeList = () => {
             <h2 className="text-gray-600 text-sm font-semibold pb-2 border-b">
               Pinned Recipes
             </h2>
-            {pinnedRecipes.map((recipe) => (
+            {pinnedRecipes.map((recipe, index) => (
               <div
                 key={recipe.id}
-                className={`relative group p-3 mt-2 rounded-md bg-cover bg-center ${!recipe.imageURL ? "bg-yellow-200 hover:bg-yellow-300" : ""}`}
-                style={{
-                  backgroundImage: recipe.imageURL ? `url(${recipe.imageURL})` : "none",
-                }}
+                className={`relative group p-3 mt-2 rounded-md min-h-[88px] overflow-hidden ${!recipe.imageURL ? "bg-yellow-200 hover:bg-yellow-300" : ""}`}
                 onMouseLeave={() => setMenuOpen(null)}
               >
-                {/* Conditional Overlay */}
                 {recipe.imageURL && (
-                  <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-50 rounded-md transition-opacity"></div>
+                  <>
+                    <Image
+                      src={recipe.imageURL}
+                      alt={recipe.recipeTitle}
+                      fill
+                      sizes="256px"
+                      className="object-cover rounded-md"
+                      priority={index < 3}
+                      placeholder="blur"
+                      blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBEQACEQD/ALAB/9k="
+                    />
+                    <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-50 rounded-md transition-opacity" />
+                  </>
                 )}
 
-                {/* Content block */}
                 <Link href={`/recipe/${recipe.id}`} passHref>
                   <div className="relative z-10">
                     <div
@@ -214,7 +222,6 @@ export const RecipeList = () => {
                   </div>
                 </Link>
 
-                {/* Menu rendering */}
                 {menuOpen === recipe.id && renderMenu(recipe.id, recipe.pinned, recipe.recipeTitle)}
               </div>
             ))}
@@ -231,21 +238,28 @@ export const RecipeList = () => {
             <h2 className="text-gray-600 text-sm font-semibold pb-2 border-b">
               Recently Saved Recipes
             </h2>
-            {recipes.map((recipe) => (
+            {recipes.map((recipe, index) => (
               <div
                 key={recipe.id}
-                className={`relative group p-3 mt-2 rounded-md bg-cover bg-center ${!recipe.imageURL ? "bg-pink-200 hover:bg-pink-300" : ""}`}
-                style={{
-                  backgroundImage: recipe.imageURL ? `url(${recipe.imageURL})` : "none",
-                }}
+                className={`relative group p-3 mt-2 rounded-md min-h-[88px] overflow-hidden ${!recipe.imageURL ? "bg-pink-200 hover:bg-pink-300" : ""}`}
                 onMouseLeave={() => setMenuOpen(null)}
               >
-                {/* Conditional Overlay */}
                 {recipe.imageURL && (
-                  <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-50 rounded-md transition-opacity"></div>
+                  <>
+                    <Image
+                      src={recipe.imageURL}
+                      alt={recipe.recipeTitle}
+                      fill
+                      sizes="256px"
+                      className="object-cover rounded-md"
+                      priority={index < 3}
+                      placeholder="blur"
+                      blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBEQACEQD/ALAB/9k="
+                    />
+                    <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-50 rounded-md transition-opacity" />
+                  </>
                 )}
 
-                {/* Content block */}
                 <Link href={`/recipe/${recipe.id}`} passHref>
                   <div className="relative z-10">
                     <div
@@ -268,7 +282,6 @@ export const RecipeList = () => {
                   </div>
                 </Link>
 
-                {/* Menu rendering */}
                 {menuOpen === recipe.id && renderMenu(recipe.id, recipe.pinned, recipe.recipeTitle)}
               </div>
             ))}
@@ -282,25 +295,40 @@ export const RecipeList = () => {
           </div>
         </>
       ) : (
-        <div className="bg-gradient-to-b from-purple-50 to-white rounded-xl border border-purple-100 p-5">
-          <div className="text-center space-y-3">
-            <div className="text-lg mb-1.5">👩‍🍳</div>
-            <h3 className="font-semibold text-gray-900">Create Your Free Recipe Collection</h3>
-            <div className="text-sm text-gray-600 space-y-2">
-              <p>Join Baba Selo and unlock these features:</p>
-              <ul className="space-y-1.5">
-                <li>• Save unlimited recipes</li>
-                <li>• Pin your favorites for quick access</li>
-                <li>• Share your culinary creations</li>
-                <li>• Earn spoon points and rewards</li>
-              </ul>
+        <div className="bg-gradient-to-b from-purple-50 to-white rounded-xl border border-purple-100 p-6 shadow-sm">
+          <div className="max-w-[260px] mx-auto">
+            <div className="text-center mb-4">
+              <div className="text-2xl mb-2">👩‍🍳</div>
+              <h3 className="text-lg font-bold text-gray-900 leading-tight">
+                Create Your Free Recipe Collection
+              </h3>
             </div>
+            <p className="text-sm text-gray-700 text-center mb-3 font-medium">
+              Join Baba Selo and unlock:
+            </p>
+            <ul className="space-y-2 text-sm text-gray-700 mb-5 text-left">
+              <li className="flex gap-2.5">
+                <span className="text-purple-500 mt-0.5 shrink-0">•</span>
+                <span>Save unlimited recipes</span>
+              </li>
+              <li className="flex gap-2.5">
+                <span className="text-purple-500 mt-0.5 shrink-0">•</span>
+                <span>Pin favorites for quick access</span>
+              </li>
+              <li className="flex gap-2.5">
+                <span className="text-purple-500 mt-0.5 shrink-0">•</span>
+                <span>Share your culinary creations</span>
+              </li>
+            </ul>
             <Link 
               href="/login" 
-              className="inline-block mt-2 px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+              className="block w-full text-center py-3 px-6 bg-gray-900 text-white font-semibold rounded-lg hover:bg-gray-800 active:scale-[0.98] transition-all shadow-md hover:shadow-lg"
             >
               Get Started Free
             </Link>
+            <p className="text-xs text-gray-500 text-center mt-3">
+              No credit card required
+            </p>
           </div>
         </div>
       )}

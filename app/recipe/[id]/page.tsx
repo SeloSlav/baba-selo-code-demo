@@ -11,6 +11,7 @@ import { faUpload, faTrash, faSave, faThumbtack, faEllipsisVertical } from "@for
 import { getAuth } from "firebase/auth"; // Import Firebase auth
 import Image from "next/image";
 import { RecipeChatBubble } from "../../components/RecipeChatBubble";
+import { SidebarLayout } from "../../components/SidebarLayout";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { useDeleteRecipe } from "../../context/DeleteRecipeContext";
 import { usePoints } from '../../context/PointsContext';
@@ -81,12 +82,13 @@ const RecipeDetails = () => {
   const [notes, setNotes] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
   const [hasNoteChanges, setHasNoteChanges] = useState(false);
-  const [activeSection, setActiveSection] = useState('');
+  const [activeSection, setActiveSection] = useState('ingredients');
   const ingredientsRef = useRef(null);
   const directionsRef = useRef(null);
   const notesRef = useRef(null);
   const macroInfoRef = useRef(null);
   const pairingsRef = useRef(null);
+  const scrollByClickRef = useRef(false);
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const [copySuccess, setCopySuccess] = useState(false);
@@ -157,9 +159,10 @@ const RecipeDetails = () => {
     fetchRecipe();
   }, [id, auth]);
 
+  // Scroll detection - update active tab as user scrolls (skip during programmatic scroll from click)
   useEffect(() => {
     const handleScroll = () => {
-      const scrollPosition = window.scrollY + 100;
+      if (scrollByClickRef.current) return;
 
       const sections = [
         { id: 'ingredients', ref: ingredientsRef },
@@ -169,25 +172,30 @@ const RecipeDetails = () => {
         { id: 'pairings', ref: pairingsRef }
       ];
 
-      for (const section of sections) {
-        if (section.ref.current) {
-          const element = section.ref.current;
-          const offsetTop = element.offsetTop;
-          const offsetBottom = offsetTop + element.offsetHeight;
+      const threshold = 180; // Account for sticky nav height (scroll-mt-44 = 176px)
 
-          if (scrollPosition >= offsetTop && scrollPosition < offsetBottom) {
+      for (let i = sections.length - 1; i >= 0; i--) {
+        const section = sections[i];
+        if (section.ref.current) {
+          const rect = section.ref.current.getBoundingClientRect();
+          if (rect.top <= threshold) {
             setActiveSection(section.id);
-            break;
+            return;
           }
         }
       }
+      setActiveSection('ingredients');
     };
 
+    handleScroll();
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const scrollToSection = (ref: React.RefObject<HTMLDivElement>) => {
+  const scrollToSection = (ref: React.RefObject<HTMLDivElement>, sectionId: string) => {
+    setActiveSection(sectionId);
+    scrollByClickRef.current = true;
+    setTimeout(() => { scrollByClickRef.current = false; }, 900);
     ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
@@ -818,6 +826,7 @@ const RecipeDetails = () => {
   }, [user]);
 
   return (
+    <SidebarLayout>
     <div className="min-h-screen bg-gray-100 py-8 px-4">
       {recipe ? (
         <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-6">
@@ -865,6 +874,19 @@ const RecipeDetails = () => {
             toBase64={toBase64}
           />
 
+          {/* Navigation - at top so always visible, click to jump to section */}
+          <RecipeNavigation
+            activeSection={activeSection}
+            ingredientsProgress={calculateProgress().ingredients}
+            directionsProgress={calculateProgress().directions}
+            scrollToSection={scrollToSection}
+            ingredientsRef={ingredientsRef}
+            directionsRef={directionsRef}
+            notesRef={notesRef}
+            macroInfoRef={macroInfoRef}
+            pairingsRef={pairingsRef}
+          />
+
           <RecipeIngredients
             recipe={recipe}
             checkedIngredients={checkedIngredients}
@@ -907,18 +929,6 @@ const RecipeDetails = () => {
             handleGetPairings={handleGetPairings}
           />
 
-          <RecipeNavigation
-            activeSection={activeSection}
-            ingredientsProgress={calculateProgress().ingredients}
-            directionsProgress={calculateProgress().directions}
-            scrollToSection={scrollToSection}
-            ingredientsRef={ingredientsRef}
-            directionsRef={directionsRef}
-            notesRef={notesRef}
-            macroInfoRef={macroInfoRef}
-            pairingsRef={pairingsRef}
-          />
-
           {/* Add the chat bubble with adjusted positioning and higher z-index */}
           <div className="relative mb-16 md:mb-8">
             <div className="fixed bottom-0 right-0 w-[25%] md:w-auto md:relative md:bottom-auto md:right-auto z-50">
@@ -949,6 +959,7 @@ ${recipe.directions.map((direction, index) => `${index + 1}. ${direction}`).join
         </div>
       )}
     </div>
+    </SidebarLayout>
   );
 };
 

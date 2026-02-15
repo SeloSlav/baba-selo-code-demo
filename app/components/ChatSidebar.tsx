@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faHamburger, faPersonRifle, faPencilRuler, faClose, faThumbtack, faTrashAlt, faStarOfLife } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "../context/AuthContext";
 import { RecipeList } from "./RecipeList";
+import { ChatList } from "./ChatList";
 import { SeloOilPromo } from "./SeloOilPromo";
 import Link from "next/link";
 import Image from "next/image";
@@ -31,23 +32,35 @@ const toBase64 = (str: string) =>
     : window.btoa(str);
 
 export const ChatSidebar = ({
-    focusInput,
+    focusInput = () => {},
     isSidebarOpen,
     toggleSidebar,
     chatWindowRef,
     recipe,
     loadingPinAction,
     handlePinUnpin,
-    handleDelete
+    handleDelete,
+    currentChatId,
+    onSelectChat,
+    onNewChat,
+    plan,
+    onChatsChange,
+    chatListRefreshKey = 0
 }: {
-    focusInput: () => void;
+    focusInput?: () => void;
     isSidebarOpen: boolean;
     toggleSidebar: () => void;
-    chatWindowRef: React.RefObject<any>;
+    chatWindowRef?: React.RefObject<any>;
     recipe?: any;
     loadingPinAction?: boolean;
     handlePinUnpin?: (isPinned: boolean) => void;
     handleDelete?: (id: string, title: string) => void;
+    currentChatId?: string | null;
+    onSelectChat?: (id: string | null) => void;
+    onNewChat?: () => void;
+    plan?: "free" | "pro";
+    onChatsChange?: () => void;
+    chatListRefreshKey?: number;
 }) => {
     const [isHydrated, setIsHydrated] = useState(false);
     const [imageError, setImageError] = useState(false);
@@ -170,6 +183,17 @@ export const ChatSidebar = ({
                     <div className="flex-grow overflow-y-auto p-4 space-y-6">
                         {/* Selo Oil Promo */}
                         <SeloOilPromo />
+
+                        {/* Chat List - Pro only: free users get one ephemeral chat, nothing saved */}
+                        {plan === "pro" && currentChatId !== undefined && onSelectChat && onNewChat && (
+                            <ChatList
+                                currentChatId={currentChatId ?? null}
+                                onSelectChat={onSelectChat}
+                                onNewChat={onNewChat}
+                                plan={plan}
+                                refreshKey={chatListRefreshKey}
+                            />
+                        )}
 
                         <RecipeList />
 

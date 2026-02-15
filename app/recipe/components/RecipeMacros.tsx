@@ -20,7 +20,7 @@ export const RecipeMacros = ({
   handleMacroCalculation,
 }: RecipeMacrosProps) => {
   return (
-    <div ref={macroInfoRef} className="mb-6">
+    <div ref={macroInfoRef} className="mb-6 scroll-mt-44">
       <h3 className="text-xl font-semibold mb-2">
         <span className="mr-2">📊</span>
         Calorie & Nutritional Info

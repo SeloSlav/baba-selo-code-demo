@@ -4,7 +4,7 @@ import Image from "next/image";
 
 export const RecipeFooter = () => {
   return (
-    <div className="text-center mb-8 mt-24">
+    <div className="text-center mb-8 mt-24 pb-32">
       <div className="flex justify-center mb-4">
         <Image
           src="/baba-removebg.png"

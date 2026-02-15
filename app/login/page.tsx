@@ -7,7 +7,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGoogle } from "@fortawesome/free-brands-svg-icons";
 
 const Login = () => {
-  const { signInWithGoogle } = useAuth();
+  const { signInWithGoogle, authError } = useAuth();
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-white">
@@ -24,27 +24,24 @@ const Login = () => {
       <h1 className="text-2xl font-bold text-gray-900 mb-2">Ask me anything, dear</h1>
       <p className="text-gray-600 mb-8 text-center max-w-sm">Your personal grandma, ready to share recipes, stories, and wisdom</p>
 
-      {/* Auth Buttons Container */}
-      <div className="flex flex-col gap-3 w-full max-w-[320px] px-6">
-        {/* Google Sign Up Button - Primary */}
+      {/* Auth Container */}
+      <div className="flex flex-col items-center w-full max-w-[320px] px-6">
         <button
           onClick={signInWithGoogle}
-          className="w-full flex items-center justify-center px-6 py-3 bg-[#4285F4] text-white rounded-md shadow-sm hover:bg-[#357ABD] transition-colors"
-          aria-label="Sign up with Google"
+          className="w-full flex items-center justify-center px-6 py-3 bg-[#4285F4] text-white rounded-lg shadow-sm hover:bg-[#357ABD] transition-colors font-medium"
+          aria-label="Continue with Google"
         >
           <FontAwesomeIcon icon={faGoogle as any} className="text-lg mr-2" />
-          <span className="font-medium">Sign up with Google</span>
+          Continue with Google
         </button>
-
-        {/* Sign In Button - Secondary */}
-        <button
-          onClick={signInWithGoogle}
-          className="w-full flex items-center justify-center px-6 py-3 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 transition-colors"
-          aria-label="Sign in with Google"
-        >
-          <FontAwesomeIcon icon={faGoogle as any} className="text-lg mr-2 text-[#4285F4]" />
-          <span className="text-gray-700 font-medium">Sign in with Google</span>
-        </button>
+        {authError && (
+          <p className="text-red-600 text-sm text-center mt-3" role="alert">
+            {authError}
+          </p>
+        )}
+        <p className="text-gray-500 text-xs text-center mt-2">
+          Don&apos;t have an account? We&apos;ll create one for you.
+        </p>
       </div>
 
       {/* Terms Text */}

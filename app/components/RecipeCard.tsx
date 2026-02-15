@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Recipe } from '../recipe/types';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEllipsisVertical, faHeart, faXmark } from '@fortawesome/free-solid-svg-icons';
+import { faEllipsisVertical, faHeart } from '@fortawesome/free-solid-svg-icons';
 
 const shimmer = (w: number, h: number) => `
 <svg width="${w}" height="${h}" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -36,7 +36,7 @@ interface RecipeCardProps {
   isMenuOpen?: boolean;
 }
 
-export const RecipeCard = ({ 
+export const RecipeCard = memo(function RecipeCard({ 
   recipe, 
   onLike, 
   currentUser, 
@@ -44,7 +44,7 @@ export const RecipeCard = ({
   showMenu = false,
   onMenuClick,
   isMenuOpen = false
-}: RecipeCardProps) => {
+}: RecipeCardProps) {
   const [imageError, setImageError] = useState(false);
   const [isImageLoading, setIsImageLoading] = useState(true);
 
@@ -63,7 +63,7 @@ export const RecipeCard = ({
               onLoad={() => setIsImageLoading(false)}
               onError={() => setImageError(true)}
               placeholder="blur"
-              blurDataURL={`data:image/svg+xml;base64,${toBase64(shimmer(1920, 1080))}`}
+              blurDataURL={`data:image/svg+xml;base64,${toBase64(shimmer(400, 225))}`}
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             />
           ) : (
@@ -162,4 +162,4 @@ export const RecipeCard = ({
       </div>
     </div>
   );
-}; 
+}); 

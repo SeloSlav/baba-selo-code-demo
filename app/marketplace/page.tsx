@@ -10,6 +10,7 @@ import { UserInventory } from './components/UserInventory';
 import { SpoonPointSystem } from '../lib/spoonPoints';
 import { usePoints } from '../context/PointsContext';
 import { LoadingSpinner } from '../components/LoadingSpinner';
+import { SidebarLayout } from '../components/SidebarLayout';
 
 export default function Marketplace() {
     const [state, setState] = useState<MarketplaceState>({
@@ -174,21 +175,26 @@ export default function Marketplace() {
 
     if (state.loading) {
         return (
+            <SidebarLayout>
             <div className="flex flex-col items-center justify-center min-h-screen">
                 <LoadingSpinner />
             </div>
+            </SidebarLayout>
         );
     }
 
     if (state.error) {
         return (
+            <SidebarLayout>
             <div className="flex flex-col items-center justify-center min-h-screen">
                 <div className="text-red-500">{state.error}</div>
             </div>
+            </SidebarLayout>
         );
     }
 
     return (
+        <SidebarLayout>
         <div className="min-h-[100vh]">
             <div className="max-w-7xl mx-auto px-4 py-8">
                 <div className="flex flex-col items-center mb-12">
@@ -230,5 +236,6 @@ export default function Marketplace() {
                 </div>
             </div>
         </div>
+        </SidebarLayout>
     );
 } 

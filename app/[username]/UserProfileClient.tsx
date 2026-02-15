@@ -429,44 +429,51 @@ export default function UserProfileClient({ userId, username }: UserProfileClien
                 <div className="max-w-7xl mx-auto">
                     <div className="flex items-start gap-4 mb-4">
                         <div className="relative group">
-                            <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+                            <div
+                                role={user?.uid === userId ? 'button' : undefined}
+                                tabIndex={user?.uid === userId ? 0 : undefined}
+                                onClick={() => user?.uid === userId && fileInputRef.current?.click()}
+                                onKeyDown={(e) => {
+                                    if (user?.uid === userId && (e.key === 'Enter' || e.key === ' ')) {
+                                        e.preventDefault();
+                                        fileInputRef.current?.click();
+                                    }
+                                }}
+                                className={`relative w-16 h-16 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center transition-all duration-300 ease-out ${user?.uid === userId ? 'cursor-pointer hover:ring-2 hover:ring-offset-2 hover:ring-black/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black/30' : ''}`}
+                                aria-label={user?.uid === userId ? 'Upload profile photo' : undefined}
+                            >
                                 {profilePhoto ? (
                                     <Image
                                         src={profilePhoto}
                                         alt={`${username}'s profile`}
                                         width={64}
                                         height={64}
-                                        className="object-cover w-full h-full"
+                                        className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
                                     />
                                 ) : (
                                     <FontAwesomeIcon
                                         icon={faUser}
-                                        className="text-gray-400 text-2xl"
+                                        className="text-gray-400 text-2xl transition-transform duration-300 group-hover:scale-110"
                                     />
+                                )}
+                                {user?.uid === userId && (
+                                    <div className={`absolute inset-0 rounded-full bg-black/50 flex items-center justify-center transition-opacity duration-300 ${uploadingPhoto ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                                        {uploadingPhoto ? (
+                                            <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                        ) : (
+                                            <FontAwesomeIcon icon={faCamera} className="text-white text-lg drop-shadow-sm" />
+                                        )}
+                                    </div>
                                 )}
                             </div>
                             {user?.uid === userId && (
-                                <>
-                                    <button
-                                        onClick={() => fileInputRef.current?.click()}
-                                        className={`absolute bottom-0 right-0 bg-black rounded-full p-1.5 text-white transition-opacity duration-200 hover:bg-gray-800 ${uploadingPhoto ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                                            }`}
-                                        aria-label="Upload profile photo"
-                                    >
-                                        {uploadingPhoto ? (
-                                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                        ) : (
-                                            <FontAwesomeIcon icon={faCamera} className="text-xs" />
-                                        )}
-                                    </button>
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={handleProfilePhotoUpload}
-                                        className="hidden"
-                                    />
-                                </>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleProfilePhotoUpload}
+                                    className="hidden"
+                                />
                             )}
                         </div>
                         <div className="flex-1">

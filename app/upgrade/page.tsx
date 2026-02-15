@@ -13,7 +13,7 @@ export default function UpgradePlan() {
             {/* Enhanced header section */}
             <div className="text-center mb-12">
                 <h2 className="text-3xl font-bold mb-3">Upgrade to Pro</h2>
-                <p className="text-gray-600 max-w-xl mx-auto">Get the full Baba Selo experience with real-time audio conversations and advanced features.</p>
+                <p className="text-gray-600 max-w-xl mx-auto">Get the full Baba Selo experience with advanced features.</p>
             </div>
 
             {/* Social proof section - Compact on mobile */}
@@ -59,7 +59,7 @@ export default function UpgradePlan() {
             </div>
 
             {/* Grid with reordered cards on mobile */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
                 {/* Pro Plan First on Mobile */}
                 <div className="md:order-2 p-8 border-2 border-black rounded-2xl bg-white flex flex-col relative transform hover:scale-[1.02] transition-all duration-300">
                     <div className="absolute -top-3 left-8 bg-black text-white text-sm font-medium px-3 py-1 rounded-full">
@@ -72,15 +72,15 @@ export default function UpgradePlan() {
                         ${isAnnual ? Math.round(annualPrice / 12) : monthlyPrice}
                     </div>
                     <div className="text-sm text-gray-500 mb-1">USD/month</div>
-                    {isAnnual && (
-                        <div className="text-sm text-green-600 mb-6">
-                            Billed annually (${Math.round(annualPrice)}/year)
-                        </div>
+                    {isAnnual ? (
+                        <div className="text-sm text-green-600 mb-6">Billed annually (${Math.round(annualPrice)}/year)</div>
+                    ) : (
+                        <div className="mb-6" aria-hidden="true" />
                     )}
 
                     {/* Enhanced description */}
                     <p className="text-gray-700 mb-4">
-                        The complete Baba Selo experience with voice chat
+                        The complete Baba Selo experience
                     </p>
 
                     {/* Updated CTA */}
@@ -97,10 +97,6 @@ export default function UpgradePlan() {
                         <li className="flex items-start">
                             <span className="text-lg mr-3">✨</span>
                             <span>Everything in Free, plus:</span>
-                        </li>
-                        <li className="flex items-start">
-                            <span className="text-lg mr-3">🗣️</span>
-                            <span><strong>Real-time voice chat</strong> with Baba Selo</span>
                         </li>
                         <li className="flex items-start">
                             <span className="text-lg mr-3">📅</span>

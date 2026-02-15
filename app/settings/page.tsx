@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext"; // Adjust if your AuthContext 
 import { db } from "../firebase/firebase";        // Adjust if firebase config is in a different path
 import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
 import { LoadingSpinner } from '../components/LoadingSpinner';
+import { SidebarLayout } from '../components/SidebarLayout';
 import { validateUsername } from '../lib/usernameValidation';
 
 // Image style options with their prompts
@@ -41,6 +42,9 @@ export default function SettingsPage() {
   const [dietaryPreferences, setDietaryPreferences] = useState<string[]>([]);
   const [preferredCookingOil, setPreferredCookingOil] = useState<string>("");
   const [preferredImageStyle, setPreferredImageStyle] = useState<ImageStyle>("rustic-traditional");
+  const [plan, setPlan] = useState<"free" | "pro">("free");
+  const [mealPlanEnabled, setMealPlanEnabled] = useState(false);
+  const [mealPlanTime, setMealPlanTime] = useState("08:00");
 
   // For handling the auto-complete filters
   const [dietarySearch, setDietarySearch] = useState("");
@@ -102,6 +106,7 @@ export default function SettingsPage() {
     dietaryPreferences: string[];
     preferredCookingOil: string;
     preferredImageStyle: ImageStyle;
+    mealPlanSchedule?: { enabled: boolean; time: string };
   }>) => {
     if (!user) return;
 
@@ -221,6 +226,10 @@ export default function SettingsPage() {
           setPreferredCookingOil(userData.preferredCookingOil || "");
           setPreferredImageStyle(userData.preferredImageStyle || "rustic-traditional");
           setOilSearch(userData.preferredCookingOil || "");
+          setPlan(userData.plan || "free");
+          const s = userData.mealPlanSchedule;
+          setMealPlanEnabled(!!s?.enabled);
+          setMealPlanTime(s?.time || "08:00");
         }
       } catch (error) {
         console.error("Error fetching user settings:", error);
@@ -254,18 +263,21 @@ export default function SettingsPage() {
   // If not logged in (and not loading), show a message
   if (!user && !loading) {
     return (
+      <SidebarLayout>
       <div className="max-w-5xl mx-auto px-4 py-10">
         <h2 className="text-3xl font-bold text-center mb-12">Settings</h2>
         <p className="text-center text-gray-600">
           You need to be logged in to view settings.
         </p>
       </div>
+      </SidebarLayout>
     );
   }
 
   // Custom loading indicator
   if (loading) {
     return (
+      <SidebarLayout>
       <div className="flex flex-col items-center justify-center min-h-screen">
         <img src="/baba-removebg.png" alt="Baba" className="w-32 h-32 mb-6" />
         <div className="typing-indicator flex space-x-2">
@@ -274,11 +286,13 @@ export default function SettingsPage() {
           <div className="dot bg-gray-400 rounded-full w-6 h-6"></div>
         </div>
       </div>
+      </SidebarLayout>
     );
   }
 
   // Render the settings form
   return (
+    <SidebarLayout>
     <div className="max-w-5xl mx-auto px-4 py-10">
       <h2 className="text-3xl font-bold text-center mb-12">Settings</h2>
 
@@ -540,7 +554,91 @@ export default function SettingsPage() {
             </div>
           )}
         </div>
+
+        {/* Pro: Custom Meal Plans */}
+        {plan === "pro" && (
+          <div className="p-8 border-2 border-amber-200 rounded-2xl shadow-sm bg-amber-50/30 flex flex-col">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-amber-100 rounded-xl">
+                <span className="text-xl">📅</span>
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold">Custom Meal Plans</h3>
+                <p className="text-sm text-gray-600">
+                  Get personalized meal plans emailed daily on your schedule.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={mealPlanEnabled}
+                  onChange={(e) => {
+                    setMealPlanEnabled(e.target.checked);
+                    autoSave({
+                      mealPlanSchedule: {
+                        enabled: e.target.checked,
+                        time: mealPlanTime,
+                      },
+                    });
+                  }}
+                  className="w-4 h-4 rounded"
+                />
+                <span>Email me daily meal plans</span>
+              </label>
+              {mealPlanEnabled && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600">at</span>
+                  <input
+                    type="time"
+                    value={mealPlanTime}
+                    onChange={(e) => {
+                      const t = e.target.value;
+                      setMealPlanTime(t);
+                      autoSave({
+                        mealPlanSchedule: { enabled: mealPlanEnabled, time: t },
+                      });
+                    }}
+                    className="p-2 border border-gray-300 rounded-lg"
+                  />
+                  <span className="text-xs text-gray-500">(UTC)</span>
+                </div>
+              )}
+            </div>
+            <p className="mt-3 text-xs text-gray-500">
+              A cron job should hit /api/cron/meal-plans every minute. Configure CRON_SECRET in env.
+            </p>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  const token = await user?.getIdToken();
+                  const res = await fetch("/api/meal-plan/send", {
+                    method: "POST",
+                    headers: { Authorization: `Bearer ${token}` },
+                  });
+                  const data = await res.json();
+                  if (res.ok && data.emailSent) {
+                    setSaveSuccess(true);
+                    setTimeout(() => setSaveSuccess(false), 2000);
+                  } else if (res.ok) {
+                    setError(data.message || "Email not configured");
+                  } else {
+                    setError(data.error || "Failed to send");
+                  }
+                } catch {
+                  setError("Failed to send meal plan");
+                }
+              }}
+              className="mt-4 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 text-sm"
+            >
+              Send meal plan now
+            </button>
+          </div>
+        )}
       </div>
     </div>
+    </SidebarLayout>
   );
 }

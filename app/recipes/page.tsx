@@ -22,6 +22,7 @@ import { getAuth } from "firebase/auth";
 import { useDeleteRecipe } from "../context/DeleteRecipeContext";
 import { SearchBar } from '../components/SearchBar';
 import { RecipeCard } from '../components/RecipeCard';
+import { SidebarLayout } from '../components/SidebarLayout';
 import { Recipe } from '../recipe/types';
 
 // Add type for Firestore document data
@@ -312,6 +313,7 @@ const Recipes = () => {
   // 1) Show the loading indicator if we are loading AND have no recipes yet.
   if (loading && recipes.length === 0) {
     return (
+      <SidebarLayout>
       <div className="flex flex-col items-center justify-center min-h-screen">
         <img src="/baba-removebg.png" alt="Baba" className="w-32 h-32 mb-6" />
         <div className="typing-indicator flex space-x-2">
@@ -320,11 +322,13 @@ const Recipes = () => {
           <div className="dot bg-gray-400 rounded-full w-6 h-6"></div>
         </div>
       </div>
+      </SidebarLayout>
     );
   }
 
   // 2) Once recipes are loaded (or we're loading more recipes), show the list.
   return (
+    <SidebarLayout>
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Sticky header */}
       <div className="sticky top-0 bg-white z-10 py-4 -mx-4 px-4 shadow-sm">
@@ -512,6 +516,7 @@ const Recipes = () => {
         )}
       </div>
     </div>
+    </SidebarLayout>
   );
 };
 

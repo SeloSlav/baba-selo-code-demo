@@ -28,7 +28,7 @@ export const RecipeNotes = ({
   handleSaveNotes,
 }: RecipeNotesProps) => {
   return (
-    <div ref={notesRef} className="mb-6">
+    <div ref={notesRef} className="mb-6 scroll-mt-44">
       <h3 className="text-xl font-semibold mb-2">
         <span className="mr-2">📝</span>
         Notes

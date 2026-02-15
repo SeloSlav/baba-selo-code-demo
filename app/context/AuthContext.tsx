@@ -4,6 +4,8 @@ import React, { createContext, useContext, useState, useEffect, useRef } from "r
 import {
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   onAuthStateChanged,
   signOut,
 } from "firebase/auth";
@@ -20,6 +22,7 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>;
   logOut: () => Promise<void>;
   loading: boolean;
+  authError: string | null;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -27,11 +30,13 @@ const AuthContext = createContext<AuthContextType>({
   signInWithGoogle: async () => {},
   logOut: async () => {},
   loading: true,
+  authError: null,
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false); 
   const [isSpoonMenuOpen, setIsSpoonMenuOpen] = useState(false);
   const [spoonData, setSpoonData] = useState<any>(null);
@@ -55,6 +60,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     return () => unsubscribe();
   }, [router, pathname]);
+
+  // Handle redirect result when user returns from Google sign-in redirect
+  useEffect(() => {
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) {
+          setAuthError(null);
+        }
+      })
+      .catch((error) => {
+        const code = error?.code || "";
+        if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") {
+          setAuthError(null); // User cancelled, don't show error
+        } else {
+          setAuthError("Sign in failed. Please try again.");
+        }
+      });
+  }, []);
 
   // Subscribe to spoon data updates
   useEffect(() => {
@@ -81,12 +104,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [user]);
 
   const signInWithGoogle = async () => {
+    setAuthError(null);
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
       // After successful login, `onAuthStateChanged` will handle redirection if needed.
-    } catch (error) {
-      console.error("Error signing in with Google:", error);
+    } catch (error: unknown) {
+      const code = (error as { code?: string })?.code || "";
+      // Popup blocked (Safari, Brave, strict privacy) - fall back to redirect
+      if (code === "auth/popup-blocked" || code === "auth/cancelled-popup-request") {
+        await signInWithRedirect(auth, provider);
+        return;
+      }
+      // User closed popup - don't show error
+      if (code === "auth/popup-closed-by-user") {
+        return;
+      }
+      setAuthError("Sign in failed. Please try again or check if popups are allowed.");
     }
   };
 
@@ -191,7 +225,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [isProfileMenuOpen, isSpoonMenuOpen]);
 
   return (
-    <AuthContext.Provider value={{ user, signInWithGoogle, logOut, loading }}>
+    <AuthContext.Provider value={{ user, signInWithGoogle, logOut, loading, authError }}>
       <div className="fixed top-4 right-8 z-30 flex items-center gap-2">
         {user && (
           /* Spoon Menu Button - only shown for authenticated users */

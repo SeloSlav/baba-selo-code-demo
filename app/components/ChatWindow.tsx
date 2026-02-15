@@ -6,6 +6,7 @@ import React, {
   useImperativeHandle,
   useState,
   useEffect,
+  useCallback,
 } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPaperclip, faCamera, faArrowUp, faArrowDown, faImage, faMagicWandSparkles, faUpload, faFileUpload, faClock, faMicrophone } from "@fortawesome/free-solid-svg-icons";
@@ -28,10 +29,28 @@ interface Message {
 
 interface ChatWindowProps {
   isSidebarOpen: boolean;
+  chatId?: string | null;
+  plan?: "free" | "pro";
+  onChatIdChange?: (id: string | null) => void;
+  onChatsChange?: () => void;
+}
+
+async function fetchWithAuth(url: string, options: RequestInit = {}) {
+  const { auth } = await import("../firebase/firebase");
+  const user = auth?.currentUser;
+  if (!user) throw new Error("Not authenticated");
+  const token = await user.getIdToken();
+  return fetch(url, {
+    ...options,
+    headers: {
+      ...options.headers,
+      Authorization: `Bearer ${token}`,
+    },
+  });
 }
 
 export const ChatWindow = forwardRef(
-  ({ isSidebarOpen }: ChatWindowProps, ref) => {
+  ({ isSidebarOpen, chatId = null, plan = "free", onChatIdChange, onChatsChange }: ChatWindowProps, ref) => {
     const inputRef = useRef<HTMLTextAreaElement>(null);
     const [message, setMessage] = useState<string>("");
     const [messages, setMessages] = useState<Message[]>([
@@ -69,6 +88,58 @@ export const ChatWindow = forwardRef(
       inputRef, // Expose inputRef for setting the value
     }));
 
+    // Load chat when chatId changes
+    useEffect(() => {
+      if (!chatId || !onChatIdChange) return;
+      let cancelled = false;
+      (async () => {
+        try {
+          const res = await fetchWithAuth(`/api/chats/${chatId}`);
+          if (!res.ok || cancelled) return;
+          const data = await res.json();
+          const msgs = Array.isArray(data.messages) ? data.messages : [];
+          setMessages(msgs.length > 0 ? msgs : [{ role: "assistant", content: "Hello! Ask me anything dear." }]);
+        } catch {
+          if (!cancelled) setMessages([{ role: "assistant", content: "Hello! Ask me anything dear." }]);
+        }
+      })();
+      return () => { cancelled = true; };
+    }, [chatId]);
+
+    // Reset to new chat when chatId becomes null
+    useEffect(() => {
+      if (chatId === null && onChatIdChange) {
+        setMessages([{ role: "assistant", content: "Hello! Ask me anything dear." }]);
+      }
+    }, [chatId]);
+
+    // Debounced save when messages change (only when chatId is set)
+    const saveTimeoutRef = useRef<NodeJS.Timeout>();
+    const saveChat = useCallback(async (msgs: Message[], id: string, title?: string) => {
+      try {
+        await fetchWithAuth(`/api/chats/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages: msgs, ...(title && { title }) }),
+        });
+        onChatsChange?.();
+      } catch (e) {
+        console.error("Error saving chat:", e);
+      }
+    }, [onChatsChange]);
+
+    useEffect(() => {
+      if (!chatId || messages.length <= 1 || !onChatIdChange) return;
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = setTimeout(() => {
+        const title = messages.find((m) => m.role === "user")?.content?.slice(0, 50) || "New Chat";
+        saveChat(messages, chatId, title);
+      }, 1500);
+      return () => {
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      };
+    }, [chatId, messages, saveChat, onChatIdChange]);
+
     useEffect(() => {
       const fetchUserPreferences = async () => {
         const auth = getAuth();
@@ -96,7 +167,6 @@ export const ChatWindow = forwardRef(
               setDietaryPreferences([]);
             }
           } else {
-            console.warn("No user logged in.");
             setPreferredCookingOil("olive oil");
             setDietaryPreferences([]);
           }
@@ -143,6 +213,28 @@ export const ChatWindow = forwardRef(
     const sendMessage = async (msg: string) => {
       const trimmedMessage = msg.trim();
       if (trimmedMessage === "") return;
+
+      // If no chat yet, create one first (for chat history persistence)
+      let currentChatId = chatId;
+      if (!currentChatId && onChatIdChange) {
+        try {
+          const createRes = await fetchWithAuth("/api/chats", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              title: trimmedMessage.slice(0, 50) || "New Chat",
+              messages: [...messages, { role: "user", content: trimmedMessage }],
+            }),
+          });
+          if (createRes.ok) {
+            const { id } = await createRes.json();
+            currentChatId = id;
+            onChatIdChange(id);
+          }
+        } catch (e) {
+          console.error("Error creating chat:", e);
+        }
+      }
 
       // Add user's message to the conversation
       const updatedMessages: Message[] = [

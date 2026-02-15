@@ -1,13 +1,52 @@
 "use client";
 
-import React, { useRef, useEffect, useState } from "react";
-import { ChatWindow } from "./ChatWindow";
-import { ChatSidebar } from "./ChatSidebar";
+import React, { useRef, useEffect, useState, useCallback } from "react";
+import dynamic from "next/dynamic";
+import { useAuth } from "../context/AuthContext";
+import { auth } from "../firebase/firebase";
+
+const ChatWindow = dynamic(() => import("./ChatWindow").then((m) => m.ChatWindow), { ssr: false });
+const ChatSidebar = dynamic(() => import("./ChatSidebar").then((m) => m.ChatSidebar), { ssr: false });
+
+async function fetchWithAuth(url: string, options: RequestInit = {}) {
+  const user = auth?.currentUser;
+  if (!user) throw new Error("Not authenticated");
+  const token = await user.getIdToken();
+  return fetch(url, {
+    ...options,
+    headers: { ...(options.headers || {}), Authorization: `Bearer ${token}` },
+  });
+}
 
 export const HomeClient = () => {
   const chatWindowRef = useRef<any>();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [windowWidth, setWindowWidth] = useState<number | null>(null);
+  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const [plan, setPlan] = useState<"free" | "pro">("free");
+  const [chatListRefreshKey, setChatListRefreshKey] = useState(0);
+  const { user } = useAuth();
+
+  const fetchPlan = useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await fetchWithAuth("/api/me");
+      if (res.ok) {
+        const data = await res.json();
+        setPlan(data.plan || "free");
+      }
+    } catch {
+      setPlan("free");
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchPlan();
+  }, [fetchPlan]);
+
+  const handleChatsChange = useCallback(() => {
+    setChatListRefreshKey((k) => k + 1);
+  }, []);
 
   useEffect(() => {
     const updateSidebarState = () => {
@@ -45,6 +84,12 @@ export const HomeClient = () => {
         isSidebarOpen={isSidebarOpen}
         toggleSidebar={toggleSidebar}
         chatWindowRef={chatWindowRef}
+        currentChatId={plan === "pro" ? currentChatId : undefined}
+        onSelectChat={plan === "pro" ? setCurrentChatId : undefined}
+        onNewChat={plan === "pro" ? () => setCurrentChatId(null) : undefined}
+        plan={plan}
+        onChatsChange={plan === "pro" ? handleChatsChange : undefined}
+        chatListRefreshKey={plan === "pro" ? chatListRefreshKey : 0}
       />
 
       {isSidebarOpen && isMobileOverlay && (
@@ -55,7 +100,14 @@ export const HomeClient = () => {
       )}
 
       <div className={`transition-all duration-300 flex-grow ${sidebarClass}`}>
-        <ChatWindow ref={chatWindowRef} isSidebarOpen={isSidebarOpen} />
+        <ChatWindow
+          ref={chatWindowRef}
+          isSidebarOpen={isSidebarOpen}
+          chatId={plan === "pro" ? currentChatId : undefined}
+          plan={plan}
+          onChatIdChange={plan === "pro" ? setCurrentChatId : undefined}
+          onChatsChange={plan === "pro" ? handleChatsChange : undefined}
+        />
       </div>
     </div>
   );
