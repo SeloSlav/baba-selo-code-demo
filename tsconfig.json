@@ -13,7 +13,7 @@
     "incremental": true,
     "module": "esnext",
     "esModuleInterop": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve", // Changed from "preserve" to "react-jsx" for better React 17+ compatibility
@@ -28,6 +28,7 @@
   "include": [
     "next-env.d.ts",
     ".next/types/**/*.ts",
+    "types/**/*.d.ts",
     "**/*.ts",
     "**/*.tsx"
   ],

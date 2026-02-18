@@ -14,10 +14,10 @@ export const viewport = {
 };
 
 export const metadata = {
-  title: "AI Recipe Generator | Baba Selo - Create & Save Recipes with AI",
+  title: "Baba Selo | Your AI Balkan Recipe Companion—Accurate Recipes, Grandma Vibes",
   description:
-    "AI Recipe Generator that creates personalized recipes, generates food images, and helps you save & share your culinary creations. Chat with Baba Selo for magical recipe guidance.",
-  keywords: ["AI recipe generator", "AI recipes", "recipe generator", "Baba Selo", "AI cooking assistant"],
+    "The perfect AI Balkan recipe companion. Actually accurate recipes, sounds and acts like your grandma, gives real advice—not generic bot nonsense. Create, save, and cook with confidence.",
+  keywords: ["Balkan recipes", "AI recipe companion", "grandma recipes", "Baba Selo", "accurate Balkan cooking", "AI cooking assistant"],
   icons: {
     icon: [
       {
@@ -32,9 +32,9 @@ export const metadata = {
   },
   manifest: "/site.webmanifest",
   openGraph: {
-    title: "AI Recipe Generator | Baba Selo - Create & Save Recipes with AI",
+    title: "Baba Selo | Your AI Balkan Recipe Companion—Accurate Recipes, Grandma Vibes",
     description:
-      "AI Recipe Generator that creates personalized recipes, generates food images, and helps you save & share your culinary creations. Chat with Baba Selo for magical recipe guidance.",
+      "The perfect AI Balkan recipe companion. Actually accurate recipes, sounds and acts like your grandma, gives real advice—not generic bot nonsense.",
     url: "https://www.babaselo.com",
     type: "website",
     siteName: "Baba Selo",
@@ -43,15 +43,15 @@ export const metadata = {
         url: "https://www.babaselo.com/og-image.jpg",
         width: 1200,
         height: 630,
-        alt: "AI Recipe Generator - Baba Selo creates and saves recipes with AI",
+        alt: "Baba Selo - Your AI Balkan recipe companion with accurate recipes and grandma vibes",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "AI Recipe Generator | Baba Selo - Create & Save Recipes with AI",
+    title: "Baba Selo | Your AI Balkan Recipe Companion—Accurate Recipes, Grandma Vibes",
     description:
-      "AI Recipe Generator that creates personalized recipes, generates food images, and helps you save & share your culinary creations.",
+      "The perfect AI Balkan recipe companion. Actually accurate recipes, sounds and acts like your grandma, gives real advice—not generic bot nonsense.",
     images: ["https://www.babaselo.com/twitter-image.jpg"],
   },
 };

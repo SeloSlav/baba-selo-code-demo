@@ -1,4 +1,4 @@
-export type Category = 'food' | 'toy' | 'accessory' | 'Olive Oil';
+export type Category = 'Olive Oil'; // Discount codes / vouchers only
 
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 

@@ -1,7 +1,7 @@
 // app/components/ProfileMenu.tsx
 import React, { useRef, useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBookOpenReader, faGear, faHome, faSignOut, faStarOfLife, faSpoon, faCompass, faStore, faShieldHalved, faSeedling, faNewspaper, faCalendarDays } from "@fortawesome/free-solid-svg-icons";
+import { faBookOpenReader, faGear, faHome, faSignOut, faStarOfLife, faSpoon, faCompass, faStore, faShieldHalved, faNewspaper, faCalendarDays } from "@fortawesome/free-solid-svg-icons";
 import { faGoogle } from "@fortawesome/free-brands-svg-icons";
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
@@ -88,6 +88,7 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
                     <li className="px-4 py-2">
                         <div className="text-sm text-gray-500">Welcome to</div>
                         <div className="font-medium">Baba Selo</div>
+                        <div className="text-xs text-amber-700/80 mt-0.5">Your AI Balkan recipe companion</div>
                     </li>
                     <hr />
                     <li className="flex items-center px-4 py-2 rounded-md hover:bg-amber-50 cursor-pointer">
@@ -129,7 +130,7 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
                         <span className="font-medium">Continue with Google</span>
                     </li>
                     <li className="px-4 py-1">
-                        <p className="text-xs text-gray-500">New here? We&apos;ll create an account for you.</p>
+                        <p className="text-xs text-gray-500">New here? One click and you&apos;re in.</p>
                     </li>
                 </ul>
             </div>
@@ -226,17 +227,6 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
                 </li>
                 <hr />
                 {/* Config */}
-                {/* <li className="flex items-center px-4 py-2 rounded-md hover:bg-amber-50 cursor-pointer">
-                    <Link href="/yard" className="flex items-center w-full justify-between">
-                        <div className="flex items-center">
-                            <FontAwesomeIcon icon={faSeedling} className="text-[#5d5d5d] mr-3" />
-                            <span>Yard</span>
-                        </div>
-                        <span className="text-xs bg-green-100 text-green-600 px-2 py-1 rounded-full">
-                            Play! 🌱
-                        </span>
-                    </Link>
-                </li> */}
                 <li className="flex items-center px-4 py-2 rounded-md hover:bg-amber-50 cursor-pointer">
                     <Link href="/settings" className="flex items-center w-full">
                         <FontAwesomeIcon icon={faGear} className="text-amber-700 mr-3" />

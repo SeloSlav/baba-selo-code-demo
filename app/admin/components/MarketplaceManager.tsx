@@ -21,18 +21,6 @@ const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ user, showPoint
     const [goodies, setGoodies] = useState<EditableGoodie[]>([]);
     const [editingGoodie, setEditingGoodie] = useState<EditableGoodie | null>(null);
     const [generatingAI, setGeneratingAI] = useState(false);
-    const [selectedRarities, setSelectedRarities] = useState<Set<string>>(new Set());
-    const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
-    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-    const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-
-    const RARITY_ORDER = {
-        'common': 0,
-        'uncommon': 1,
-        'rare': 2,
-        'epic': 3,
-        'legendary': 4
-    };
 
     const getRarityColor = (rarity: string): string => {
         switch (rarity) {
@@ -46,21 +34,6 @@ const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ user, showPoint
                 return 'bg-purple-100 text-purple-600';
             case 'legendary':
                 return 'bg-yellow-100 text-yellow-600';
-            default:
-                return 'bg-gray-100 text-gray-600';
-        }
-    };
-
-    const getCategoryColor = (category: string): string => {
-        switch (category) {
-            case 'food':
-                return 'bg-orange-100 text-orange-600';
-            case 'toy':
-                return 'bg-indigo-100 text-indigo-600';
-            case 'accessory':
-                return 'bg-pink-100 text-pink-600';
-            case 'Olive Oil':
-                return 'bg-green-100 text-green-600';
             default:
                 return 'bg-gray-100 text-gray-600';
         }
@@ -208,22 +181,22 @@ const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ user, showPoint
     return (
         <div className="bg-white rounded-xl p-6 mb-8">
             <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold">Marketplace Management</h2>
+                <h2 className="text-xl font-semibold">Discount Code Management</h2>
             </div>
 
-            {/* New Item Form */}
+            {/* New Discount Code Form */}
             <div className="mb-8 border-b pb-8">
                 <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-medium">Add New Item</h3>
+                    <h3 className="text-lg font-medium">Add New Discount Code</h3>
                     {!editingGoodie?.docId && (
                         <button
-                            onClick={() => setEditingGoodie({
+                            onClick={() =>                             setEditingGoodie({
                                 docId: 'new',
                                 name: '',
                                 description: '',
                                 cost: 0,
                                 rarity: 'common',
-                                category: 'food',
+                                category: 'Olive Oil',
                                 imageUrl: '',
                                 hidden: false
                             } as EditableGoodie)}
@@ -248,10 +221,7 @@ const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ user, showPoint
                                     })}
                                     className="w-full px-3 py-2 border rounded-lg"
                                 >
-                                    <option value="food">Food</option>
-                                    <option value="toy">Toy</option>
-                                    <option value="accessory">Accessory</option>
-                                    <option value="Olive Oil">Olive Oil</option>
+                                    <option value="Olive Oil">Olive Oil (Discount Code)</option>
                                 </select>
                             </div>
                             <div>
@@ -392,116 +362,12 @@ const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ user, showPoint
 
             {/* Existing Items Grid */}
             <div>
-                <h3 className="text-lg font-medium mb-4">Current Items</h3>
-                
-                {/* Filters Section */}
-                <div className="bg-white rounded-3xl shadow-lg border border-gray-300 mb-6" style={{ display: 'none' }}>
-                    <button
-                        onClick={() => setIsFiltersOpen(prev => !prev)}
-                        className="w-full p-4 flex items-center justify-between rounded-t-3xl"
-                    >
-                        <div className="flex items-center gap-2">
-                            <span className="text-gray-500">🔍</span>
-                            <span className="font-semibold">Filter & Sort</span>
-                            {(selectedRarities.size + selectedCategories.size + (sortOrder === 'desc' ? 1 : 0)) > 0 && (
-                                <span className="bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full text-xs font-medium">
-                                    {selectedRarities.size + selectedCategories.size + (sortOrder === 'desc' ? 1 : 0)} active
-                                </span>
-                            )}
-                        </div>
-                        <span className={`text-gray-500 transition-transform duration-200 ${isFiltersOpen ? 'rotate-180' : ''}`}>
-                            ▼
-                        </span>
-                    </button>
-
-                    <div className={`border-t border-gray-200 overflow-hidden transition-all duration-200 ${
-                        isFiltersOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-                    }`}>
-                        <div className="p-6 space-y-6">
-                            {/* Category Filter */}
-                            <div>
-                                <h3 className="font-semibold mb-3">Filter by Category</h3>
-                                <div className="flex flex-wrap gap-3">
-                                    {['food', 'toy', 'accessory', 'Olive Oil'].map((category) => (
-                                        <button
-                                            key={category}
-                                            onClick={() => {
-                                                setSelectedCategories(prev => {
-                                                    const newSet = new Set(prev);
-                                                    if (newSet.has(category)) {
-                                                        newSet.delete(category);
-                                                    } else {
-                                                        newSet.add(category);
-                                                    }
-                                                    return newSet;
-                                                });
-                                            }}
-                                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200
-                                                ${selectedCategories.has(category)
-                                                    ? getCategoryColor(category) + ' ring-2 ring-offset-2 ring-gray-500'
-                                                    : 'bg-gray-100 text-gray-500 hover:' + getCategoryColor(category).replace('bg-', '')
-                                                }
-                                                transform hover:scale-105 active:scale-95`}
-                                        >
-                                            {category.charAt(0).toUpperCase() + category.slice(1)}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Rarity Filter */}
-                            <div>
-                                <h3 className="font-semibold mb-3">Filter by Rarity</h3>
-                                <div className="flex flex-wrap gap-3">
-                                    {Object.keys(RARITY_ORDER).map((rarity) => (
-                                        <button
-                                            key={rarity}
-                                            onClick={() => {
-                                                setSelectedRarities(prev => {
-                                                    const newSet = new Set(prev);
-                                                    if (newSet.has(rarity)) {
-                                                        newSet.delete(rarity);
-                                                    } else {
-                                                        newSet.add(rarity);
-                                                    }
-                                                    return newSet;
-                                                });
-                                            }}
-                                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200
-                                                ${selectedRarities.has(rarity)
-                                                    ? getRarityColor(rarity) + ' ring-2 ring-offset-2 ring-gray-500'
-                                                    : rarity === 'rare'
-                                                        ? 'bg-gray-100 text-blue-600'
-                                                        : 'bg-gray-100 text-gray-500 hover:' + getRarityColor(rarity).replace('bg-', '')
-                                                }
-                                                transform hover:scale-105 active:scale-95`}
-                                        >
-                                            {rarity.charAt(0).toUpperCase() + rarity.slice(1)}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Price Sort */}
-                            <div>
-                                <h3 className="font-semibold mb-3">Sort by Price</h3>
-                                <button
-                                    onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
-                                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-all duration-200 text-sm transform hover:scale-105 active:scale-95"
-                                >
-                                    <FontAwesomeIcon icon={faSpoon} className="text-yellow-600" />
-                                    <span>Price: {sortOrder === 'asc' ? 'Low to High' : 'High to Low'}</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <h3 className="text-lg font-medium mb-4">Current Discount Codes</h3>
 
                 <div className="grid grid-cols-1 gap-4">
                     {goodies
-                        .filter(goodie => selectedCategories.size === 0 || selectedCategories.has(goodie.category))
-                        .filter(goodie => selectedRarities.size === 0 || selectedRarities.has(goodie.rarity))
-                        .sort((a, b) => sortOrder === 'asc' ? a.cost - b.cost : b.cost - a.cost)
+                        .filter(goodie => goodie.category === 'Olive Oil')
+                        .sort((a, b) => a.cost - b.cost)
                         .map(goodie => (
                             <div key={goodie.docId} className="border rounded-lg overflow-hidden bg-white shadow-md hover:shadow-lg transition-shadow flex">
                                 <div className="relative h-24 w-24 flex-shrink-0 bg-gray-100">
@@ -531,8 +397,8 @@ const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ user, showPoint
                                                 <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getRarityColor(goodie.rarity)}`}>
                                                     {goodie.rarity.charAt(0).toUpperCase() + goodie.rarity.slice(1)}
                                                 </span>
-                                                <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getCategoryColor(goodie.category)}`}>
-                                                    {goodie.category.charAt(0).toUpperCase() + goodie.category.slice(1)}
+                                                <span className="inline-block px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-600">
+                                                    Discount Code
                                                 </span>
                                                 {goodie.hidden && (
                                                     <span className="inline-block px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-600">
@@ -585,10 +451,7 @@ const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ user, showPoint
                                         })}
                                         className="w-full px-3 py-2 border rounded-lg"
                                     >
-                                        <option value="food">Food</option>
-                                        <option value="toy">Toy</option>
-                                        <option value="accessory">Accessory</option>
-                                        <option value="Olive Oil">Olive Oil</option>
+                                        <option value="Olive Oil">Olive Oil (Discount Code)</option>
                                     </select>
                                 </div>
                                 <div>

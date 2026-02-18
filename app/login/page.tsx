@@ -22,7 +22,7 @@ const Login = () => {
 
       {/* Title and Subtitle */}
       <h1 className="text-2xl font-bold text-gray-900 mb-2">Ask me anything, dear</h1>
-      <p className="text-gray-600 mb-8 text-center max-w-sm">Your personal grandma, ready to share recipes, stories, and wisdom</p>
+      <p className="text-gray-600 mb-8 text-center max-w-sm">Your AI Balkan recipe companion—accurate recipes, real grandma vibes, and advice that actually helps. No generic bot nonsense.</p>
 
       {/* Auth Container */}
       <div className="flex flex-col items-center w-full max-w-[320px] px-6">
@@ -40,7 +40,7 @@ const Login = () => {
           </p>
         )}
         <p className="text-gray-500 text-xs text-center mt-2">
-          Don&apos;t have an account? We&apos;ll create one for you.
+          New here? We&apos;ll create an account—one click and you&apos;re in.
         </p>
       </div>
 

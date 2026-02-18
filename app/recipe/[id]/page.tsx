@@ -6,8 +6,6 @@ import { doc, getDoc, deleteDoc, updateDoc, query, getDocs, collection, where, a
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { useEffect, useState, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCircle, faCheckCircle, faTrashCan, faCopy } from "@fortawesome/free-regular-svg-icons";
-import { faUpload, faTrash, faSave, faThumbtack, faEllipsisVertical } from "@fortawesome/free-solid-svg-icons";
 import { getAuth } from "firebase/auth"; // Import Firebase auth
 import Image from "next/image";
 import { RecipeChatBubble } from "../../components/RecipeChatBubble";
@@ -165,77 +163,23 @@ const RecipeDetails = () => {
     fetchRecipe();
   }, [id, auth]);
 
-  // Fetch similar recipes when recipe is loaded
+  // Fetch similar recipes via pgvector (semantic similarity)
   useEffect(() => {
     if (!recipe || !id) return;
 
     const fetchSimilarRecipes = async () => {
       try {
-        const recipesQuery = query(
-          collection(db, "recipes"),
-          orderBy("createdAt", "desc"),
-          limit(25)
-        );
-        const snapshot = await getDocs(recipesQuery);
-        const allRecipes = snapshot.docs
-          .filter(d => d.id !== id)
-          .map(d => {
-            const data = d.data();
-            const directions = Array.isArray(data.directions) ? data.directions : [];
-            const ingredients = Array.isArray(data.ingredients) ? data.ingredients : [];
-            return {
-              id: d.id,
-              recipeTitle: data.recipeTitle || "No title",
-              recipeContent: data.recipeContent || "",
-              userId: data.userId || "",
-              cuisineType: data.cuisineType || "Unknown",
-              cookingDifficulty: data.cookingDifficulty || "Unknown",
-              cookingTime: data.cookingTime || "Unknown",
-              diet: data.diet || [],
-              directions,
-              ingredients,
-              imageURL: data.imageURL || "",
-              recipeSummary: data.recipeSummary || "",
-              recipeNotes: data.recipeNotes || "",
-              macroInfo: data.macroInfo || null,
-              dishPairings: data.dishPairings || "",
-              pinned: data.pinned || false,
-              lastPinnedAt: data.lastPinnedAt || null,
-              likes: data.likes || [],
-              username: data.username || "Anonymous Chef"
-            } as Recipe;
-          });
-
-        // Prefer same cuisine: sort by cuisineType match first
-        const cuisine = recipe.cuisineType || "Unknown";
-        const similar = allRecipes
-          .sort((a, b) => {
-            const aMatch = a.cuisineType === cuisine ? 1 : 0;
-            const bMatch = b.cuisineType === cuisine ? 1 : 0;
-            return bMatch - aMatch;
-          })
-          .slice(0, 4);
-
-        // Fetch usernames for similar recipes
-        const userIds = new Set(similar.map(r => r.userId).filter(Boolean));
-        let userMap = new Map<string, string>();
-        if (userIds.size > 0) {
-          const usersQuery = query(
-            collection(db, "users"),
-            where("__name__", "in", Array.from(userIds).slice(0, 10))
-          );
-          const userDocs = await getDocs(usersQuery);
-          userDocs.docs.forEach(d => userMap.set(d.id, d.data().username || "Anonymous Chef"));
+        const res = await fetch(`/api/similarRecipes?recipeId=${id}&limit=4`);
+        if (!res.ok) {
+          // Fallback: no similar recipes if API fails (e.g. not synced yet)
+          setSimilarRecipes([]);
+          return;
         }
-
-        const withUsernames = similar.map(r => ({
-          ...r,
-          username: userMap.get(r.userId) || "Anonymous Chef"
-        }));
-
-        setSimilarRecipes(withUsernames);
+        const { similar } = await res.json();
+        setSimilarRecipes((similar || []).map((r: Recipe) => ({ ...r, recipeContent: "" })));
       } catch (error) {
         console.error("Error fetching similar recipes:", error);
+        setSimilarRecipes([]);
       }
     };
 

@@ -29,10 +29,9 @@ export default function Marketplace() {
             try {
                 // Fetch goodies
                 const goodiesSnapshot = await getDocs(collection(db, 'goodies'));
-                const goodies = goodiesSnapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                })) as Goodie[];
+                const goodies = (goodiesSnapshot.docs
+                    .map(doc => ({ id: doc.id, ...doc.data() })) as Goodie[])
+                    .filter(g => g.category === 'Olive Oil'); // Only discount codes
 
                 // Fetch user's inventory
                 const userInventoryRef = doc(db, `users/${user.uid}/inventory/items`);
@@ -82,18 +81,6 @@ export default function Marketplace() {
                     `Not enough spoons! You need ${goodie.cost} spoons but have ${currentPoints}.`
                 );
                 return;
-            }
-
-            // Only check for existing items if it's not a food item
-            if (goodie.category !== 'food') {
-                const existingItems = state.userInventory.filter(item => item.id === goodie.id);
-                if (existingItems.length > 0) {
-                    showPointsToast(
-                        0,
-                        'You already own this item! Only food items can be purchased multiple times.'
-                    );
-                    return;
-                }
             }
 
             // Attempt to deduct points
@@ -199,19 +186,20 @@ export default function Marketplace() {
             <div className="max-w-7xl mx-auto px-4 py-8">
                 <div className="flex flex-col items-center mb-12">
                     <img src="/baba-removebg.png" alt="Baba" className="w-32 h-32 mb-4" />
-                    <h1 className="text-center text-2xl font-semibold mb-4">Spend your hard-earned spoons on special goodies!</h1>
-                    <p className="text-amber-900/80 text-center">Collect spoons to unlock special vouchers for premium <a href="https://seloolive.com/products/authentic-croatian-olive-oil?variant=40790542549035" target="_blank" rel="noopener noreferrer" className="text-amber-600 hover:text-amber-700 transition-colors underline">SELO Olive Oil</a>.
-                    {/* Visit <a href="/yard" className="text-blue-600 hover:text-blue-800 transition-colors underline">Baba's Yard</a> where you can use your rare items to befriend stray cats and multiply your spoon earnings! */}
+                    <h1 className="text-center text-2xl font-semibold mb-4">Spend your spoons on discount codes!</h1>
+                    <p className="text-amber-900/80 text-center">Collect spoons by saving recipes and chatting with Baba, then redeem them for vouchers on premium <a href="https://seloolive.com/products/authentic-croatian-olive-oil?variant=40790542549035" target="_blank" rel="noopener noreferrer" className="text-amber-600 hover:text-amber-700 transition-colors underline">SELO Olive Oil</a>.
                     </p>
                 </div>
 
                 {/* Stack inventory above marketplace */}
                 <div className="flex flex-col gap-8">
-                    {/* Your Inventory */}
+                    {/* Your Discount Codes */}
                     <div className="w-full">
-                        <h2 className="text-2xl font-semibold mb-4">Your Coupons</h2>
+                        <h2 className="text-2xl font-semibold mb-4">Your Discount Codes</h2>
                         <div className="overflow-y-auto pr-2 custom-scrollbar">
-                            <UserInventory items={state.userInventory.sort((a, b) => {
+                            <UserInventory items={state.userInventory
+                                .filter(item => item.category === 'Olive Oil')
+                                .sort((a, b) => {
                                 const dateA = a.purchasedAt instanceof Timestamp ? 
                                     a.purchasedAt.toDate().getTime() : 
                                     a.purchasedAt.getTime();
@@ -223,9 +211,9 @@ export default function Marketplace() {
                         </div>
                     </div>
 
-                    {/* Available Items */}
+                    {/* Available Discount Codes */}
                     <div className="w-full">
-                        <h2 className="text-2xl font-semibold mb-4">Marketplace</h2>
+                        <h2 className="text-2xl font-semibold mb-4">Available Discount Codes</h2>
                         <div className="overflow-y-auto pr-2 custom-scrollbar">
                             <MarketplaceList 
                                 goodies={state.goodies} 

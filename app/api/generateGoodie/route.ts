@@ -55,8 +55,8 @@ Cost: ${data.cost} spoons
 `;
                 }).join('\n') : '';
 
-        const prompt = `Generate a UNIQUE marketplace item for a cat-themed game with the following specifications:
-Category: ${category}
+        const prompt = `Generate a UNIQUE discount code/voucher for Olive Oil from SELO (seloolive.com) with the following specifications:
+Category: Olive Oil (discount code only)
 Rarity: ${rarity}
 
 IMPORTANT: Create something COMPLETELY NEW and UNIQUE. Do not reuse or slightly modify any existing items.
@@ -72,19 +72,15 @@ Guidelines for your UNIQUE creation:
 
 1. Name must be:
    - COMPLETELY UNIQUE (not similar to any existing names listed above)
-   - Follow the style pattern but be distinctly different
-   - Be whimsical and cat-themed
-   - Match the rarity level (common items are simple, legendary items have grand/divine/celestial names)
-   - Descriptive of the item's purpose
-   - For ${category} items, consider unique ingredients/materials not used in other items
+   - A voucher/discount code name for premium Croatian olive oil
+   - Match the rarity level (common = small discount, legendary = major discount)
+   - E.g. "Summer Harvest Voucher", "Golden Grove Discount", "Dalmatian Coast Special"
 
 2. Description must:
-   - Follow the same tone and length as the examples
-   - Be COMPLETELY UNIQUE (don't reuse themes or concepts from existing items)
-   - For ${category} items, use different ingredients/materials/effects than existing items
-   - Include magical or mystical elements for rare+ items
+   - Describe the discount/voucher for SELO Olive Oil
+   - Include the discount value or benefit (e.g. "10% off", "Free shipping")
+   - Be compelling and appetizing
    - Match the rarity's prestige level
-   - Tell its own unique story
 
 3. Cost should:
    - Match the rarity tier:
@@ -98,7 +94,7 @@ Guidelines for your UNIQUE creation:
 
 Please provide the item details in the following JSON format:
 {
-    "name": "Item Name",
+    "name": "Voucher Name",
     "description": "Item description...",
     "cost": number,
     "imageUrl": "image url path"
@@ -109,7 +105,7 @@ Please provide the item details in the following JSON format:
             messages: [
                 {
                     role: "system",
-                    content: "You are a creative game item designer who specializes in creating unique, whimsical, cat-themed items. You never copy or slightly modify existing items - instead, you create entirely new concepts while matching the established style and tone. You only respond with valid JSON."
+                    content: "You are a creative copywriter who creates unique discount codes and vouchers for premium Croatian olive oil (SELO brand). You never copy or slightly modify existing items - instead, you create entirely new concepts. You only respond with valid JSON."
                 },
                 {
                     role: "user",

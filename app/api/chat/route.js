@@ -191,6 +191,26 @@ export async function POST(req) {
     // Pass the verifiedUserId to the store function
     storeUserPrompt(verifiedUserId, lastMessage.content, messages.slice(0, -1));
   }
+
+  // Pro: conversation memory - retrieve relevant past turns
+  let memoryContext = "";
+  let isProUser = false;
+  if (userIsAuthenticated && lastMessage.role === "user") {
+    try {
+      const userDoc = await admin.firestore().collection("users").doc(verifiedUserId).get();
+      const adminDoc = await admin.firestore().collection("admins").doc(verifiedUserId).get();
+      isProUser = userDoc.data()?.plan === "pro" || (adminDoc.exists && adminDoc.data()?.active === true);
+      if (isProUser) {
+        const { getRelevantMemory } = await import("../../lib/conversationMemoryStore");
+        const memory = await getRelevantMemory(verifiedUserId, lastMessage.content || "");
+        if (memory.length > 0) {
+          memoryContext = `\n\nRELEVANT PAST CONVERSATION (use this to answer questions like "what was that recipe?" or "remember when..."):\n${memory.map((m) => `${m.role}: ${m.content}`).join("\n")}\n\n`;
+        }
+      }
+    } catch (e) {
+      console.error("Conversation memory retrieval error:", e);
+    }
+  }
   
   // Check if it's a timer request from the user
   if (lastMessage.role === "user") {
@@ -333,7 +353,8 @@ Extras:
 
 Note: The user has these dietary preferences: ${dietaryPreferences.join(", ")}.
 The user also prefers to use ${preferredCookingOil} as a cooking oil.
-${randomizationHint}`;
+${randomizationHint}
+${memoryContext}`;
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -364,6 +385,16 @@ ${randomizationHint}`;
     }
 
     const assistantMessage = data.choices?.[0]?.message?.content || "I'm sorry, I couldn't respond.";
+
+    // Pro: store conversation turn for memory
+    if (isProUser && lastMessage.role === "user") {
+      try {
+        const { storeConversationTurn } = await import("../../lib/conversationMemoryStore");
+        await storeConversationTurn(verifiedUserId, lastMessage.content || "", assistantMessage);
+      } catch (e) {
+        console.error("Conversation memory store error:", e);
+      }
+    }
 
     // Parse the response to detect recipe
     const lines = assistantMessage.split('\n');

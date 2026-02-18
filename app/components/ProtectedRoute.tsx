@@ -8,7 +8,6 @@ import { useRouter, usePathname } from "next/navigation";
 const protectedPaths = [
   '/marketplace',
   '/settings',
-  '/yard',
   '/admin',
   '/upgrade',
   '/spoons',

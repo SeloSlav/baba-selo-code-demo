@@ -12,7 +12,6 @@ export const RESERVED_PATHS = [
     'recipes',
     'settings',
     'signup',
-    'yard',
     'chat',
     'about',
     'help',

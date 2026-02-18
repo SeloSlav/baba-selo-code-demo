@@ -67,13 +67,12 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
   const renderContent = () => {
     if (transaction.actionType === "CAT_VISIT") {
       return (
-        <Link 
-          href="/yard"
-          className="font-medium block truncate hover:text-blue-600 transition-colors cursor-pointer"
+        <div 
+          className="font-medium truncate"
           title={transaction.details || POINT_ACTIONS[transaction.actionType]?.displayName}
         >
           {transaction.details || POINT_ACTIONS[transaction.actionType]?.displayName}
-        </Link>
+        </div>
       );
     }
 

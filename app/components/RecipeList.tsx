@@ -352,24 +352,24 @@ export const RecipeList = () => {
             <div className="text-center mb-4">
               <div className="text-2xl mb-2">👩‍🍳</div>
               <h3 className="text-lg font-bold text-gray-900 leading-tight">
-                Create Your Free Recipe Collection
+                Your Balkan Recipe Companion Awaits
               </h3>
             </div>
             <p className="text-sm text-gray-700 text-center mb-3 font-medium">
-              Join Baba Selo and unlock:
+              Join Baba Selo—accurate recipes, grandma vibes, real advice:
             </p>
             <ul className="space-y-2 text-sm text-gray-700 mb-5 text-left">
               <li className="flex gap-2.5">
                 <span className="text-amber-600 mt-0.5 shrink-0">•</span>
-                <span>Save unlimited recipes</span>
+                <span>Actually accurate Balkan & regional recipes</span>
               </li>
               <li className="flex gap-2.5">
                 <span className="text-amber-600 mt-0.5 shrink-0">•</span>
-                <span>Pin favorites for quick access</span>
+                <span>Save & pin your favorites</span>
               </li>
               <li className="flex gap-2.5">
                 <span className="text-amber-600 mt-0.5 shrink-0">•</span>
-                <span>Share your culinary creations</span>
+                <span>Advice that helps—no generic bot fluff</span>
               </li>
             </ul>
             <Link 

@@ -116,6 +116,24 @@ export async function POST(req) {
         const recipeDocRef = adminDb.collection("recipes").doc(docId);
         await recipeDocRef.set(newRecipe); // Use Admin SDK set method
 
+        // Index for similar-recipe search (pgvector)
+        try {
+            const { indexRecipe } = await import("../../lib/similarRecipesStore");
+            await indexRecipe({
+                id: docId,
+                recipeTitle: newRecipe.recipeTitle,
+                userId: verifiedUserId,
+                cuisineType: newRecipe.cuisineType || "Unknown",
+                cookingDifficulty: newRecipe.cookingDifficulty || "Unknown",
+                cookingTime: newRecipe.cookingTime || "Unknown",
+                diet: newRecipe.diet || [],
+                ingredients: newRecipe.ingredients || [],
+                directions: newRecipe.directions || [],
+            });
+        } catch (e) {
+            console.error("Recipe index error (non-fatal):", e);
+        }
+
         // Since Admin SDK bypasses rules, success here means the write happened
         console.log(`==> Admin SDK setDoc successful for docId: ${docId}`);
         return NextResponse.json({ success: true, id: docId });

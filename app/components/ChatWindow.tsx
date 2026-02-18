@@ -54,7 +54,7 @@ export const ChatWindow = forwardRef(
     const inputRef = useRef<HTMLTextAreaElement>(null);
     const [message, setMessage] = useState<string>("");
     const [messages, setMessages] = useState<Message[]>([
-      { role: "assistant", content: "Hello! Ask me anything dear." },
+      { role: "assistant", content: "Hello, dear! I'm your Balkan recipe companion—ask me for accurate recipes, cooking tips, or anything. No generic bot nonsense, I promise." },
     ]);
     const [loading, setLoading] = useState<boolean>(false);
     const [windowWidth, setWindowWidth] = useState<number | null>(null);
@@ -98,9 +98,9 @@ export const ChatWindow = forwardRef(
           if (!res.ok || cancelled) return;
           const data = await res.json();
           const msgs = Array.isArray(data.messages) ? data.messages : [];
-          setMessages(msgs.length > 0 ? msgs : [{ role: "assistant", content: "Hello! Ask me anything dear." }]);
+          setMessages(msgs.length > 0 ? msgs : [{ role: "assistant", content: "Hello, dear! I'm your Balkan recipe companion—ask me for accurate recipes, cooking tips, or anything. No generic bot nonsense, I promise." }]);
         } catch {
-          if (!cancelled) setMessages([{ role: "assistant", content: "Hello! Ask me anything dear." }]);
+          if (!cancelled) setMessages([{ role: "assistant", content: "Hello, dear! I'm your Balkan recipe companion—ask me for accurate recipes, cooking tips, or anything. No generic bot nonsense, I promise." }]);
         }
       })();
       return () => { cancelled = true; };
@@ -109,7 +109,7 @@ export const ChatWindow = forwardRef(
     // Reset to new chat when chatId becomes null
     useEffect(() => {
       if (chatId === null && onChatIdChange) {
-        setMessages([{ role: "assistant", content: "Hello! Ask me anything dear." }]);
+        setMessages([{ role: "assistant", content: "Hello, dear! I'm your Balkan recipe companion—ask me for accurate recipes, cooking tips, or anything. No generic bot nonsense, I promise." }]);
       }
     }, [chatId]);
 
