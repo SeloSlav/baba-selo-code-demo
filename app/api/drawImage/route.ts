@@ -1,11 +1,6 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
 import { getStorage } from 'firebase-admin/storage';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
-
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
-});
 
 // Initialize Firebase Admin if not already initialized
 if (!getApps().length) {
@@ -24,23 +19,35 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Missing prompt or recipeId" }, { status: 400 });
         }
 
-        // Generate image with DALL-E 3 (standard quality for speed; natural style for photorealistic output)
-        const response = await openai.images.generate({
-            model: "dall-e-3",
-            prompt: prompt,
-            n: 1,
-            size: "1024x1024",
-            quality: "standard",
-            style: "natural"  // More photorealistic than "vivid"
+        const apiKey = process.env.OPENAI_API_KEY;
+        if (!apiKey) throw new Error("OPENAI_API_KEY not configured");
+
+        const res = await fetch('https://api.openai.com/v1/images/generations', {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${apiKey}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                model: 'gpt-image-1',
+                prompt,
+                n: 1,
+                size: '1536x1024',
+                quality: 'low',
+                output_format: 'png',
+            }),
         });
 
-        if (!response.data?.[0]?.url) {
-            throw new Error("No image URL in response");
+        if (!res.ok) {
+            const err = await res.text();
+            throw new Error(err || `API error ${res.status}`);
         }
 
-        // Download the image
-        const imageResponse = await fetch(response.data[0].url);
-        const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
+        const data = await res.json();
+        const b64 = data?.data?.[0]?.b64_json;
+        if (!b64) throw new Error("No image in response");
+
+        const imageBuffer = Buffer.from(b64, 'base64');
 
         // Upload to Firebase Storage
         const bucket = getStorage().bucket();
@@ -58,10 +65,7 @@ export async function POST(req: Request) {
             expires: '03-01-2500' // Far future expiration
         });
 
-        return NextResponse.json({
-            imageUrl: url,
-            revisedPrompt: response.data[0].revised_prompt
-        });
+        return NextResponse.json({ imageUrl: url });
     } catch (error) {
         console.error('Error generating image:', error);
         return NextResponse.json(

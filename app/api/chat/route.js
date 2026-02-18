@@ -326,6 +326,21 @@ You have multiple modes of response:
 
 9. IMPORTANT: Do not answer medical questions or provide medical advice. If someone asks for medical information, diagnoses, or health treatments, politely refuse by saying something like: "*sips rakija* Medical advice? Child, I know old village remedies, not modern medicine! For real health problems, you need a doctor, not recipes from an old woman. I can tell you how to make chicken soup for a cold, but anything more serious - to the doctor with you!"
 
+10. If the user asks for an image, picture, or drawing of food, a dish, or anything culinary (e.g. "make me an image of kajmak", "draw a picture of sarma", "show me what burek looks like"), use the generate_image tool. Do NOT refuse or say you cannot draw—you have this capability. Call the tool with a descriptive subject (e.g. "kajmak on fresh bread", "a plate of sarma with cabbage rolls"). After the tool returns the image URL, include it in your response using markdown: ![Description](imageUrl). Add a warm Baba Selo comment about what you drew.
+
+11. TOOLS - Use these when appropriate:
+   - save_recipe: When the user says "save this", "add to my collection", "keep this recipe", etc. Pass the full recipe content from your last response. If the user is not logged in, the tool will return an error—tell them to sign in.
+   - get_similar_recipes: When the user asks "what else is like this?", "something similar to sarma", "more recipes like that". Pass the recipe text from the conversation.
+   - convert_servings: When the user says "make this for 6 people", "double this recipe", "scale for 8 servings". Pass the recipe and target number of servings.
+   - get_nutrition: When the user asks "how many calories?", "what's the protein?", "nutrition info for this". Pass the recipe content.
+   - ingredient_substitution: When the user asks "what can I use instead of X?", "I don't have kajmak", "substitute for sour cream". Pass the ingredient name.
+   - set_timer: When the user wants a timer (e.g. "timer for 5 minutes", "remind me in 20 minutes"). Pass seconds. Then tell them the timer is set—the app will show it.
+   - translate_recipe: When the user says "give me this in Croatian", "translate to Serbian", "in [language]". Pass the recipe and target language.
+   - add_to_meal_plan: When a Pro user says "add this to Saturday", "put in my meal plan for Monday". Pass recipe content and day. Pro only.
+   - seasonal_tips: When the user asks "what's in season?", "what's good now?", "seasonal produce". Pass region (balkan or northern).
+   - find_by_ingredients: When the user says "I have chicken, paprika, rice—what can I make?", "recipes with these ingredients". Pass an array of ingredients.
+   - unit_conversion: When the user asks "how many cups is 200g flour?", "convert 1 cup to ml", "tbsp to tsp". Pass amount, fromUnit, toUnit.
+
 In summary:
   - Only produce the detailed recipe structure if the user explicitly asks for a recipe.
   - If not a recipe request, respond in a non-recipe format.
@@ -356,35 +371,318 @@ The user also prefers to use ${preferredCookingOil} as a cooking oil.
 ${randomizationHint}
 ${memoryContext}`;
 
-  try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o",
-        max_tokens: 1500,
-        temperature: 1.0,
-        messages: [
-          {
-            role: "system",
-            content: originalSystemPrompt
+  const tools = [
+    {
+      type: "function",
+      function: {
+        name: "generate_image",
+        description: "Generate an image of a food, dish, or culinary item when the user asks for a picture, drawing, or image of something.",
+        parameters: {
+          type: "object",
+          properties: {
+            subject: { type: "string", description: "The food, dish, or item to draw (e.g. 'kajmak on fresh bread', 'a plate of sarma'). Be descriptive." }
           },
-          ...messages, // Include the full conversation history here
-        ],
-      }),
-    });
+          required: ["subject"]
+        }
+      }
+    },
+    {
+      type: "function",
+      function: {
+        name: "save_recipe",
+        description: "Save a recipe to the user's collection when they say 'save this', 'add to my collection', 'keep this recipe', etc.",
+        parameters: {
+          type: "object",
+          properties: {
+            recipeContent: { type: "string", description: "The full recipe text including title, ingredients, and directions." },
+            classification: { type: "object", description: "Optional: { cuisine, cooking_time, difficulty, diet }" }
+          },
+          required: ["recipeContent"]
+        }
+      }
+    },
+    {
+      type: "function",
+      function: {
+        name: "get_similar_recipes",
+        description: "Find recipes similar to a given one. Use when user asks 'what else is like this?', 'something similar to X'.",
+        parameters: {
+          type: "object",
+          properties: {
+            recipeText: { type: "string", description: "The recipe text to find similar recipes for." },
+            limit: { type: "number", description: "Max number of results (default 6)." }
+          },
+          required: ["recipeText"]
+        }
+      }
+    },
+    {
+      type: "function",
+      function: {
+        name: "convert_servings",
+        description: "Scale a recipe to a different number of servings. Use when user says 'make this for 6 people', 'double this', 'scale for 8'.",
+        parameters: {
+          type: "object",
+          properties: {
+            recipeContent: { type: "string", description: "The full recipe text." },
+            targetServings: { type: "number", description: "The desired number of servings." }
+          },
+          required: ["recipeContent", "targetServings"]
+        }
+      }
+    },
+    {
+      type: "function",
+      function: {
+        name: "get_nutrition",
+        description: "Get calorie and macro (protein, carbs, fat) info for a recipe. Use when user asks 'how many calories?', 'nutrition info'.",
+        parameters: {
+          type: "object",
+          properties: {
+            recipeContent: { type: "string", description: "The full recipe text." }
+          },
+          required: ["recipeContent"]
+        }
+      }
+    },
+    {
+      type: "function",
+      function: {
+        name: "ingredient_substitution",
+        description: "Suggest substitutes for an ingredient. Use when user asks 'what can I use instead of X?', 'I don't have kajmak'.",
+        parameters: {
+          type: "object",
+          properties: {
+            ingredient: { type: "string", description: "The ingredient to find a substitute for." }
+          },
+          required: ["ingredient"]
+        }
+      }
+    },
+    {
+      type: "function",
+      function: {
+        name: "set_timer",
+        description: "Set a kitchen timer. Use when user says 'timer for 5 minutes', 'remind me in 20 minutes'.",
+        parameters: {
+          type: "object",
+          properties: {
+            seconds: { type: "number", description: "Duration in seconds (e.g. 300 for 5 minutes)." }
+          },
+          required: ["seconds"]
+        }
+      }
+    },
+    {
+      type: "function",
+      function: {
+        name: "translate_recipe",
+        description: "Translate a recipe to another language. Use when user says 'give me this in Croatian', 'translate to Serbian'.",
+        parameters: {
+          type: "object",
+          properties: {
+            recipeContent: { type: "string", description: "The full recipe text." },
+            targetLanguage: { type: "string", description: "Target language (e.g. 'Croatian', 'Serbian', 'English')." }
+          },
+          required: ["recipeContent", "targetLanguage"]
+        }
+      }
+    },
+    {
+      type: "function",
+      function: {
+        name: "add_to_meal_plan",
+        description: "Add a recipe to the user's meal plan for a specific day. Pro users only. Use when user says 'add this to Saturday', 'put in my meal plan'.",
+        parameters: {
+          type: "object",
+          properties: {
+            recipeContent: { type: "string", description: "The full recipe text." },
+            dayOfWeek: { type: "string", description: "Day name: sunday, monday, tuesday, etc." }
+          },
+          required: ["recipeContent", "dayOfWeek"]
+        }
+      }
+    },
+    {
+      type: "function",
+      function: {
+        name: "seasonal_tips",
+        description: "Get seasonal produce tips. Use when user asks 'what's in season?', 'what's good now?'.",
+        parameters: {
+          type: "object",
+          properties: {
+            region: { type: "string", description: "'balkan' or 'northern' (default balkan)." }
+          }
+        }
+      }
+    },
+    {
+      type: "function",
+      function: {
+        name: "find_by_ingredients",
+        description: "Find recipes that use given ingredients. Use when user says 'I have chicken, rice—what can I make?', 'recipes with these ingredients'.",
+        parameters: {
+          type: "object",
+          properties: {
+            ingredients: { type: "array", items: { type: "string" }, description: "List of ingredients the user has." }
+          },
+          required: ["ingredients"]
+        }
+      }
+    },
+    {
+      type: "function",
+      function: {
+        name: "unit_conversion",
+        description: "Convert cooking units. Use when user asks 'how many cups is 200g flour?', 'convert 1 cup to ml', 'tbsp to tsp'.",
+        parameters: {
+          type: "object",
+          properties: {
+            amount: { type: "number", description: "The numeric amount." },
+            fromUnit: { type: "string", description: "Source unit (e.g. 'g', 'cups', 'ml')." },
+            toUnit: { type: "string", description: "Target unit (e.g. 'cups', 'ml')." }
+          },
+          required: ["amount", "fromUnit", "toUnit"]
+        }
+      }
+    }
+  ];
 
-    const data = await response.json();
+  try {
+    let currentMessages = [
+      { role: "system", content: originalSystemPrompt },
+      ...messages,
+    ];
+    let assistantMessage = null;
+    let timerSecondsFromTool = null;
+    let maxIterations = 5;
 
-    if (!response.ok) {
-      console.error("OpenAI API error:", data);
-      return NextResponse.json({ error: "Failed to fetch from OpenAI" }, { status: 500 });
+    while (maxIterations--) {
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-4o",
+          max_tokens: 1500,
+          temperature: 1.0,
+          messages: currentMessages,
+          tools,
+          tool_choice: "auto",
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error("OpenAI API error:", data);
+        return NextResponse.json({ error: "Failed to fetch from OpenAI" }, { status: 500 });
+      }
+
+      const msg = data.choices?.[0]?.message;
+      if (!msg) {
+        assistantMessage = "I'm sorry, I couldn't respond.";
+        break;
+      }
+
+      if (!msg.tool_calls || msg.tool_calls.length === 0) {
+        assistantMessage = msg.content || "I'm sorry, I couldn't respond.";
+        break;
+      }
+
+      currentMessages.push(msg);
+
+      const { handleSaveRecipe, handleGetSimilarRecipes, handleConvertServings, handleGetNutrition, handleIngredientSubstitution, handleSetTimer, handleTranslateRecipe, handleAddToMealPlan, handleSeasonalTips, handleFindByIngredients, handleUnitConversion } = await import("../../lib/chatTools");
+
+      for (const tc of msg.tool_calls) {
+        let args = {};
+        try {
+          args = JSON.parse(tc.function?.arguments || "{}");
+        } catch (e) {
+          args = {};
+        }
+        let toolResult = { success: false, error: "Unknown tool" };
+
+        switch (tc.function?.name) {
+          case "generate_image": {
+            const subject = args.subject || "food";
+            const imagePrompt = `Photorealistic food photograph. ${subject}. Natural lighting, appetizing, professional food photography.`;
+            try {
+              const { generateImageForChat } = await import("../../lib/generateImageForChat");
+              const { imageUrl } = await generateImageForChat(imagePrompt, verifiedUserId);
+              toolResult = { imageUrl, success: true };
+            } catch (err) {
+              console.error("Image generation error:", err);
+              toolResult = { success: false, error: err.message };
+            }
+            break;
+          }
+          case "save_recipe": {
+            const classification = await (async () => {
+              try {
+                const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:${process.env.PORT || 3000}`;
+                const res = await fetch(`${baseUrl}/api/classifyRecipe`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ message: args.recipeContent }),
+                });
+                const data = await res.json();
+                return data.diet ? { diet: data.diet, cuisine: data.cuisine, cooking_time: data.cooking_time, difficulty: data.difficulty } : null;
+              } catch {
+                return null;
+              }
+            })();
+            toolResult = await handleSaveRecipe({ recipeContent: args.recipeContent, userId: verifiedUserId, classification });
+            break;
+          }
+          case "get_similar_recipes":
+            toolResult = await handleGetSimilarRecipes({ recipeText: args.recipeText, limit: args.limit });
+            break;
+          case "convert_servings":
+            toolResult = await handleConvertServings({ recipeContent: args.recipeContent, targetServings: args.targetServings });
+            break;
+          case "get_nutrition":
+            toolResult = await handleGetNutrition({ recipeContent: args.recipeContent });
+            break;
+          case "ingredient_substitution":
+            toolResult = await handleIngredientSubstitution({ ingredient: args.ingredient });
+            break;
+          case "set_timer":
+            toolResult = await handleSetTimer({ seconds: args.seconds });
+            if (toolResult.success && toolResult.seconds) timerSecondsFromTool = toolResult.seconds;
+            break;
+          case "translate_recipe":
+            toolResult = await handleTranslateRecipe({ recipeContent: args.recipeContent, targetLanguage: args.targetLanguage });
+            break;
+          case "add_to_meal_plan":
+            toolResult = await handleAddToMealPlan({ recipeContent: args.recipeContent, dayOfWeek: args.dayOfWeek, userId: verifiedUserId });
+            break;
+          case "seasonal_tips":
+            toolResult = await handleSeasonalTips({ region: args.region });
+            break;
+          case "find_by_ingredients":
+            toolResult = await handleFindByIngredients({ ingredients: args.ingredients, userId: verifiedUserId });
+            break;
+          case "unit_conversion":
+            toolResult = await handleUnitConversion({ amount: args.amount, fromUnit: args.fromUnit, toUnit: args.toUnit });
+            break;
+          default:
+            break;
+        }
+
+        currentMessages.push({
+          role: "tool",
+          tool_call_id: tc.id,
+          content: JSON.stringify(toolResult),
+        });
+      }
     }
 
-    const assistantMessage = data.choices?.[0]?.message?.content || "I'm sorry, I couldn't respond.";
+    if (!assistantMessage) {
+      assistantMessage = "I'm sorry, something went wrong.";
+    }
 
     // Pro: store conversation turn for memory
     if (isProUser && lastMessage.role === "user") {
@@ -462,7 +760,8 @@ ${memoryContext}`;
 
     return NextResponse.json({ 
         assistantMessage,
-        pointsAwarded
+        pointsAwarded,
+        ...(timerSecondsFromTool != null && { timerSeconds: timerSecondsFromTool }),
     });
   } catch (error) {
     console.error("Error calling OpenAI API:", error);

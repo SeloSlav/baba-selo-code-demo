@@ -7,7 +7,7 @@ export type FilterType = "cuisine" | "time" | "diet" | "difficulty";
 interface FilterTagProps {
   type: FilterType;
   value: string;
-  icon?: string;
+  icon?: React.ReactNode;
   children?: React.ReactNode;
   className?: string;
 }
@@ -41,7 +41,7 @@ export const FilterTag = ({
 
   return (
     <Link href={href} className={className}>
-      {icon && <span className="font-semibold mr-2">{icon}</span>}
+      {icon && <span className="flex-shrink-0">{icon}</span>}
       <span>{content}</span>
     </Link>
   );

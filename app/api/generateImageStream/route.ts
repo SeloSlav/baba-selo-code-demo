@@ -54,6 +54,29 @@ function encodeSSE(data: object): string {
     return `data: ${JSON.stringify(data)}\n\n`;
 }
 
+function isControllerClosed(e: unknown): boolean {
+    const msg = e instanceof Error ? e.message : String(e);
+    return msg.includes('already closed') || msg.includes('ERR_INVALID_STATE');
+}
+
+function safeEnqueue(controller: ReadableStreamDefaultController<Uint8Array>, encoder: TextEncoder, data: object): boolean {
+    try {
+        controller.enqueue(encoder.encode(encodeSSE(data)));
+        return true;
+    } catch (e) {
+        if (isControllerClosed(e)) return false;
+        throw e;
+    }
+}
+
+function safeClose(controller: ReadableStreamDefaultController<Uint8Array>): void {
+    try {
+        controller.close();
+    } catch (e) {
+        if (!isControllerClosed(e)) throw e;
+    }
+}
+
 export async function POST(req: Request) {
     const encoder = new TextEncoder();
 
@@ -63,11 +86,8 @@ export async function POST(req: Request) {
                 const { prompt, userId, recipeId } = await req.json();
 
                 if (!prompt || !recipeId) {
-                    controller.enqueue(encoder.encode(encodeSSE({
-                        type: 'error',
-                        message: 'Missing prompt or recipeId'
-                    })));
-                    controller.close();
+                    safeEnqueue(controller, encoder, { type: 'error', message: 'Missing prompt or recipeId' });
+                    safeClose(controller);
                     return;
                 }
 
@@ -97,8 +117,8 @@ export async function POST(req: Request) {
                 // pass stream:true to the client, so streaming responses are mishandled.
                 const apiKey = process.env.OPENAI_API_KEY;
                 if (!apiKey) {
-                    controller.enqueue(encoder.encode(encodeSSE({ type: 'error', message: 'API key not configured' })));
-                    controller.close();
+                    safeEnqueue(controller, encoder, { type: 'error', message: 'API key not configured' });
+                    safeClose(controller);
                     return;
                 }
 
@@ -122,11 +142,11 @@ export async function POST(req: Request) {
 
                 if (!openaiRes.ok || !openaiRes.body) {
                     const errText = await openaiRes.text();
-                    controller.enqueue(encoder.encode(encodeSSE({
+                    safeEnqueue(controller, encoder, {
                         type: 'error',
                         message: openaiRes.status === 401 ? 'Invalid API key' : errText || `API error ${openaiRes.status}`
-                    })));
-                    controller.close();
+                    });
+                    safeClose(controller);
                     return;
                 }
 
@@ -134,6 +154,7 @@ export async function POST(req: Request) {
                 const reader = openaiRes.body.getReader();
                 const decoder = new TextDecoder();
                 let buffer = '';
+                let clientGone = false;
 
                 while (true) {
                     const { done, value } = await reader.read();
@@ -153,16 +174,23 @@ export async function POST(req: Request) {
 
                                 if (ev.type === 'image_generation.partial_image') {
                                     const idx = ev.partial_image_index ?? 0;
-                                    controller.enqueue(encoder.encode(encodeSSE({ type: 'partial', index: idx, b64 })));
+                                    if (!safeEnqueue(controller, encoder, { type: 'partial', index: idx, b64 })) {
+                                        clientGone = true;
+                                        break;
+                                    }
                                 } else if (ev.type === 'image_generation.completed') {
                                     finalB64 = b64;
-                                    controller.enqueue(encoder.encode(encodeSSE({ type: 'partial', index: 2, b64 })));
+                                    if (!safeEnqueue(controller, encoder, { type: 'partial', index: 2, b64 })) {
+                                        clientGone = true;
+                                        break;
+                                    }
                                 }
                             } catch {
                                 // skip malformed lines
                             }
                         }
                     }
+                    if (clientGone) break;
                 }
 
                 // Handle any remaining buffer
@@ -180,12 +208,14 @@ export async function POST(req: Request) {
                     }
                 }
 
+                if (clientGone) return;
+
                 if (!finalB64 || !storageBucketName) {
-                    controller.enqueue(encoder.encode(encodeSSE({
+                    safeEnqueue(controller, encoder, {
                         type: 'error',
                         message: finalB64 ? 'Storage not configured' : 'No image generated'
-                    })));
-                    controller.close();
+                    });
+                    safeClose(controller);
                     return;
                 }
 
@@ -202,18 +232,15 @@ export async function POST(req: Request) {
                     expires: '03-01-2500'
                 });
 
-                controller.enqueue(encoder.encode(encodeSSE({
-                    type: 'final',
-                    imageUrl: url
-                })));
+                safeEnqueue(controller, encoder, { type: 'final', imageUrl: url });
             } catch (error) {
                 console.error('Error in generateImageStream:', error);
-                controller.enqueue(encoder.encode(encodeSSE({
+                safeEnqueue(controller, encoder, {
                     type: 'error',
                     message: error instanceof Error ? error.message : 'Failed to generate image'
-                })));
+                });
             } finally {
-                controller.close();
+                safeClose(controller);
             }
         }
     });

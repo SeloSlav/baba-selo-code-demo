@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
 import { admin } from '../../firebase/firebaseAdmin';
 import { getStorage } from 'firebase-admin/storage';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
@@ -38,10 +37,6 @@ const imageStyleOptions: Record<string, { prompt: string }> = {
         prompt: "IMPORTANT: This must be a 2D animated illustration, NOT a photograph. The dish is the clear focal point—large, prominent, center-frame, impossible to miss. Studio Ghibli style: painterly hand-drawn aesthetic with soft watercolor washes, gentle gouache-like layers, organic flowing lines. The dish itself rendered with care and warmth, rounded inviting shapes, rich appetizing detail. Background and setting are secondary—softly suggested, out of focus or simplified: a hint of warm wood, soft light, pastoral atmosphere. The food must dominate the composition. Hand-painted storybook quality of Spirited Away. Whimsical, nostalgic, inviting. No realism."
     }
 };
-
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
-});
 
 // Define storageBucketName from env var
 const storageBucketName = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
@@ -105,35 +100,52 @@ export async function POST(req: Request) {
             }
         }
 
-        // DALL-E 3 "natural" = photorealistic; "vivid" = artistic/illustration. Whimsical cartoon needs vivid.
-        const dalleStyle = userStyle === "whimsical-cartoon" ? "vivid" : "natural";
-
-        console.log("Final style prompt being used:", stylePrompt, "| DALL-E style:", dalleStyle);
+        console.log("Final style prompt being used:", stylePrompt);
 
         // For whimsical-cartoon, put style first to override "rustic" in base prompt
         const fullPrompt = userStyle === "whimsical-cartoon"
             ? `${stylePrompt} Depict: ${prompt}`
             : `${prompt}. ${stylePrompt}`;
 
-        const response = await openai.images.generate({
-            model: "dall-e-3",
-            prompt: fullPrompt,
-            n: 1,
-            size: "1024x1024",
-            quality: "standard",
-            style: dalleStyle
+        const apiKey = process.env.OPENAI_API_KEY;
+        if (!apiKey) {
+            return NextResponse.json({ error: "API key not configured", message: "Server configuration error." }, { status: 500 });
+        }
+
+        const res = await fetch('https://api.openai.com/v1/images/generations', {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${apiKey}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                model: 'gpt-image-1',
+                prompt: fullPrompt,
+                n: 1,
+                size: '1536x1024',
+                quality: 'low',
+                output_format: 'png',
+            }),
         });
 
-        if (!response.data?.[0]?.url) {
+        if (!res.ok) {
+            const err = await res.text();
             return NextResponse.json({
-                error: "No image URL in response",
+                error: "API error",
+                message: err || "Failed to generate image. Please try again."
+            }, { status: 500 });
+        }
+
+        const data = await res.json();
+        const b64 = data?.data?.[0]?.b64_json;
+        if (!b64) {
+            return NextResponse.json({
+                error: "No image in response",
                 message: "Failed to generate image. Please try again."
             }, { status: 500 });
         }
 
-        // Download the image
-        const imageResponse = await fetch(response.data[0].url);
-        const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
+        const imageBuffer = Buffer.from(b64, 'base64');
 
         // Upload to Firebase Storage
         if (!storageBucketName) {
@@ -157,7 +169,6 @@ export async function POST(req: Request) {
 
         return NextResponse.json({
             imageUrl: url,
-            revisedPrompt: response.data[0].revised_prompt,
             canAwardPoints
         });
     } catch (error) {

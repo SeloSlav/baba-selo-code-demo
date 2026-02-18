@@ -269,14 +269,24 @@ export const ChatWindow = forwardRef(
           body: JSON.stringify(requestBody),
         });
 
-        const data = await response.json();
+        const text = await response.text();
+        let data: { assistantMessage?: string; pointsAwarded?: { points: number; message: string }; timerSeconds?: number; error?: string };
+        try {
+          data = text ? JSON.parse(text) : {};
+        } catch {
+          console.error("Chat API returned non-JSON:", text?.slice(0, 200));
+          throw new Error("Server returned an invalid response. Please try again.");
+        }
         // console.log("Chat API response:", data);
         
         if (data.assistantMessage) {
-          setMessages((prev) => [
-            ...prev,
-            { role: "assistant", content: data.assistantMessage },
-          ]);
+          setMessages((prev) => {
+            const next: Message[] = [...prev, { role: "assistant", content: data.assistantMessage! }];
+            if (data.timerSeconds != null && data.timerSeconds > 0) {
+              next.push({ role: "assistant", content: `TIMER_REQUEST_${data.timerSeconds}` });
+            }
+            return next;
+          });
 
           // Show points toast if points information is available
           if (data.pointsAwarded) {
@@ -288,6 +298,11 @@ export const ChatWindow = forwardRef(
           } else {
             // console.log("No points information in response");
           }
+        } else if (data.error) {
+          setMessages((prev) => [
+            ...prev,
+            { role: "assistant", content: `Oh dear, something went wrong: ${data.error}. Try again in a moment, darling!` },
+          ]);
         } else {
           setMessages((prev) => [
             ...prev,
@@ -430,7 +445,7 @@ export const ChatWindow = forwardRef(
           ]);
 
           // Add Baba's response with the generated image
-          const babaResponse = `Here's what I drew for you, dear! ${data.revisedPrompt ? `\n\nI interpreted your request as: "${data.revisedPrompt}"` : ''}\n\n![Generated Image](${data.imageUrl})`;
+          const babaResponse = `Here's what I drew for you, dear!\n\n![Generated Image](${data.imageUrl})`;
           
           setMessages(prev => [
             ...prev,
