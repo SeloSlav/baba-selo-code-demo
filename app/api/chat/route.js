@@ -367,109 +367,101 @@ The user also prefers to use ${preferredCookingOil} as a cooking oil.
 ${randomizationHint}
 ${memoryContext}`;
 
+  const encoder = new TextEncoder();
+  const write = (obj) => encoder.encode(JSON.stringify(obj) + "\n");
+
   try {
-    const { runChatGraph } = await import("../../lib/chatGraph");
-    const graphResult = await runChatGraph({
-      messages,
-      systemPrompt: originalSystemPrompt,
-      userId: verifiedUserId,
+    const { runChatGraphStream } = await import("../../lib/chatGraph");
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const event of runChatGraphStream({
+            messages,
+            systemPrompt: originalSystemPrompt,
+            userId: verifiedUserId,
+          })) {
+            if (event.type === "tool_started") {
+              controller.enqueue(write(event));
+            } else if (event.type === "done") {
+              let assistantMessage = event.assistantMessage;
+              const timerSecondsFromTool = event.timerSeconds ?? null;
+              const lastMealPlanId = event.lastMealPlanId ?? null;
+
+              if (lastMealPlanId) {
+                const correctLink = `[here](/meal-plans?plan=${lastMealPlanId})`;
+                if (assistantMessage.includes(`plan=${lastMealPlanId}`)) {
+                  // AI got it right
+                } else if (assistantMessage.includes("/meal-plans?plan=")) {
+                  assistantMessage = assistantMessage.replace(/\/meal-plans\?plan=[^)\s]+/g, `/meal-plans?plan=${lastMealPlanId}`);
+                } else {
+                  assistantMessage += `\n\nI've saved this to your meal plans—view it ${correctLink}.`;
+                }
+              }
+
+              if (isProUser && lastMessage.role === "user") {
+                try {
+                  const { storeConversationTurn } = await import("../../lib/conversationMemoryStore");
+                  await storeConversationTurn(verifiedUserId, lastMessage.content || "", assistantMessage);
+                } catch (e) {
+                  console.error("Conversation memory store error:", e);
+                }
+              }
+
+              const lines = assistantMessage.split('\n');
+              const firstLine = lines[0]?.trim() || '';
+              const hasRecipeName = firstLine.length > 0 && !firstLine.toLowerCase().includes('ingredients') && !firstLine.toLowerCase().includes('directions');
+              const hasIngredients = assistantMessage.toLowerCase().includes("ingredients");
+              const hasDirections = assistantMessage.toLowerCase().includes("directions");
+              const isRecipe = hasRecipeName && hasIngredients && hasDirections;
+
+              let pointsAwarded = null;
+              if (isRecipe && userIsAuthenticated) {
+                const docId = `${verifiedUserId}-${Date.now()}`;
+                const recipeHash = `${verifiedUserId}-${Date.now()}-${firstLine}`;
+                try {
+                  const pointsResult = await SpoonPointSystem.awardPoints(verifiedUserId, 'GENERATE_RECIPE', docId, { recipeHash });
+                  if (pointsResult.success) {
+                    pointsAwarded = { points: pointsResult.points, message: 'Recipe generated successfully!' };
+                  } else {
+                    const errorMessage = (() => {
+                      switch (pointsResult.error) {
+                        case 'Daily limit reached': return "You've reached your daily recipe limit! Come back tomorrow for more spoons!";
+                        case 'Action on cooldown': return "Whoa there! Let's wait a few minutes before generating another recipe.";
+                        case 'Action already performed on this target': return "You've already earned points for this exact recipe!";
+                        default:
+                          if (pointsResult.error && (pointsResult.error.includes('PERMISSION_DENIED') || pointsResult.error.includes('permission-denied'))) {
+                            return "Permission denied when awarding points.";
+                          }
+                          return pointsResult.error || 'Could not award points';
+                      }
+                    })();
+                    pointsAwarded = { points: 0, message: errorMessage };
+                  }
+                } catch (error) {
+                  console.error("Error awarding points:", error);
+                  pointsAwarded = { points: 0, message: (error.code === 7 || error.code === 'permission-denied') ? "Permission denied when awarding points." : 'Something went wrong while awarding points' };
+                }
+              }
+
+              controller.enqueue(write({
+                type: "done",
+                assistantMessage,
+                pointsAwarded,
+                ...(timerSecondsFromTool != null && { timerSeconds: timerSecondsFromTool }),
+              }));
+            }
+          }
+          controller.close();
+        } catch (error) {
+          console.error("Error in chat stream:", error);
+          controller.enqueue(write({ type: "error", error: "Internal Server Error" }));
+          controller.close();
+        }
+      },
     });
 
-    let assistantMessage = graphResult.assistantMessage;
-    const timerSecondsFromTool = graphResult.timerSeconds ?? null;
-    const lastMealPlanId = graphResult.lastMealPlanId ?? null;
-
-    // Ensure meal plan link has actual planId (AI may output PLAN_ID or null literally)
-    if (lastMealPlanId) {
-      const correctLink = `[here](/meal-plans?plan=${lastMealPlanId})`;
-      if (assistantMessage.includes(`plan=${lastMealPlanId}`)) {
-        // AI got it right, nothing to do
-      } else if (assistantMessage.includes("/meal-plans?plan=")) {
-        // AI included a link but wrong id—replace it
-        assistantMessage = assistantMessage.replace(/\/meal-plans\?plan=[^)\s]+/g, `/meal-plans?plan=${lastMealPlanId}`);
-      } else {
-        assistantMessage += `\n\nI've saved this to your meal plans—view it ${correctLink}.`;
-      }
-    }
-
-    // Pro: store conversation turn for memory
-    if (isProUser && lastMessage.role === "user") {
-      try {
-        const { storeConversationTurn } = await import("../../lib/conversationMemoryStore");
-        await storeConversationTurn(verifiedUserId, lastMessage.content || "", assistantMessage);
-      } catch (e) {
-        console.error("Conversation memory store error:", e);
-      }
-    }
-
-    // Parse the response to detect recipe
-    const lines = assistantMessage.split('\n');
-    const firstLine = lines[0]?.trim() || '';
-    
-    // Check recipe components with more lenient conditions
-    const hasRecipeName = firstLine.length > 0 && 
-                         !firstLine.toLowerCase().includes('ingredients') && 
-                         !firstLine.toLowerCase().includes('directions');
-    
-    const hasIngredients = assistantMessage.toLowerCase().includes("ingredients");
-    const hasDirections = assistantMessage.toLowerCase().includes("directions");
-    
-    const isRecipe = hasRecipeName && hasIngredients && hasDirections;
-
-    let pointsAwarded = null;
-    if (isRecipe && userIsAuthenticated) {
-        const docId = `${verifiedUserId}-${Date.now()}`;
-        const recipeHash = `${verifiedUserId}-${Date.now()}-${firstLine}`;
-        try {
-            const pointsResult = await SpoonPointSystem.awardPoints(
-                verifiedUserId,
-                'GENERATE_RECIPE',
-                docId,
-                { recipeHash }
-            );
-            
-            if (pointsResult.success) {
-                pointsAwarded = {
-                    points: pointsResult.points,
-                    message: 'Recipe generated successfully!'
-                };
-            } else {
-                // Handle all limit cases with user-friendly messages
-                const errorMessage = (() => {
-                    switch (pointsResult.error) {
-                        case 'Daily limit reached':
-                            return "You've reached your daily recipe limit! Come back tomorrow for more spoons!";
-                        case 'Action on cooldown':
-                            return "Whoa there! Let's wait a few minutes before generating another recipe.";
-                        case 'Action already performed on this target':
-                            return "You've already earned points for this exact recipe!";
-                        default:
-                            // Check for permission denied specifically
-                            if (pointsResult.error && (pointsResult.error.includes('PERMISSION_DENIED') || pointsResult.error.includes('permission-denied'))) {
-                                return "Permission denied when awarding points.";
-                            }
-                            return pointsResult.error || 'Could not award points';
-                    }
-                })();
-
-                pointsAwarded = {
-                    points: 0,
-                    message: errorMessage
-                };
-            }
-        } catch (error) {
-            console.error("Error awarding points:", error);
-            pointsAwarded = {
-                points: 0,
-                message: (error.code === 7 || error.code === 'permission-denied') ? "Permission denied when awarding points." : 'Something went wrong while awarding points'
-            };
-        }
-    }
-
-    return NextResponse.json({ 
-        assistantMessage,
-        pointsAwarded,
-        ...(timerSecondsFromTool != null && { timerSeconds: timerSecondsFromTool }),
+    return new Response(stream, {
+      headers: { "Content-Type": "application/x-ndjson" },
     });
   } catch (error) {
     console.error("Error calling OpenAI API:", error);

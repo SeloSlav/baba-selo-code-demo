@@ -57,6 +57,7 @@ export const ChatWindow = forwardRef(
       { role: "assistant", content: "Hello, dear! I'm your Balkan recipe companion—ask me for accurate recipes, cooking tips, or anything. No generic bot nonsense, I promise." },
     ]);
     const [loading, setLoading] = useState<boolean>(false);
+    const [isGeneratingMealPlan, setIsGeneratingMealPlan] = useState(false);
     const [windowWidth, setWindowWidth] = useState<number | null>(null);
     const [translateY, setTranslateY] = useState(0);
     const [isInputFocused, setIsInputFocused] = useState(false);
@@ -273,45 +274,99 @@ export const ChatWindow = forwardRef(
           body: JSON.stringify(requestBody),
         });
 
-        const text = await response.text();
-        let data: { assistantMessage?: string; pointsAwarded?: { points: number; message: string }; timerSeconds?: number; error?: string };
-        try {
-          data = text ? JSON.parse(text) : {};
-        } catch {
-          console.error("Chat API returned non-JSON:", text?.slice(0, 200));
-          throw new Error("Server returned an invalid response. Please try again.");
-        }
-        // console.log("Chat API response:", data);
-        
-        if (data.assistantMessage) {
-          setMessages((prev) => {
-            const next: Message[] = [...prev, { role: "assistant", content: data.assistantMessage! }];
-            if (data.timerSeconds != null && data.timerSeconds > 0) {
-              next.push({ role: "assistant", content: `TIMER_REQUEST_${data.timerSeconds}` });
-            }
-            return next;
-          });
+        const contentType = response.headers.get("Content-Type") || "";
+        const isStream = contentType.includes("application/x-ndjson");
 
-          // Show points toast if points information is available
-          if (data.pointsAwarded) {
-            // console.log("Showing points toast:", data.pointsAwarded);
-            showPointsToast(
-              data.pointsAwarded.points,
-              data.pointsAwarded.message
-            );
-          } else {
-            // console.log("No points information in response");
+        if (isStream && response.body) {
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
+          let doneEvent: { assistantMessage?: string; pointsAwarded?: { points: number; message: string }; timerSeconds?: number } | null = null;
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || "";
+
+            for (const line of lines) {
+              if (!line.trim()) continue;
+              try {
+                const event = JSON.parse(line);
+                if (event.type === "tool_started" && event.tool === "generate_meal_plan") {
+                  setIsGeneratingMealPlan(true);
+                } else if (event.type === "done") {
+                  doneEvent = event;
+                } else if (event.type === "error") {
+                  throw new Error(event.error || "Server error");
+                }
+              } catch (e) {
+                if (e instanceof SyntaxError) continue;
+                throw e;
+              }
+            }
           }
-        } else if (data.error) {
-          setMessages((prev) => [
-            ...prev,
-            { role: "assistant", content: `Oh dear, something went wrong: ${data.error}. Try again in a moment, darling!` },
-          ]);
+
+          if (buffer.trim()) {
+            try {
+              const event = JSON.parse(buffer);
+              if (event.type === "done") doneEvent = event;
+            } catch {
+              // ignore
+            }
+          }
+
+          setIsGeneratingMealPlan(false);
+          if (doneEvent?.assistantMessage) {
+            setMessages((prev) => {
+              const next: Message[] = [...prev, { role: "assistant", content: doneEvent!.assistantMessage! }];
+              if (doneEvent!.timerSeconds != null && doneEvent!.timerSeconds > 0) {
+                next.push({ role: "assistant", content: `TIMER_REQUEST_${doneEvent!.timerSeconds}` });
+              }
+              return next;
+            });
+            if (doneEvent.pointsAwarded) {
+              showPointsToast(doneEvent.pointsAwarded.points, doneEvent.pointsAwarded.message);
+            }
+          } else {
+            setMessages((prev) => [
+              ...prev,
+              { role: "assistant", content: "Ah, my head! It's like I've been up all night making sarma for a village wedding. Try refreshing the page, darling—I'll do better next time!." },
+            ]);
+          }
         } else {
-          setMessages((prev) => [
-            ...prev,
-            { role: "assistant", content: "Ah, my head! It\'s like I\'ve been up all night making sarma for a village wedding. Try refreshing the page, darling—I\'ll do better next time!." },
-          ]);
+          const text = await response.text();
+          let data: { assistantMessage?: string; pointsAwarded?: { points: number; message: string }; timerSeconds?: number; error?: string };
+          try {
+            data = text ? JSON.parse(text) : {};
+          } catch {
+            console.error("Chat API returned non-JSON:", text?.slice(0, 200));
+            throw new Error("Server returned an invalid response. Please try again.");
+          }
+
+          if (data.assistantMessage) {
+            setMessages((prev) => {
+              const next: Message[] = [...prev, { role: "assistant", content: data!.assistantMessage! }];
+              if (data!.timerSeconds != null && data!.timerSeconds > 0) {
+                next.push({ role: "assistant", content: `TIMER_REQUEST_${data!.timerSeconds}` });
+              }
+              return next;
+            });
+            if (data.pointsAwarded) {
+              showPointsToast(data.pointsAwarded.points, data.pointsAwarded.message);
+            }
+          } else if (data.error) {
+            setMessages((prev) => [
+              ...prev,
+              { role: "assistant", content: `Oh dear, something went wrong: ${data.error}. Try again in a moment, darling!` },
+            ]);
+          } else {
+            setMessages((prev) => [
+              ...prev,
+              { role: "assistant", content: "Ah, my head! It's like I've been up all night making sarma for a village wedding. Try refreshing the page, darling—I'll do better next time!." },
+            ]);
+          }
         }
       } catch (error) {
         console.error("Error sending message:", error);
@@ -321,6 +376,7 @@ export const ChatWindow = forwardRef(
         ]);
       } finally {
         setLoading(false);
+        setIsGeneratingMealPlan(false);
       }
     };
 
@@ -513,6 +569,7 @@ export const ChatWindow = forwardRef(
               setLoading={setLoading}
               onSuggestionClick={onSuggestionClick}
               onAssistantResponse={onAssistantResponse}
+              isGeneratingMealPlan={isGeneratingMealPlan}
             />
 
             {/* Chat input area for mobile */}

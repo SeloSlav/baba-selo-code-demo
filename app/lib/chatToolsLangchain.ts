@@ -149,7 +149,9 @@ export function createBabaChatTools(userId: string) {
       }
     ),
     tool(
-      async ({ preferences, days }) => {
+      async (input, config?: { writer?: (chunk: unknown) => void }) => {
+        const { preferences, days } = input as { preferences?: string; days?: number };
+        config?.writer?.({ tool: "generate_meal_plan" });
         const result = await handleGenerateMealPlan({
           userId: uid,
           preferences: preferences || undefined,

@@ -14,6 +14,7 @@ function isUserReadyToGenerate(userContent: string): boolean {
         "sounds good", "sounds great", "yes", "yep", "ok", "okay",
         "do it", "create", "make", "yes please", "yes go ahead",
         "no that's all", "no that is all", "no that's it", "no that is it",
+        "you decide", "your choice", "surprise me", "up to you", "whatever you prefer",
     ];
     return confirmPhrases.some((p) => lower.includes(p) || lower === p);
 }
@@ -30,8 +31,10 @@ interface ChatMessagesProps {
     messages: Message[];
     loading: boolean;
     setLoading: (isLoading: boolean) => void;
-    onSuggestionClick: (suggestion: string) => void; // To handle user suggestions
-    onAssistantResponse: (assistantMsg: string) => void; // To add assistant messages
+    onSuggestionClick: (suggestion: string) => void;
+    onAssistantResponse: (assistantMsg: string) => void;
+    /** When true, show meal plan loader (from backend tool_started event). Overrides heuristic. */
+    isGeneratingMealPlan?: boolean;
 }
 
 // Function to extract and format food items
@@ -88,7 +91,8 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
     loading,
     setLoading,
     onSuggestionClick,
-    onAssistantResponse
+    onAssistantResponse,
+    isGeneratingMealPlan: isGeneratingMealPlanFromBackend = false,
 }) => {
     const [recipeClassification, setRecipeClassification] = useState<Record<number, RecipeClassification | null>>({});
     const [formattedPairings, setFormattedPairings] = useState<Record<number, string>>({});
@@ -260,7 +264,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                         prevContent.includes("ingredients"))) ||
                 prevContent.includes("anything else") ||
                 prevContent.includes("make your plan"));
-        const isMealPlanFlow = inMealPlanConvo && isUserReadyToGenerate(lastMsg?.content || "");
+        const isMealPlanFlow = isGeneratingMealPlanFromBackend || (inMealPlanConvo && isUserReadyToGenerate(lastMsg?.content || ""));
         if (!isMealPlanFlow) return;
 
         setMealPlanFunFactIndex(0);
@@ -276,7 +280,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
             .then((d) => (d.facts?.length ? d.facts : []))
             .catch(() => [])
             .then((facts) => facts.length > 0 && setMealPlanFunFacts(facts));
-    }, [loading, messages]);
+    }, [loading, messages, isGeneratingMealPlanFromBackend]);
 
     // Cycle through fun facts while meal plan is generating
     useEffect(() => {
@@ -297,7 +301,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                         prevContent.includes("ingredients"))) ||
                 prevContent.includes("anything else") ||
                 prevContent.includes("make your plan"));
-        const isMealPlanFlow = inMealPlanConvo && isUserReadyToGenerate(lastMsg?.content || "");
+        const isMealPlanFlow = isGeneratingMealPlanFromBackend || (inMealPlanConvo && isUserReadyToGenerate(lastMsg?.content || ""));
         if (!isMealPlanFlow) return;
 
         const facts = mealPlanFunFacts.length > 0 ? mealPlanFunFacts : FALLBACK_FUN_FACTS;
@@ -306,7 +310,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
             setMealPlanFunFactIndex((i) => (i + 1) % facts.length);
         }, 3500);
         return () => clearInterval(interval);
-    }, [loading, messages, mealPlanFunFacts.length]);
+    }, [loading, messages, mealPlanFunFacts.length, isGeneratingMealPlanFromBackend]);
 
     useEffect(() => {
         messages.forEach((msg, index) => {
@@ -387,7 +391,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                     (prevContent.includes("plan your week") || prevContent.includes("meal plan") || prevContent.includes("plan my meals") ||
                      (prevContent.includes("tell me") && (prevContent.includes("diet") || prevContent.includes("cuisines") || prevContent.includes("ingredients"))) ||
                      prevContent.includes("anything else") || prevContent.includes("make your plan"));
-                const isMealPlanFlow = inMealPlanConvo && isUserReadyToGenerate(lastMsg?.content || "");
+                const isMealPlanFlow = isGeneratingMealPlanFromBackend || (inMealPlanConvo && isUserReadyToGenerate(lastMsg?.content || ""));
                 const loadingLabel = isMealPlanFlow ? "Generating your meal plan now..." : null;
                 const displayFacts = mealPlanFunFacts.length > 0 ? mealPlanFunFacts : FALLBACK_FUN_FACTS;
                 const currentFact = displayFacts[mealPlanFunFactIndex % displayFacts.length] || displayFacts[0];
