@@ -1,5 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+    experimental: {
+        // Reduce layout chunk size; helps avoid ChunkLoadError timeout
+        optimizePackageImports: [
+            'firebase',
+            '@fortawesome/fontawesome-svg-core',
+            '@fortawesome/react-fontawesome',
+            '@fortawesome/free-solid-svg-icons',
+        ],
+    },
     async redirects() {
       return [
         { source: '/feed', destination: '/blog', permanent: true },
