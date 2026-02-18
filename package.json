@@ -17,6 +17,9 @@
     "test:cache": "node scripts/test-recipe-cache.mjs",
     "test:similar-recipes": "tsx scripts/test-similar-recipes.ts",
     "sync:recipes": "tsx scripts/sync-recipes.ts",
+    "scrape:balkan": "tsx scraping/scrape-balkan-recipes.ts",
+    "scrape:balkan:all": "tsx scraping/scrape-balkan-all.ts",
+    "ingest:corpus": "tsx scraping/ingest-balkan-corpus.ts",
     "dev:clean": "node scripts/clean-next.mjs && next dev -p 3001",
     "clean": "node scripts/clean-next.mjs"
   },
@@ -37,6 +40,7 @@
     "axios": "^1.7.9",
     "chart.js": "^4.4.7",
     "chartjs-adapter-date-fns": "^3.0.0",
+    "cheerio": "^1.2.0",
     "date-fns": "^4.1.0",
     "dotenv": "^16.4.7",
     "firebase": "^11.0.2",

@@ -1,6 +1,6 @@
 /**
- * LangGraph pipeline for recipe generation with semantic caching.
- * Flow: check_cache → [hit] return | [miss] generate → enrich → store_cache → return
+ * LangGraph pipeline for recipe generation with semantic caching and RAG corpus.
+ * Flow: check_cache → [hit] return | [miss] retrieve_corpus → [direct] return | [else] generate → enrich → store_cache → return
  */
 import { StateGraph, Annotation } from "@langchain/langgraph";
 import { ChatOpenAI } from "@langchain/openai";
@@ -9,6 +9,11 @@ import {
   checkEnrichmentCache,
   storeEnrichmentCache,
 } from "./stores/enrichmentCache";
+import { queryCorpus } from "./stores/balkanCorpusStore";
+
+const DIRECT_MATCH_THRESHOLD = 0.1; // cosine distance; lower = more similar
+const RAG_CONTEXT_THRESHOLD = 0.3; // use top matches as RAG context if within this
+const RAG_CONTEXT_TOP_K = 3;
 
 const RecipeStateAnnotation = Annotation.Root({
   queryText: Annotation<string>,
@@ -19,6 +24,7 @@ const RecipeStateAnnotation = Annotation.Root({
   baseUrl: Annotation<string>,
   result: Annotation<Partial<CachedRecipeData> | null>,
   fromCache: Annotation<boolean>,
+  corpusContext: Annotation<string>, // RAG context from corpus for generate prompt
 });
 
 type RecipeState = typeof RecipeStateAnnotation.State;
@@ -34,6 +40,47 @@ async function checkCacheNode(state: RecipeState): Promise<Partial<RecipeState>>
   return { fromCache: false };
 }
 
+async function retrieveCorpusNode(state: RecipeState): Promise<Partial<RecipeState>> {
+  if (state.fromCache) return {};
+
+  const queryText = `${state.recipeTitle}${state.recipeContent ? ` ${String(state.recipeContent).trim().slice(0, 300)}` : ""}`.trim();
+  if (!queryText) return { corpusContext: "" };
+
+  const results = await queryCorpus(queryText, RAG_CONTEXT_TOP_K);
+  if (results.length === 0) return { corpusContext: "" };
+
+  const [top] = results;
+  // Direct return: very similar match (0 LLM calls)
+  if (top.score < DIRECT_MATCH_THRESHOLD) {
+    const r = top.recipe;
+    const cached: CachedRecipeData = {
+      ingredients: r.ingredients,
+      directions: r.directions,
+      cuisineType: r.cuisine,
+    };
+    return {
+      result: cached,
+      fromCache: true,
+      corpusContext: "",
+    };
+  }
+
+  // RAG context: inject similar recipes into generate prompt
+  if (top.score < RAG_CONTEXT_THRESHOLD) {
+    const contextRecipes = results
+      .filter((x) => x.score < RAG_CONTEXT_THRESHOLD)
+      .slice(0, RAG_CONTEXT_TOP_K)
+      .map((x) => {
+        const r = x.recipe;
+        return `${r.title}\nIngredients: ${r.ingredients.join("; ")}\nDirections: ${r.directions.join(" ")}`;
+      })
+      .join("\n\n---\n\n");
+    return { corpusContext: contextRecipes };
+  }
+
+  return { corpusContext: "" };
+}
+
 async function generateNode(state: RecipeState): Promise<Partial<RecipeState>> {
   if (state.fromCache) return {};
 
@@ -43,9 +90,14 @@ async function generateNode(state: RecipeState): Promise<Partial<RecipeState>> {
     openAIApiKey: process.env.OPENAI_API_KEY,
   });
 
+  const corpusCtx = state.corpusContext ?? "";
+  const ragBlock = corpusCtx
+    ? `\n\nUse these authentic Balkan recipes as reference (adapt, don't copy verbatim):\n${corpusCtx}\n\n`
+    : "";
+
   const jsonPrompt = `Generate a complete recipe with proper ingredients and directions. Return ONLY valid JSON.
 
-Recipe: ${state.recipeTitle}${state.recipeContent ? `\n\nDescription/context: ${String(state.recipeContent).trim().slice(0, 500)}` : ""}
+Recipe: ${state.recipeTitle}${state.recipeContent ? `\n\nDescription/context: ${String(state.recipeContent).trim().slice(0, 500)}` : ""}${ragBlock}
 
 Return this exact JSON structure (no other text):
 {
@@ -203,18 +255,24 @@ async function storeCacheNode(state: RecipeState): Promise<Partial<RecipeState>>
   return {};
 }
 
-function routeAfterCache(state: RecipeState): "generate" | "__end__" {
+function routeAfterCache(state: RecipeState): "retrieve_corpus" | "__end__" {
+  return state.fromCache ? "__end__" : "retrieve_corpus";
+}
+
+function routeAfterRetrieve(state: RecipeState): "generate" | "__end__" {
   return state.fromCache ? "__end__" : "generate";
 }
 
 export function createRecipeGraph() {
   const workflow = new StateGraph(RecipeStateAnnotation)
     .addNode("check_cache", checkCacheNode)
+    .addNode("retrieve_corpus", retrieveCorpusNode)
     .addNode("generate", generateNode)
     .addNode("enrich", enrichNode)
     .addNode("store_cache", storeCacheNode)
     .addEdge("__start__", "check_cache")
     .addConditionalEdges("check_cache", routeAfterCache)
+    .addConditionalEdges("retrieve_corpus", routeAfterRetrieve)
     .addEdge("generate", "enrich")
     .addEdge("enrich", "store_cache")
     .addEdge("store_cache", "__end__");

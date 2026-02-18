@@ -261,6 +261,16 @@ export type MealPlanProgressCallback = (p: {
   timeSlot: string;
 }) => void;
 
+export type HandleGenerateMealPlanParams = {
+  userId: string;
+  preferences?: string;
+  days?: number;
+  variety?: 'varied' | 'same_every_day' | 'same_every_week' | 'leftovers' | 'meal_prep_sunday';
+  slots?: ('breakfast' | 'lunch' | 'dinner' | 'snack')[];
+  reuseLastWeek?: boolean;
+  onProgress?: MealPlanProgressCallback;
+};
+
 export async function handleGenerateMealPlan({
   userId,
   preferences,
@@ -269,15 +279,7 @@ export async function handleGenerateMealPlan({
   slots,
   reuseLastWeek,
   onProgress,
-}: {
-  userId: string;
-  preferences?: string;
-  days?: number;
-  variety?: 'varied' | 'same_every_day' | 'same_every_week' | 'leftovers' | 'meal_prep_sunday';
-  slots?: ('breakfast' | 'lunch' | 'dinner' | 'snack')[];
-  reuseLastWeek?: boolean;
-  onProgress?: MealPlanProgressCallback;
-}) {
+}: HandleGenerateMealPlanParams) {
   if (!userId || userId === 'anonymous') {
     return { success: false, error: 'Sign in to create and save meal plans. Your plans will be saved with clickable recipe links!' };
   }

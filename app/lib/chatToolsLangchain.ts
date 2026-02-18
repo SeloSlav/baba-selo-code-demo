@@ -13,7 +13,6 @@ import {
   handleSetTimer,
   handleTranslateRecipe,
   handleGenerateMealPlan,
-  handleGetTodaysMeals,
   handleAddToMealPlan,
   handleSeasonalTips,
   handleFindByIngredients,
@@ -151,6 +150,7 @@ export function createBabaChatTools(userId: string) {
     ),
     tool(
       async () => {
+        const { handleGetTodaysMeals } = (await import("./chatTools")) as unknown as { handleGetTodaysMeals: (p: { userId: string }) => Promise<unknown> };
         const result = await handleGetTodaysMeals({ userId: uid });
         return JSON.stringify(result);
       },
@@ -179,7 +179,7 @@ export function createBabaChatTools(userId: string) {
           slots: Array.isArray(slots) ? slots.filter((s) => ["breakfast", "lunch", "dinner", "snack"].includes(s)) as ("breakfast" | "lunch" | "dinner" | "snack")[] : undefined,
           reuseLastWeek,
           onProgress: (p) => config?.writer?.({ type: "meal_plan_progress", ...p }),
-        });
+        } as Parameters<typeof handleGenerateMealPlan>[0]);
         return JSON.stringify(result);
       },
       {

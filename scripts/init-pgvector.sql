@@ -11,3 +11,4 @@ CREATE EXTENSION IF NOT EXISTS vector;
 -- - recipe_index (similar recipes - synced from Firestore)
 -- - enrichment_cache (classify, summary, macro, pairing cache)
 -- - conversation_memory (Pro users - chat history for recall)
+-- - balkan_recipe_corpus (RAG corpus - run npm run ingest:corpus to populate)
