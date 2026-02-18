@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { SpoonPointSystem } from '../../lib/spoonPoints';
 import { admin } from '../../firebase/firebaseAdmin';
+import { queryCorpus } from '../../lib/stores/balkanCorpusStore';
 
 // Add timer detection helper
 const isTimerRequest = (text: string): { isTimer: boolean; seconds: number } => {
@@ -361,6 +362,24 @@ The user also prefers to use ${preferredCookingOil || 'olive oil'} as a cooking 
 ${randomizationHint}
 ${memoryContext}`;
 
+  let corpusContext = "";
+  const lastUserMessage = lastMessage.role === "user" ? (typeof lastMessage.content === "string" ? lastMessage.content : "") : undefined;
+  if (lastUserMessage) {
+    const results = await queryCorpus(lastUserMessage, 3);
+    const relevant = results.filter((r) => r.score < 0.3);
+    if (relevant.length > 0) {
+      corpusContext =
+        "\n\nReference these authentic Balkan recipes when relevant (adapt, don't copy verbatim):\n" +
+        relevant
+          .map((r) => {
+            const rec = r.recipe;
+            return `---\n${rec.title}\nIngredients: ${rec.ingredients.join("; ")}\nDirections: ${rec.directions.join(" ")}`;
+          })
+          .join("\n\n");
+    }
+  }
+  const systemPrompt = originalSystemPrompt + corpusContext;
+
   const encoder = new TextEncoder();
   const write = (obj: object) => encoder.encode(JSON.stringify(obj) + "\n");
 
@@ -371,7 +390,7 @@ ${memoryContext}`;
         try {
           for await (const event of runChatGraphStream({
             messages,
-            systemPrompt: originalSystemPrompt,
+            systemPrompt,
             userId: verifiedUserId,
           })) {
             if (event.type === "tool_started" || event.type === "meal_plan_progress") {

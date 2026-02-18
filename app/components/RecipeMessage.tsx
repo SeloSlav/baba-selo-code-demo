@@ -1,6 +1,6 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faFloppyDisk, faWineGlass, faAppleWhole, faUtensils, faGlobe, faClock, faGaugeHigh } from '@fortawesome/free-solid-svg-icons';
+import { faBookmark, faWineGlass, faAppleWhole, faUtensils, faGlobe, faClock, faGaugeHigh } from '@fortawesome/free-solid-svg-icons';
 import { RecipeClassification } from './types';
 import { linkifyOliveOil, parseRecipe } from './messageUtils';
 import { FilterTag } from './FilterTag';
@@ -129,7 +129,7 @@ export const RecipeMessage: React.FC<RecipeMessageProps> = ({
                             className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-gray-900 hover:bg-gray-800 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
                             onClick={() => handleSaveRecipe(content, classification)}
                         >
-                            <FontAwesomeIcon icon={faFloppyDisk} className="w-4 h-4" />
+                            <FontAwesomeIcon icon={faBookmark} className="w-4 h-4" />
                             Save Recipe
                         </button>
                         <div className="flex gap-2 sm:gap-3">

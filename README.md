@@ -2,6 +2,10 @@
 
 **Baba Selo** is an AI-powered Balkan recipe companion. Think of it as your digital grandma—warm, knowledgeable, and full of real advice. No generic bot nonsense: Baba gives you accurate recipes, cooking tips, ingredient substitutions, and meal planning help, all in a cozy, grandma-like tone.
 
+Visit **[babaselo.com](https://babaselo.com)** to see a running version.
+
+> This repo is made available for **educational and code showcase purposes**. Scraping scripts and ingested corpus data are ignored in this repository.
+
 ## What the App Does
 
 - **Recipe chat** – Ask for recipes, cooking tips, or anything food-related. Baba responds with detailed, culturally authentic Balkan recipes.
