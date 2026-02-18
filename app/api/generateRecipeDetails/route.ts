@@ -68,6 +68,7 @@ export async function POST(request: Request) {
     );
 
     const result = finalState?.result;
+    const fromCache = finalState?.fromCache ?? false;
     if (!result?.ingredients?.length || !result?.directions?.length) {
       return NextResponse.json(
         {
@@ -79,7 +80,7 @@ export async function POST(request: Request) {
     }
 
     const normalized = normalizeResult(result as Record<string, unknown>);
-    return NextResponse.json(normalized);
+    return NextResponse.json({ ...normalized, fromCache });
   } catch (error: unknown) {
     console.error("Error in recipe generation:", error);
     return NextResponse.json(
