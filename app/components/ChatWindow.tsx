@@ -9,7 +9,7 @@ import React, {
   useCallback,
 } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPaperclip, faCamera, faArrowUp, faArrowDown, faImage, faMagicWandSparkles, faUpload, faFileUpload, faClock, faMicrophone } from "@fortawesome/free-solid-svg-icons";
+import { faPaperclip, faCamera, faArrowUp, faArrowDown, faImage, faMagicWandSparkles, faUpload, faFileUpload, faClock, faMicrophone, faCircleQuestion } from "@fortawesome/free-solid-svg-icons";
 import { ChatMessages } from "./ChatMessages";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
@@ -20,6 +20,7 @@ import { SendButtonSpinner } from "./SendButtonSpinner";
 import { usePoints } from '../context/PointsContext';
 import { TimerPopup } from "./TimerPopup";
 import { VoiceRecordPopup } from "./VoiceRecordPopup";
+import { BabaHelpPopup } from "./BabaHelpPopup";
 
 interface Message {
   role: "user" | "assistant";
@@ -79,6 +80,9 @@ export const ChatWindow = forwardRef(
 
     // Add new state for voice recording popup
     const [isVoiceRecordOpen, setIsVoiceRecordOpen] = useState(false);
+
+    // Help popup - what Baba can do
+    const [isHelpOpen, setIsHelpOpen] = useState(false);
 
     const { showPointsToast } = usePoints();
 
@@ -632,6 +636,15 @@ export const ChatWindow = forwardRef(
                     >
                       <FontAwesomeIcon icon={faMicrophone} className="text-amber-900" />
                     </button>
+                    <button
+                      className="p-2 rounded-md hover:bg-amber-100 flex items-center justify-center"
+                      style={{ background: "transparent" }}
+                      onClick={() => setIsHelpOpen(true)}
+                      title="What can Baba do?"
+                      aria-label="Help"
+                    >
+                      <FontAwesomeIcon icon={faCircleQuestion} className="text-amber-900" />
+                    </button>
                   </div>
                   <button
                     onClick={() => sendMessage(message)}
@@ -722,6 +735,15 @@ export const ChatWindow = forwardRef(
                 >
                   <FontAwesomeIcon icon={faMicrophone} className="text-amber-900" />
                 </button>
+                <button
+                  className="p-2 rounded-md hover:bg-amber-100 flex items-center justify-center"
+                  style={{ background: "transparent" }}
+                  onClick={() => setIsHelpOpen(true)}
+                  title="What can Baba do?"
+                  aria-label="Help"
+                >
+                  <FontAwesomeIcon icon={faCircleQuestion} className="text-amber-900" />
+                </button>
               </div>
               <button
                 onClick={() => sendMessage(message)}
@@ -773,6 +795,12 @@ export const ChatWindow = forwardRef(
           isOpen={isVoiceRecordOpen}
           onClose={() => setIsVoiceRecordOpen(false)}
           onSubmit={handleVoiceSubmit}
+        />
+
+        {/* Help Popup - What Baba can do */}
+        <BabaHelpPopup
+          isOpen={isHelpOpen}
+          onClose={() => setIsHelpOpen(false)}
         />
       </div>
     );

@@ -468,7 +468,7 @@ function MealPlansContent() {
     if (facts.length === 0) return;
     const interval = setInterval(() => {
       setFunFactIndex((i) => (i + 1) % facts.length);
-    }, 3500);
+    }, 6000);
     return () => clearInterval(interval);
   }, [sendingNow, funFacts.length]);
 
@@ -617,12 +617,15 @@ function MealPlansContent() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-amber-50/95 backdrop-blur-sm">
             <div className="max-w-lg mx-auto px-6 py-12 text-center">
               <Image src="/baba-removebg.png" alt="Baba Selo" width={120} height={120} className="mx-auto mb-6 object-contain" />
-              <div className="mb-6">
+              <div className="mb-4">
                 <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-100 rounded-full text-amber-800 font-medium animate-pulse">
                   <span className="w-2 h-2 rounded-full bg-amber-500" />
                   Generating your meal plan...
                 </div>
               </div>
+              <p className="text-gray-600 text-sm mb-6">
+                This may take a minute or two. Feel free to leave—your plan will be ready when you come back!
+              </p>
               <p key={funFactIndex} className="text-gray-700 text-lg leading-relaxed italic">
                 &ldquo;{currentFact}&rdquo;
               </p>

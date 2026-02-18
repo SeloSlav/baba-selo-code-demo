@@ -308,7 +308,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
         if (facts.length === 0) return;
         const interval = setInterval(() => {
             setMealPlanFunFactIndex((i) => (i + 1) % facts.length);
-        }, 3500);
+        }, 6000);
         return () => clearInterval(interval);
     }, [loading, messages, mealPlanFunFacts.length, isGeneratingMealPlanFromBackend]);
 
@@ -402,6 +402,11 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                                 <LoadingSpinner />
                                 {loadingLabel && <span className="text-sm text-gray-600">{loadingLabel}</span>}
                             </div>
+                            {isMealPlanFlow && (
+                                <p className="text-gray-500 text-xs">
+                                    This may take a minute or two. You can leave this chat and find your plan in Meal Plans later if you&apos;re busy—otherwise wait right here, dear!
+                                </p>
+                            )}
                             {isMealPlanFlow && currentFact && (
                                 <>
                                     <p key={mealPlanFunFactIndex} className="text-gray-600 text-sm leading-relaxed italic">
