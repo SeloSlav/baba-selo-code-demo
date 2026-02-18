@@ -63,16 +63,16 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <AuthProvider>
-          <PlanDebugProvider>
+        <PlanDebugProvider>
+          <AuthProvider>
             <DeleteRecipeProvider>
               <PointsProvider>
                 {children}
                 <PlanDebugToggle />
               </PointsProvider>
             </DeleteRecipeProvider>
-          </PlanDebugProvider>
-        </AuthProvider>
+          </AuthProvider>
+        </PlanDebugProvider>
       </body>
     </html>
   );

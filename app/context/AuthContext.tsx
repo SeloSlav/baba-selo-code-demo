@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
+import { usePlanDebug } from "./PlanDebugContext";
 import {
   GoogleAuthProvider,
   signInWithPopup,
@@ -19,6 +20,8 @@ import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 
 interface AuthContextType {
   user: any;
+  /** Actual Firebase user (for admin check when simulating logged out) */
+  realUser: any;
   signInWithGoogle: () => Promise<void>;
   logOut: () => Promise<void>;
   loading: boolean;
@@ -27,6 +30,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
+  realUser: null,
   signInWithGoogle: async () => {},
   logOut: async () => {},
   loading: true,
@@ -34,6 +38,7 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const planDebug = usePlanDebug();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -224,10 +229,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
   }, [isProfileMenuOpen, isSpoonMenuOpen]);
 
+  const effectiveUser = planDebug?.simulateLoggedOut ? null : user;
+
   return (
-    <AuthContext.Provider value={{ user, signInWithGoogle, logOut, loading, authError }}>
+    <AuthContext.Provider value={{ user: effectiveUser, realUser: user, signInWithGoogle, logOut, loading, authError }}>
       <div className="fixed top-4 right-8 z-30 flex items-center gap-2">
-        {user && (
+        {effectiveUser && (
           /* Spoon Menu Button - only shown for authenticated users */
           <button
             onClick={toggleSpoonMenu}

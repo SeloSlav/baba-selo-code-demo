@@ -2,6 +2,21 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { FALLBACK_FUN_FACTS } from "../lib/mealPlanFacts";
+
+/** User message indicates they're ready to generate (not just giving a preference like "mediterranean") */
+function isUserReadyToGenerate(userContent: string): boolean {
+    const lower = (userContent || "").toLowerCase().trim();
+    const confirmPhrases = [
+        "create it", "go ahead", "that's all", "that is all", "that's it", "that is it",
+        "nothing else", "ready", "i'm ready", "make it", "make my plan", "create my plan",
+        "create the plan", "make the plan", "let's do it", "lets do it",
+        "sounds good", "sounds great", "yes", "yep", "ok", "okay",
+        "do it", "create", "make", "yes please", "yes go ahead",
+        "no that's all", "no that is all", "no that's it", "no that is it",
+    ];
+    return confirmPhrases.some((p) => lower.includes(p) || lower === p);
+}
 import { faUtensils, faFaceSmile, faHeart, faLeaf, faClock, faCalendarDays, faSun } from "@fortawesome/free-solid-svg-icons";
 import { getAuth } from "firebase/auth"; // Import Firebase auth to get current user
 import { LoadingSpinner } from "./LoadingSpinner";
@@ -77,6 +92,8 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
 }) => {
     const [recipeClassification, setRecipeClassification] = useState<Record<number, RecipeClassification | null>>({});
     const [formattedPairings, setFormattedPairings] = useState<Record<number, string>>({});
+    const [mealPlanFunFacts, setMealPlanFunFacts] = useState<string[]>([]);
+    const [mealPlanFunFactIndex, setMealPlanFunFactIndex] = useState(0);
     const bottomRef = useRef<HTMLDivElement | null>(null);
     const [userId, setUserId] = useState<string>("");
     const lastAssistantRef = useRef<HTMLDivElement | null>(null);
@@ -220,6 +237,77 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
         }
     }, [messages, showPointsToast]); // Removed userId, createRecipeHash dependencies as they are stable
 
+    // Fetch and cycle fun facts during meal plan generation in chat
+    useEffect(() => {
+        if (!loading) {
+            setMealPlanFunFacts([]);
+            setMealPlanFunFactIndex(0);
+            return;
+        }
+        if (messages.length < 2) return;
+        const lastMsg = messages[messages.length - 1];
+        const prevMsg = messages[messages.length - 2];
+        const prevContent = (prevMsg?.content || "").toLowerCase();
+        const inMealPlanConvo =
+            lastMsg?.role === "user" &&
+            prevMsg?.role === "assistant" &&
+            (prevContent.includes("plan your week") ||
+                prevContent.includes("meal plan") ||
+                prevContent.includes("plan my meals") ||
+                (prevContent.includes("tell me") &&
+                    (prevContent.includes("diet") ||
+                        prevContent.includes("cuisines") ||
+                        prevContent.includes("ingredients"))) ||
+                prevContent.includes("anything else") ||
+                prevContent.includes("make your plan"));
+        const isMealPlanFlow = inMealPlanConvo && isUserReadyToGenerate(lastMsg?.content || "");
+        if (!isMealPlanFlow) return;
+
+        setMealPlanFunFactIndex(0);
+        setMealPlanFunFacts([]);
+
+        const preferences = (lastMsg?.content || "").trim();
+        fetch("/api/meal-plan/fun-facts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ preferences: preferences || undefined, type: "weekly" }),
+        })
+            .then((r) => r.json())
+            .then((d) => (d.facts?.length ? d.facts : []))
+            .catch(() => [])
+            .then((facts) => facts.length > 0 && setMealPlanFunFacts(facts));
+    }, [loading, messages]);
+
+    // Cycle through fun facts while meal plan is generating
+    useEffect(() => {
+        if (!loading) return;
+        const lastMsg = messages[messages.length - 1];
+        const prevMsg = messages[messages.length - 2];
+        const prevContent = (prevMsg?.content || "").toLowerCase();
+        const inMealPlanConvo =
+            messages.length >= 2 &&
+            lastMsg?.role === "user" &&
+            prevMsg?.role === "assistant" &&
+            (prevContent.includes("plan your week") ||
+                prevContent.includes("meal plan") ||
+                prevContent.includes("plan my meals") ||
+                (prevContent.includes("tell me") &&
+                    (prevContent.includes("diet") ||
+                        prevContent.includes("cuisines") ||
+                        prevContent.includes("ingredients"))) ||
+                prevContent.includes("anything else") ||
+                prevContent.includes("make your plan"));
+        const isMealPlanFlow = inMealPlanConvo && isUserReadyToGenerate(lastMsg?.content || "");
+        if (!isMealPlanFlow) return;
+
+        const facts = mealPlanFunFacts.length > 0 ? mealPlanFunFacts : FALLBACK_FUN_FACTS;
+        if (facts.length === 0) return;
+        const interval = setInterval(() => {
+            setMealPlanFunFactIndex((i) => (i + 1) % facts.length);
+        }, 3500);
+        return () => clearInterval(interval);
+    }, [loading, messages, mealPlanFunFacts.length]);
+
     useEffect(() => {
         messages.forEach((msg, index) => {
             if (msg.role === "assistant" && 
@@ -293,18 +381,31 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                 const lastMsg = messages[messages.length - 1];
                 const prevMsg = messages[messages.length - 2];
                 const prevContent = (prevMsg?.content || "").toLowerCase();
-                const isMealPlanFlow = messages.length >= 2 &&
+                const inMealPlanConvo = messages.length >= 2 &&
                     lastMsg?.role === "user" &&
                     prevMsg?.role === "assistant" &&
                     (prevContent.includes("plan your week") || prevContent.includes("meal plan") || prevContent.includes("plan my meals") ||
                      (prevContent.includes("tell me") && (prevContent.includes("diet") || prevContent.includes("cuisines") || prevContent.includes("ingredients"))) ||
                      prevContent.includes("anything else") || prevContent.includes("make your plan"));
+                const isMealPlanFlow = inMealPlanConvo && isUserReadyToGenerate(lastMsg?.content || "");
                 const loadingLabel = isMealPlanFlow ? "Generating your meal plan now..." : null;
+                const displayFacts = mealPlanFunFacts.length > 0 ? mealPlanFunFacts : FALLBACK_FUN_FACTS;
+                const currentFact = displayFacts[mealPlanFunFactIndex % displayFacts.length] || displayFacts[0];
                 return (
                     <div className="flex justify-start">
-                        <div className="bg-white rounded-3xl px-4 py-2 flex items-center gap-3">
-                            <LoadingSpinner />
-                            {loadingLabel && <span className="text-sm text-gray-600">{loadingLabel}</span>}
+                        <div className="bg-white rounded-3xl px-4 py-3 flex flex-col gap-2 max-w-md">
+                            <div className="flex items-center gap-3">
+                                <LoadingSpinner />
+                                {loadingLabel && <span className="text-sm text-gray-600">{loadingLabel}</span>}
+                            </div>
+                            {isMealPlanFlow && currentFact && (
+                                <>
+                                    <p key={mealPlanFunFactIndex} className="text-gray-600 text-sm leading-relaxed italic">
+                                        &ldquo;{currentFact}&rdquo;
+                                    </p>
+                                    <p className="text-amber-600 text-xs font-medium">— Baba Selo</p>
+                                </>
+                            )}
                         </div>
                     </div>
                 );

@@ -6,17 +6,17 @@ import { usePlanDebug } from "../context/PlanDebugContext";
 import { isAdmin } from "../config/admin";
 
 export function PlanDebugToggle() {
-  const { user } = useAuth();
+  const { realUser } = useAuth();
   const ctx = usePlanDebug();
   const [isUserAdmin, setIsUserAdmin] = useState(false);
 
   useEffect(() => {
-    if (!user) {
+    if (!realUser) {
       setIsUserAdmin(false);
       return;
     }
-    isAdmin(user.uid).then(setIsUserAdmin);
-  }, [user]);
+    isAdmin(realUser.uid).then(setIsUserAdmin);
+  }, [realUser]);
 
   if (!isUserAdmin || !ctx) return null;
 
@@ -25,16 +25,16 @@ export function PlanDebugToggle() {
   return (
     <div
       className="fixed bottom-4 left-4 z-[9999] flex items-center gap-2 bg-gray-900/95 text-white px-3 py-2 rounded-lg shadow-lg border border-gray-700 text-xs font-medium"
-      title="Admin: Toggle plan view for debugging"
+      title="Admin: Simulate plan view for debugging"
     >
-      <span className="text-gray-400">Plan:</span>
+      <span className="text-gray-400">Simulate:</span>
       <button
-        onClick={() => setPlanOverride(null)}
+        onClick={() => setPlanOverride("logged_out")}
         className={`px-2 py-1 rounded transition-colors ${
-          !planOverride ? "bg-amber-600 text-white" : "hover:bg-gray-700"
+          planOverride === "logged_out" ? "bg-amber-600 text-white" : "hover:bg-gray-700"
         }`}
       >
-        Normal
+        Logged out
       </button>
       <button
         onClick={() => setPlanOverride("free")}

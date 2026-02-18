@@ -4,30 +4,32 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 
 const STORAGE_KEY = "baba-selo-plan-debug-override";
 
-type PlanOverride = "free" | "pro" | null;
+export type PlanOverride = "logged_out" | "free" | "pro";
 
 interface PlanDebugContextType {
   planOverride: PlanOverride;
   setPlanOverride: (v: PlanOverride) => void;
-  /** Returns effective plan: override if set, else realPlan */
+  /** Returns effective plan: override applied */
   usePlan: (realPlan: "free" | "pro") => "free" | "pro";
+  /** When true, simulate logged-out state (no user) */
+  simulateLoggedOut: boolean;
 }
 
 const PlanDebugContext = createContext<PlanDebugContextType | null>(null);
 
 function getStoredOverride(): PlanOverride {
-  if (typeof window === "undefined") return null;
+  if (typeof window === "undefined") return "logged_out";
   try {
     const v = localStorage.getItem(STORAGE_KEY);
-    if (v === "free" || v === "pro") return v;
-    return null;
+    if (v === "logged_out" || v === "free" || v === "pro") return v;
+    return "logged_out";
   } catch {
-    return null;
+    return "logged_out";
   }
 }
 
 export function PlanDebugProvider({ children }: { children: React.ReactNode }) {
-  const [planOverride, setPlanOverrideState] = useState<PlanOverride>(null);
+  const [planOverride, setPlanOverrideState] = useState<PlanOverride>(() => getStoredOverride());
 
   useEffect(() => {
     setPlanOverrideState(getStoredOverride());
@@ -36,8 +38,7 @@ export function PlanDebugProvider({ children }: { children: React.ReactNode }) {
   const setPlanOverride = useCallback((v: PlanOverride) => {
     setPlanOverrideState(v);
     try {
-      if (v) localStorage.setItem(STORAGE_KEY, v);
-      else localStorage.removeItem(STORAGE_KEY);
+      localStorage.setItem(STORAGE_KEY, v);
     } catch {
       // ignore
     }
@@ -45,13 +46,21 @@ export function PlanDebugProvider({ children }: { children: React.ReactNode }) {
 
   const usePlan = useCallback(
     (realPlan: "free" | "pro"): "free" | "pro" => {
-      return planOverride ?? realPlan;
+      if (planOverride === "pro") return "pro";
+      return "free"; // logged_out and free both = free plan
     },
     [planOverride]
   );
 
   return (
-    <PlanDebugContext.Provider value={{ planOverride, setPlanOverride, usePlan }}>
+    <PlanDebugContext.Provider
+      value={{
+        planOverride,
+        setPlanOverride,
+        usePlan,
+        simulateLoggedOut: planOverride === "logged_out",
+      }}
+    >
       {children}
     </PlanDebugContext.Provider>
   );

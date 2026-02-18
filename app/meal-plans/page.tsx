@@ -10,7 +10,8 @@ import { auth, db } from "../firebase/firebase";
 import { doc, getDoc, updateDoc, setDoc, collection, getDocs, deleteDoc, Timestamp } from "firebase/firestore";
 import { SidebarLayout } from "../components/SidebarLayout";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faArrowRight, faChevronDown, faCalendarDays, faStop, faTrashCan } from "@fortawesome/free-solid-svg-icons";
+import { FALLBACK_FUN_FACTS } from "../lib/mealPlanFacts";
+import { faCheck, faArrowRight, faChevronDown, faCalendarDays, faStop, faTrashCan, faPaperPlane, faStar, faPlay } from "@fortawesome/free-solid-svg-icons";
 
 const EXAMPLE_PROMPTS = [
   "Mediterranean, lots of veggies, olive oil. No red meat.",
@@ -112,15 +113,6 @@ function getTimezoneLabel(tz: string): string {
   }
 }
 
-const FALLBACK_FUN_FACTS = [
-  "Olive oil was used in ancient Olympic games—athletes rubbed it on their skin before competing.",
-  "The Mediterranean diet is one of the most studied eating patterns in the world.",
-  "Meal prepping can save you up to 3 hours per week in the kitchen.",
-  "Herbs like basil and oregano release more flavor when torn by hand than when cut with a knife.",
-  "Eating the same breakfast every day can actually help with weight management—fewer decisions, fewer temptations.",
-  "A well-stocked pantry is half the battle. Baba always says: good ingredients make good food.",
-];
-
 async function fetchPlan(): Promise<"free" | "pro"> {
   const user = auth?.currentUser;
   if (!user) return "free";
@@ -186,6 +178,9 @@ export default function MealPlansPage() {
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [expandedPlanId, setExpandedPlanId] = useState<string | null>(null);
   const [deletingPlanId, setDeletingPlanId] = useState<string | null>(null);
+  const [activePlanId, setActivePlanId] = useState<string | null>(null);
+  const [activePlanStartDay, setActivePlanStartDay] = useState<number>(1);
+  const [resendingPlanId, setResendingPlanId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -213,6 +208,8 @@ export default function MealPlansPage() {
         if (s.dayOfWeek != null) setMealPlanDay(s.dayOfWeek);
         if (s.timezone) setUserTimezone(s.timezone);
       }
+      if (d?.activePlanId != null) setActivePlanId(d.activePlanId);
+      if (d?.activePlanStartDay != null) setActivePlanStartDay(d.activePlanStartDay);
     };
     load();
   }, [user]);
@@ -311,10 +308,99 @@ export default function MealPlansPage() {
     try {
       await deleteDoc(doc(db, "users", user.uid, "mealPlanHistory", planId));
       setPlanHistory((prev) => prev.filter((p) => p.id !== planId));
+      if (activePlanId === planId) setActivePlanId(null);
     } catch {
       setHistoryError("Failed to delete plan");
     } finally {
       setDeletingPlanId(null);
+    }
+  };
+
+  const handleSetActivePlan = async (planId: string, startDay?: number) => {
+    if (!user) return;
+    setSaving(true);
+    setSendError(null);
+    try {
+      const userDocRef = doc(db, "users", user.uid);
+      const day = startDay ?? activePlanStartDay;
+      await updateDoc(userDocRef, {
+        activePlanId: planId,
+        activePlanStartDay: day,
+      });
+      setActivePlanId(planId);
+      setActivePlanStartDay(day);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2000);
+    } catch {
+      setSendError("Failed to set active plan");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleClearActivePlan = async () => {
+    if (!user) return;
+    setSaving(true);
+    setSendError(null);
+    try {
+      const userDocRef = doc(db, "users", user.uid);
+      await updateDoc(userDocRef, { activePlanId: null });
+      setActivePlanId(null);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2000);
+    } catch {
+      setSendError("Failed to clear active plan");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleResendIngredients = async (planId: string) => {
+    if (!user) return;
+    setResendingPlanId(planId);
+    setSendError(null);
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch("/api/meal-plan/resend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ planId }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 2000);
+      } else {
+        setSendError(data.error || "Failed to resend");
+      }
+    } catch {
+      setSendError("Failed to resend ingredients");
+    } finally {
+      setResendingPlanId(null);
+    }
+  };
+
+  const handleQuickEnable = async () => {
+    if (!user) return;
+    setSaving(true);
+    setSendError(null);
+    try {
+      const userDocRef = doc(db, "users", user.uid);
+      await updateDoc(userDocRef, {
+        mealPlanSchedule: {
+          enabled: true,
+          time: mealPlanTime,
+          timezone: userTimezone,
+          ...(mealPlanType === "weekly" && { dayOfWeek: mealPlanDay }),
+        },
+      });
+      setMealPlanEnabled(true);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2000);
+    } catch {
+      setSendError("Failed to enable");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -607,10 +693,17 @@ export default function MealPlansPage() {
                           </span>
                           <span className="text-gray-500 text-sm">No plans will be sent until you enable delivery.</span>
                           <button
+                            onClick={handleQuickEnable}
+                            disabled={saving}
+                            className="px-4 py-2 text-sm font-medium text-amber-700 bg-amber-100 hover:bg-amber-200 rounded-lg transition-colors disabled:opacity-50"
+                          >
+                            Enable delivery
+                          </button>
+                          <button
                             onClick={() => setActiveTab("configure")}
                             className="text-amber-600 hover:text-amber-700 font-medium text-sm"
                           >
-                            Enable in Configure →
+                            or Configure →
                           </button>
                         </div>
                       )}
@@ -630,10 +723,10 @@ export default function MealPlansPage() {
                 {/* History list */}
                 <div className="bg-white rounded-2xl border border-amber-100 shadow-lg p-6">
                   <h2 className="text-lg font-semibold text-gray-900 mb-4">Plans you&apos;ve received</h2>
-                  <p className="text-sm text-gray-500 mb-4">Plans are also emailed to you. Here you can view them anytime.</p>
-                  {historyError && (
+                  <p className="text-sm text-gray-500 mb-4">Pick one plan as active, resend ingredients, or change when your week starts.</p>
+                  {(historyError || sendError) && (
                     <div className="mb-4 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
-                      {historyError}
+                      {historyError || sendError}
                     </div>
                   )}
                   {loadingHistory ? (
@@ -652,10 +745,13 @@ export default function MealPlansPage() {
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      {planHistory.map((plan) => (
+                      {planHistory.map((plan) => {
+                        const isActive = activePlanId === plan.id;
+                        const hasShoppingList = !!(plan.shoppingList && plan.shoppingList.trim());
+                        return (
                         <div
                           key={plan.id}
-                          className="border border-amber-100 rounded-xl overflow-hidden"
+                          className={`border rounded-xl overflow-hidden ${isActive ? "border-amber-400 bg-amber-50/30 shadow-sm" : "border-amber-100"}`}
                         >
                           <div className="w-full px-4 py-3 flex items-center justify-between gap-4">
                             <button
@@ -663,6 +759,12 @@ export default function MealPlansPage() {
                               className="flex-1 flex items-center justify-between gap-4 text-left hover:bg-amber-50/50 transition-colors -mx-2 px-2 py-1 rounded-lg"
                             >
                               <div className="flex items-center gap-3">
+                                {isActive && (
+                                  <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-green-100 text-green-800 text-xs font-medium">
+                                    <FontAwesomeIcon icon={faStar} className="text-[10px]" />
+                                    Active
+                                  </span>
+                                )}
                                 <span className="text-xs font-medium px-2 py-1 rounded bg-amber-100 text-amber-800">
                                   {plan.type === "weekly" ? "Weekly" : "Daily"}
                                 </span>
@@ -682,15 +784,50 @@ export default function MealPlansPage() {
                                 className={`text-amber-600 transition-transform ${expandedPlanId === plan.id ? "rotate-180" : ""}`}
                               />
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeletePlan(plan.id)}
-                              disabled={deletingPlanId === plan.id}
-                              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                              title="Delete plan"
-                            >
-                              <FontAwesomeIcon icon={faTrashCan} className="text-sm" />
-                            </button>
+                            <div className="flex items-center gap-1">
+                              {!isActive ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleSetActivePlan(plan.id)}
+                                  disabled={saving}
+                                  className="px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-100 hover:bg-amber-200 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                                  title="Use this plan"
+                                >
+                                  <FontAwesomeIcon icon={faPlay} className="text-[10px]" />
+                                  Use this plan
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={handleClearActivePlan}
+                                  disabled={saving}
+                                  className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
+                                  title="Stop using this plan"
+                                >
+                                  Clear active
+                                </button>
+                              )}
+                              {hasShoppingList && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleResendIngredients(plan.id)}
+                                  disabled={resendingPlanId === plan.id}
+                                  className="p-2 text-gray-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors disabled:opacity-50"
+                                  title="Resend ingredients to email"
+                                >
+                                  <FontAwesomeIcon icon={faPaperPlane} className="text-sm" />
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleDeletePlan(plan.id)}
+                                disabled={deletingPlanId === plan.id}
+                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                                title="Delete plan"
+                              >
+                                <FontAwesomeIcon icon={faTrashCan} className="text-sm" />
+                              </button>
+                            </div>
                           </div>
                           {expandedPlanId === plan.id && (
                             <div className="px-4 pb-4 pt-0 border-t border-amber-50">
@@ -748,10 +885,56 @@ export default function MealPlansPage() {
                                   <pre className="whitespace-pre-wrap">{plan.content}</pre>
                                 )}
                               </div>
+                              {/* Start day & actions for active weekly plans */}
+                              {expandedPlanId === plan.id && plan.type === "weekly" && (
+                                <div className="mt-4 pt-4 border-t border-amber-100 flex flex-wrap items-center gap-4">
+                                  {isActive ? (
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm text-gray-600">Start day:</span>
+                                      <select
+                                        value={activePlanStartDay}
+                                        onChange={(e) => handleSetActivePlan(plan.id, Number(e.target.value))}
+                                        disabled={saving}
+                                        className="p-2 text-sm border border-amber-200 rounded-lg focus:outline-none focus:border-amber-500"
+                                      >
+                                        {WEEKDAYS.map((d) => (
+                                          <option key={d.value} value={d.value}>
+                                            {d.label}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm text-gray-600">Start on:</span>
+                                      <select
+                                        value={activePlanStartDay}
+                                        onChange={(e) => setActivePlanStartDay(Number(e.target.value))}
+                                        className="p-2 text-sm border border-amber-200 rounded-lg focus:outline-none focus:border-amber-500"
+                                      >
+                                        {WEEKDAYS.map((d) => (
+                                          <option key={d.value} value={d.value}>
+                                            {d.label}
+                                          </option>
+                                        ))}
+                                      </select>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleSetActivePlan(plan.id, activePlanStartDay)}
+                                        disabled={saving}
+                                        className="px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-100 hover:bg-amber-200 rounded-lg"
+                                      >
+                                        Use this plan
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
-                      ))}
+                      );
+                      })}
                     </div>
                   )}
                 </div>

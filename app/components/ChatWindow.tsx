@@ -263,9 +263,13 @@ export const ChatWindow = forwardRef(
         };
         // console.log("Sending request with body:", requestBody); // Log the request body
 
+        const token = auth?.currentUser ? await auth.currentUser.getIdToken() : null;
         const response = await fetch("/api/chat", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
           body: JSON.stringify(requestBody),
         });
 
