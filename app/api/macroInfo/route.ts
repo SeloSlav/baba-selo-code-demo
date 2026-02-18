@@ -1,32 +1,12 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
+import { callLLMJSON } from "../../lib/callLLM";
+import {
+  checkEnrichmentCache,
+  storeEnrichmentCache,
+} from "../../lib/stores/enrichmentCache";
+import type { NutritionalInfo } from "../../components/types";
 
-export async function POST(req: Request) {
-  const { recipe } = await req.json();
-
-  if (!recipe) {
-    return NextResponse.json({ error: "No recipe provided" }, { status: 400 });
-  }
-
-  const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-  if (!OPENAI_API_KEY) {
-    return NextResponse.json({ error: "Missing OpenAI API key" }, { status: 500 });
-  }
-
-  try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        max_tokens: 500,
-        temperature: 0.7,
-        messages: [
-          {
-            role: "system",
-            content: `You are a nutritionist API that ONLY responds with JSON. Based on a given recipe, calculate the total calories and macros (proteins, carbs, fats) for the entire recipe and per serving. First, determine the number of servings based on the recipe portions or ingredients. Then provide the total values for calories, proteins, carbs, and fats in grams, along with the number of servings. Structure the response EXACTLY as shown, with NO additional text or explanation:
+const SYSTEM_PROMPT = `You are a nutritionist API that ONLY responds with JSON. Based on a given recipe, calculate the total calories and macros (proteins, carbs, fats) for the entire recipe and per serving. First, determine the number of servings based on the recipe portions or ingredients. Then provide the total values for calories, proteins, carbs, and fats in grams, along with the number of servings. Structure the response EXACTLY as shown, with NO additional text or explanation:
 
 {
   "servings": 4,
@@ -42,41 +22,61 @@ export async function POST(req: Request) {
     "carbs": 35,
     "fats": 11.25
   }
-}`
-          },
-          { role: "user", content: recipe },
-        ],
-      }),
-    });
+}`;
 
-    const data = await response.json();
+export async function POST(req: Request) {
+  const { recipe } = await req.json();
 
-    if (!response.ok || !data.choices || !data.choices[0] || !data.choices[0].message || !data.choices[0].message.content) {
-      console.error("Unexpected OpenAI API response structure:", data);
-      return NextResponse.json({ error: "Failed to fetch calorie and macro info" }, { status: 500 });
+  if (!recipe) {
+    return NextResponse.json({ error: "No recipe provided" }, { status: 400 });
+  }
+
+  const recipeText =
+    typeof recipe === "string" ? recipe : JSON.stringify(recipe);
+  const cacheKey = recipeText.slice(0, 2000);
+
+  try {
+    const cached = await checkEnrichmentCache<{ macros: NutritionalInfo }>(
+      "macro",
+      cacheKey
+    );
+    if (cached?.macros) {
+      return NextResponse.json({ macros: cached.macros });
+    }
+  } catch (err) {
+    console.error("Enrichment cache lookup failed:", err);
+  }
+
+  try {
+    const nutritionData = await callLLMJSON<NutritionalInfo>(
+      SYSTEM_PROMPT,
+      recipeText,
+      { temperature: 0.7 }
+    );
+
+    if (
+      !nutritionData.servings ||
+      !nutritionData.total ||
+      !nutritionData.per_serving
+    ) {
+      return NextResponse.json(
+        { error: "Invalid nutrition data structure" },
+        { status: 500 }
+      );
     }
 
-    try {
-      let rawContent = data.choices[0].message.content;
-      rawContent = rawContent.replace(/```json\s*|\s*```/g, '').trim();
-      const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('No valid JSON found in response');
-      }
-      const nutritionData = JSON.parse(jsonMatch[0]);
-      if (!nutritionData.servings || !nutritionData.total || !nutritionData.per_serving) {
-        throw new Error('Invalid nutrition data structure');
-      }
-      return NextResponse.json({
-        macros: nutritionData,
-      });
-    } catch (parseError) {
-      console.error("Error parsing OpenAI API response:", parseError);
-      console.error("Raw message content:", data.choices[0].message.content);
-      return NextResponse.json({ error: "Invalid response format from OpenAI" }, { status: 500 });
-    }
+    const result = { macros: nutritionData };
+
+    storeEnrichmentCache("macro", cacheKey, result).catch((err) =>
+      console.error("Failed to store macro cache:", err)
+    );
+
+    return NextResponse.json(result);
   } catch (error) {
-    console.error("Error calling OpenAI API:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    console.error("Error getting nutrition info:", error);
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    );
   }
 }

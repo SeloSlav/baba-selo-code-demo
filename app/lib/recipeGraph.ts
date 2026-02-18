@@ -4,16 +4,23 @@
  */
 import { StateGraph, Annotation } from "@langchain/langgraph";
 import { ChatOpenAI } from "@langchain/openai";
-import { checkRecipeCache, storeRecipeCache, CachedRecipeData } from "./stores/recipeVectorStore";
+import { MODELS } from "./models";
 import {
-  checkEnrichmentCache,
-  storeEnrichmentCache,
-} from "./stores/enrichmentCache";
+  checkRecipeCache,
+  storeRecipeCache,
+  CachedRecipeData,
+} from "./stores/recipeVectorStore";
+import { checkEnrichmentCache } from "./stores/enrichmentCache";
 import { queryCorpus } from "./stores/balkanCorpusStore";
 
-const DIRECT_MATCH_THRESHOLD = 0.1; // cosine distance; lower = more similar
-const RAG_CONTEXT_THRESHOLD = 0.3; // use top matches as RAG context if within this
+const DIRECT_MATCH_THRESHOLD = 0.1;
+const RAG_CONTEXT_THRESHOLD = 0.3;
 const RAG_CONTEXT_TOP_K = 3;
+
+const recipeModel = new ChatOpenAI({
+  model: MODELS.recipeGeneration,
+  temperature: 0.5,
+});
 
 const RecipeStateAnnotation = Annotation.Root({
   queryText: Annotation<string>,
@@ -24,48 +31,48 @@ const RecipeStateAnnotation = Annotation.Root({
   baseUrl: Annotation<string>,
   result: Annotation<Partial<CachedRecipeData> | null>,
   fromCache: Annotation<boolean>,
-  corpusContext: Annotation<string>, // RAG context from corpus for generate prompt
+  corpusContext: Annotation<string>,
 });
 
 type RecipeState = typeof RecipeStateAnnotation.State;
 
-async function checkCacheNode(state: RecipeState): Promise<Partial<RecipeState>> {
+async function checkCacheNode(
+  state: RecipeState
+): Promise<Partial<RecipeState>> {
   const cached = await checkRecipeCache(state.queryText);
   if (cached) {
-    return {
-      result: cached,
-      fromCache: true,
-    };
+    return { result: cached, fromCache: true };
   }
   return { fromCache: false };
 }
 
-async function retrieveCorpusNode(state: RecipeState): Promise<Partial<RecipeState>> {
+async function retrieveCorpusNode(
+  state: RecipeState
+): Promise<Partial<RecipeState>> {
   if (state.fromCache) return {};
 
-  const queryText = `${state.recipeTitle}${state.recipeContent ? ` ${String(state.recipeContent).trim().slice(0, 300)}` : ""}`.trim();
+  const queryText =
+    `${state.recipeTitle}${state.recipeContent ? ` ${String(state.recipeContent).trim().slice(0, 300)}` : ""}`.trim();
   if (!queryText) return { corpusContext: "" };
 
   const results = await queryCorpus(queryText, RAG_CONTEXT_TOP_K);
   if (results.length === 0) return { corpusContext: "" };
 
   const [top] = results;
-  // Direct return: very similar match (0 LLM calls)
+
   if (top.score < DIRECT_MATCH_THRESHOLD) {
     const r = top.recipe;
-    const cached: CachedRecipeData = {
-      ingredients: r.ingredients,
-      directions: r.directions,
-      cuisineType: r.cuisine,
-    };
     return {
-      result: cached,
+      result: {
+        ingredients: r.ingredients,
+        directions: r.directions,
+        cuisineType: r.cuisine,
+      },
       fromCache: true,
       corpusContext: "",
     };
   }
 
-  // RAG context: inject similar recipes into generate prompt
   if (top.score < RAG_CONTEXT_THRESHOLD) {
     const contextRecipes = results
       .filter((x) => x.score < RAG_CONTEXT_THRESHOLD)
@@ -81,14 +88,10 @@ async function retrieveCorpusNode(state: RecipeState): Promise<Partial<RecipeSta
   return { corpusContext: "" };
 }
 
-async function generateNode(state: RecipeState): Promise<Partial<RecipeState>> {
+async function generateNode(
+  state: RecipeState
+): Promise<Partial<RecipeState>> {
   if (state.fromCache) return {};
-
-  const llm = new ChatOpenAI({
-    model: "gpt-4o-mini",
-    temperature: 0.5,
-    openAIApiKey: process.env.OPENAI_API_KEY,
-  });
 
   const corpusCtx = state.corpusContext ?? "";
   const ragBlock = corpusCtx
@@ -110,7 +113,7 @@ Rules:
 - directions: array of strings, each a complete step
 - Minimum 5 ingredients, 4 directions`;
 
-  const response = await llm.invoke([
+  const response = await recipeModel.invoke([
     {
       role: "system",
       content:
@@ -119,7 +122,8 @@ Rules:
     { role: "user", content: jsonPrompt },
   ]);
 
-  const text = typeof response.content === "string" ? response.content : "";
+  const text =
+    typeof response.content === "string" ? response.content : "";
   let parsed: { ingredients?: string[]; directions?: string[] } = {};
   try {
     parsed = JSON.parse(text);
@@ -128,25 +132,54 @@ Rules:
   }
 
   const ingredients = Array.isArray(parsed.ingredients)
-    ? parsed.ingredients.filter((i): i is string => typeof i === "string" && i.trim().length > 0)
+    ? parsed.ingredients.filter(
+        (i): i is string => typeof i === "string" && i.trim().length > 0
+      )
     : [];
   const directions = Array.isArray(parsed.directions)
-    ? parsed.directions.filter((d): d is string => typeof d === "string" && d.trim().length > 0)
+    ? parsed.directions.filter(
+        (d): d is string => typeof d === "string" && d.trim().length > 0
+      )
     : [];
 
   if (!ingredients.length || !directions.length) {
-    throw new Error("AI did not return valid ingredients or directions arrays");
+    throw new Error(
+      "AI did not return valid ingredients or directions arrays"
+    );
   }
 
-  return {
-    result: {
-      ingredients,
-      directions,
-    },
-  };
+  return { result: { ingredients, directions } };
 }
 
-async function enrichNode(state: RecipeState): Promise<Partial<RecipeState>> {
+async function fetchWithCache<T>(
+  type: "classify" | "summary" | "macro" | "pairing",
+  cacheKey: string,
+  baseUrl: string,
+  endpoint: string,
+  body: unknown
+): Promise<T | null> {
+  try {
+    const cached = await checkEnrichmentCache<T>(type, cacheKey);
+    if (cached) return cached;
+  } catch {
+    /* cache miss or unavailable — fall through to API */
+  }
+
+  try {
+    const res = await fetch(`${baseUrl}${endpoint}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    return res.ok ? await res.json() : null;
+  } catch {
+    return null;
+  }
+}
+
+async function enrichNode(
+  state: RecipeState
+): Promise<Partial<RecipeState>> {
   if (state.fromCache || !state.generateAll || !state.result) return {};
 
   const { result, baseUrl, recipeTitle, skipMacroAndPairing } = state;
@@ -154,28 +187,20 @@ async function enrichNode(state: RecipeState): Promise<Partial<RecipeState>> {
   const directions = result.directions ?? [];
 
   try {
-    // Classify (with cache)
     const classifyInput = `${recipeTitle}\n${ingredients.join("\n")}\n${directions.join("\n")}`;
-    let classifyData = await checkEnrichmentCache<{
+
+    // Classify (must happen first — summary depends on its output)
+    const classifyData = await fetchWithCache<{
       cooking_time: string;
       cuisine: string;
       difficulty: string;
       diet: string[];
-    }>("classify", classifyInput);
+    }>("classify", classifyInput, baseUrl, "/api/classifyRecipe", {
+      title: recipeTitle,
+      ingredients: ingredients.join("\n"),
+      directions: directions.join("\n"),
+    });
 
-    if (!classifyData) {
-      const classifyRes = await fetch(`${baseUrl}/api/classifyRecipe`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: recipeTitle,
-          ingredients: ingredients.join("\n"),
-          directions: directions.join("\n"),
-        }),
-      });
-      classifyData = classifyRes.ok ? await classifyRes.json() : null;
-      if (classifyData) await storeEnrichmentCache("classify", classifyInput, classifyData);
-    }
     const timeMap: Record<string, string> = {
       "15 minutes": "15 min",
       "30 minutes": "30 min",
@@ -184,59 +209,54 @@ async function enrichNode(state: RecipeState): Promise<Partial<RecipeState>> {
       "2 hours": "1.5 hours",
     };
     if (classifyData) {
-      result.cookingTime = timeMap[classifyData.cooking_time] || classifyData.cooking_time;
+      result.cookingTime =
+        timeMap[classifyData.cooking_time] || classifyData.cooking_time;
       result.cuisineType = classifyData.cuisine;
       result.cookingDifficulty = classifyData.difficulty;
       result.diet = classifyData.diet;
     }
 
-    // Summary (with cache)
+    // Summary (depends on classify output)
     const summaryInput = `${recipeTitle}\n${ingredients.join("\n")}\n${directions.join("\n")}\n${result.cuisineType}\n${result.cookingTime}\n${result.cookingDifficulty}`;
-    let summaryData = await checkEnrichmentCache<{ summary: string }>("summary", summaryInput);
-    if (!summaryData) {
-      const summaryRes = await fetch(`${baseUrl}/api/generateSummary`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: recipeTitle,
-          ingredients,
-          directions,
-          cuisineType: result.cuisineType,
-          diet: result.diet,
-          cookingTime: result.cookingTime,
-          cookingDifficulty: result.cookingDifficulty,
-        }),
-      });
-      summaryData = summaryRes.ok ? await summaryRes.json() : null;
-      if (summaryData) await storeEnrichmentCache("summary", summaryInput, summaryData);
-    }
+    const summaryData = await fetchWithCache<{ summary: string }>(
+      "summary",
+      summaryInput,
+      baseUrl,
+      "/api/generateSummary",
+      {
+        title: recipeTitle,
+        ingredients,
+        directions,
+        cuisineType: result.cuisineType,
+        diet: result.diet,
+        cookingTime: result.cookingTime,
+        cookingDifficulty: result.cookingDifficulty,
+      }
+    );
     if (summaryData) result.summary = summaryData.summary;
 
-    // Macros and Pairings (skip for meal plan recipes to save time)
+    // Macros and pairings are independent — run in parallel
     if (!skipMacroAndPairing) {
       const recipeForMacros = `${recipeTitle}\n\nIngredients:\n${ingredients.join("\n")}\n\nDirections:\n${directions.join("\n")}`;
-      let macroData = await checkEnrichmentCache<{ macros?: unknown }>("macro", recipeForMacros);
-      if (!macroData) {
-        const macroRes = await fetch(`${baseUrl}/api/macroInfo`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ recipe: recipeForMacros }),
-        });
-        macroData = macroRes.ok ? await macroRes.json() : null;
-        if (macroData) await storeEnrichmentCache("macro", recipeForMacros, macroData);
-      }
-      if (macroData) result.macroInfo = macroData.macros || macroData;
 
-      let pairingData = await checkEnrichmentCache<{ suggestion: string }>("pairing", recipeForMacros);
-      if (!pairingData) {
-        const pairingRes = await fetch(`${baseUrl}/api/dishPairing`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ recipe: recipeForMacros }),
-        });
-        pairingData = pairingRes.ok ? await pairingRes.json() : null;
-        if (pairingData) await storeEnrichmentCache("pairing", recipeForMacros, pairingData);
-      }
+      const [macroData, pairingData] = await Promise.all([
+        fetchWithCache<{ macros?: unknown }>(
+          "macro",
+          recipeForMacros,
+          baseUrl,
+          "/api/macroInfo",
+          { recipe: recipeForMacros }
+        ),
+        fetchWithCache<{ suggestion: string }>(
+          "pairing",
+          recipeForMacros,
+          baseUrl,
+          "/api/dishPairing",
+          { recipe: recipeForMacros }
+        ),
+      ]);
+
+      if (macroData) result.macroInfo = macroData.macros || macroData;
       if (pairingData) result.dishPairings = pairingData.suggestion;
     }
   } catch (err) {
@@ -246,7 +266,9 @@ async function enrichNode(state: RecipeState): Promise<Partial<RecipeState>> {
   return { result: { ...result } };
 }
 
-async function storeCacheNode(state: RecipeState): Promise<Partial<RecipeState>> {
+async function storeCacheNode(
+  state: RecipeState
+): Promise<Partial<RecipeState>> {
   if (state.fromCache || !state.result || !state.generateAll) return {};
   const data = state.result as CachedRecipeData;
   if (data.ingredients?.length && data.directions?.length) {
@@ -255,7 +277,9 @@ async function storeCacheNode(state: RecipeState): Promise<Partial<RecipeState>>
   return {};
 }
 
-function routeAfterCache(state: RecipeState): "retrieve_corpus" | "__end__" {
+function routeAfterCache(
+  state: RecipeState
+): "retrieve_corpus" | "__end__" {
   return state.fromCache ? "__end__" : "retrieve_corpus";
 }
 

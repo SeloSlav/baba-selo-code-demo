@@ -2,10 +2,13 @@
  * Similar recipes via pgvector.
  * Recipes are synced from Firestore; similarity search by embedding.
  */
-import { PGVectorStore } from "@langchain/community/vectorstores/pgvector";
-import { OpenAIEmbeddings } from "@langchain/openai";
-import { Pool, PoolConfig } from "pg";
 import { Document } from "@langchain/core/documents";
+import { Pool } from "pg";
+import {
+  getOrCreateStore,
+  getSharedPool,
+  getConnectionConfig,
+} from "./vectorStoreFactory";
 
 const TABLE_NAME = "recipe_index";
 const DEFAULT_LIMIT = 6;
@@ -26,48 +29,6 @@ export interface IndexedRecipe {
   [key: string]: unknown;
 }
 
-let vectorStore: PGVectorStore | null = null;
-
-function getConnectionConfig(): PoolConfig | null {
-  const url = process.env.POSTGRES_URL ?? process.env.DATABASE_URL;
-  if (!url) return null;
-  return { connectionString: url };
-}
-
-async function ensurePgVectorExtension(config: PoolConfig): Promise<void> {
-  const pool = new Pool(config);
-  try {
-    await pool.query("CREATE EXTENSION IF NOT EXISTS vector");
-  } finally {
-    await pool.end();
-  }
-}
-
-async function getVectorStore(): Promise<PGVectorStore | null> {
-  if (vectorStore) return vectorStore;
-  const config = getConnectionConfig();
-  if (!config) return null;
-
-  try {
-    await ensurePgVectorExtension(config);
-
-    const embeddings = new OpenAIEmbeddings({
-      model: "text-embedding-3-small",
-      openAIApiKey: process.env.OPENAI_API_KEY,
-    });
-
-    vectorStore = await PGVectorStore.initialize(embeddings, {
-      postgresConnectionOptions: config,
-      tableName: TABLE_NAME,
-      distanceStrategy: "cosine",
-    });
-    return vectorStore;
-  } catch (err) {
-    console.error("Failed to init similar recipes store:", err);
-    return null;
-  }
-}
-
 export function recipeToEmbeddingText(recipe: {
   recipeTitle?: string;
   ingredients?: string[];
@@ -84,19 +45,45 @@ export function recipeToEmbeddingText(recipe: {
   return parts.join("\n\n").slice(0, 8000);
 }
 
+/** Search-optimized text: ingredients + directions + summary only (no title). Use for similarity search to find recipes with overlapping ingredients/techniques rather than same-name variants. */
+export function recipeToSearchText(recipe: {
+  ingredients?: string[];
+  directions?: string[];
+  recipeSummary?: string;
+}): string {
+  const parts: string[] = [];
+  if (Array.isArray(recipe.ingredients) && recipe.ingredients.length)
+    parts.push("Ingredients: " + recipe.ingredients.join(", "));
+  if (Array.isArray(recipe.directions) && recipe.directions.length)
+    parts.push("Directions: " + recipe.directions.join(" "));
+  if (recipe.recipeSummary) parts.push(recipe.recipeSummary);
+  return parts.join("\n\n").slice(0, 8000);
+}
+
+function isTitleDuplicate(sourceTitle: string, candidateTitle: string): boolean {
+  const normalize = (t: string) =>
+    t
+      .toLowerCase()
+      .replace(/\(.*?\)/g, "")
+      .replace(/[^a-z0-9]/g, "")
+      .trim();
+  return normalize(sourceTitle) === normalize(candidateTitle);
+}
+
 export async function indexRecipe(recipe: IndexedRecipe): Promise<void> {
-  const store = await getVectorStore();
+  const store = await getOrCreateStore(TABLE_NAME);
   if (!store) return;
 
   const text = recipeToEmbeddingText(recipe);
   if (!text.trim()) return;
 
   try {
-    const doc = new Document({
-      pageContent: text,
-      metadata: { recipeId: recipe.id, recipe },
-    });
-    await store.addDocuments([doc]);
+    await store.addDocuments([
+      new Document({
+        pageContent: text,
+        metadata: { recipeId: recipe.id, recipe },
+      }),
+    ]);
   } catch (err) {
     console.error("Failed to index recipe:", err);
   }
@@ -113,46 +100,41 @@ export async function indexRecipes(
     const pool = new Pool(config);
     try {
       await pool.query(`TRUNCATE TABLE ${TABLE_NAME}`);
-    } catch (e) {
+    } catch {
       // Table might not exist yet
     } finally {
       await pool.end();
     }
   }
 
-  const store = await getVectorStore();
+  const store = await getOrCreateStore(TABLE_NAME);
   if (!store) return;
 
+  // Compute embedding text once per recipe (not twice via filter + map)
   const docs = recipes
-    .filter((r) => recipeToEmbeddingText(r).trim().length > 0)
-    .map((r) => ({
-      pageContent: recipeToEmbeddingText(r),
-      metadata: { recipeId: r.id, recipe: r },
-    }));
+    .map((r) => ({ text: recipeToEmbeddingText(r), recipe: r }))
+    .filter(({ text }) => text.trim().length > 0)
+    .map(
+      ({ text, recipe }) =>
+        new Document({
+          pageContent: text,
+          metadata: { recipeId: recipe.id, recipe },
+        })
+    );
 
   if (docs.length === 0) return;
 
   try {
-    await store.addDocuments(
-      docs.map((d) => new Document({ pageContent: d.pageContent, metadata: d.metadata }))
-    );
+    await store.addDocuments(docs);
   } catch (err) {
     console.error("Failed to index recipes:", err);
   }
 }
 
-let _embeddingPool: Pool | null = null;
-
-function getEmbeddingPool(): Pool | null {
-  if (_embeddingPool) return _embeddingPool;
-  const config = getConnectionConfig();
-  if (!config) return null;
-  _embeddingPool = new Pool(config);
-  return _embeddingPool;
-}
-
-async function getStoredEmbedding(recipeId: string): Promise<number[] | null> {
-  const pool = getEmbeddingPool();
+async function getStoredEmbedding(
+  recipeId: string
+): Promise<number[] | null> {
+  const pool = getSharedPool();
   if (!pool) return null;
 
   try {
@@ -184,45 +166,66 @@ export interface SimilarRecipesTiming {
   usedStoredEmbedding: boolean;
 }
 
+export interface SimilarRecipesOptions {
+  sourceTitle?: string;
+  searchText?: string;
+}
+
 export async function getSimilarRecipes(
   recipeId: string,
   recipeText: string,
-  limit = DEFAULT_LIMIT
+  limit = DEFAULT_LIMIT,
+  options?: SimilarRecipesOptions
 ): Promise<IndexedRecipe[]> {
-  const { results } = await getSimilarRecipesWithTiming(recipeId, recipeText, limit);
+  const { results } = await getSimilarRecipesWithTiming(
+    recipeId,
+    recipeText,
+    limit,
+    options
+  );
   return results;
 }
 
 export async function getSimilarRecipesWithTiming(
   recipeId: string,
   recipeText: string,
-  limit = DEFAULT_LIMIT
+  limit = DEFAULT_LIMIT,
+  options?: SimilarRecipesOptions
 ): Promise<{ results: IndexedRecipe[]; timing: SimilarRecipesTiming }> {
-  const store = await getVectorStore();
-  const timing: SimilarRecipesTiming = { similaritySearchMs: 0, usedStoredEmbedding: false };
+  const store = await getOrCreateStore(TABLE_NAME);
+  const timing: SimilarRecipesTiming = {
+    similaritySearchMs: 0,
+    usedStoredEmbedding: false,
+  };
 
   if (!store) return { results: [], timing };
 
+  const { sourceTitle, searchText } = options ?? {};
+  const queryText = searchText?.trim() || recipeText;
+  const fetchLimit = limit * 2;
+
   try {
     let t0 = Date.now();
-    const storedVec = await getStoredEmbedding(recipeId);
+    const storedVec = !searchText ? await getStoredEmbedding(recipeId) : null;
     timing.getStoredEmbeddingMs = Date.now() - t0;
     timing.usedStoredEmbedding = !!storedVec;
 
     t0 = Date.now();
-    const results = storedVec
-      ? await store.similaritySearchVectorWithScore(storedVec, limit + 5)
-      : await store.similaritySearchWithScore(recipeText, limit + 5);
+    const rawResults = storedVec
+      ? await store.similaritySearchVectorWithScore(storedVec, fetchLimit)
+      : await store.similaritySearchWithScore(queryText, fetchLimit);
     timing.similaritySearchMs = Date.now() - t0;
 
     const seen = new Set<string>();
     const out: IndexedRecipe[] = [];
 
-    for (const [doc, _score] of results) {
+    for (const [doc] of rawResults) {
       const meta = doc.metadata as Record<string, unknown>;
       const recipe = meta?.recipe as IndexedRecipe | undefined;
       const rid = (meta?.recipeId ?? recipe?.id) as string | undefined;
       if (!rid || rid === recipeId || seen.has(rid)) continue;
+      if (sourceTitle && recipe?.recipeTitle && isTitleDuplicate(sourceTitle, recipe.recipeTitle))
+        continue;
       seen.add(rid);
       if (recipe) out.push(recipe);
       if (out.length >= limit) break;

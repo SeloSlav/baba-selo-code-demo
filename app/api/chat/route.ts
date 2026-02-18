@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { SpoonPointSystem } from '../../lib/spoonPoints';
+import { awardPointsServer } from '../../lib/spoonPointsServer';
 import { admin } from '../../firebase/firebaseAdmin';
 import { queryCorpus } from '../../lib/stores/balkanCorpusStore';
 
@@ -362,9 +362,19 @@ The user also prefers to use ${preferredCookingOil || 'olive oil'} as a cooking 
 ${randomizationHint}
 ${memoryContext}`;
 
+  // Only query the corpus when the message is likely recipe-related (avoids
+  // unnecessary embedding + pgvector calls for greetings, stories, etc.)
+  const RECIPE_KEYWORDS = [
+    'recipe', 'cook', 'make', 'prepare', 'bake', 'grill', 'fry', 'roast',
+    'ingredient', 'dish', 'meal', 'food', 'dinner', 'lunch', 'breakfast',
+    'sarma', 'burek', 'ćevapi', 'ajvar', 'kajmak', 'rakija', 'pljeskavica',
+    'balkan', 'croatian', 'serbian', 'bosnian', 'traditional',
+    'hungry', 'eat', 'supper', 'snack', 'leftover',
+  ];
   let corpusContext = "";
   const lastUserMessage = lastMessage.role === "user" ? (typeof lastMessage.content === "string" ? lastMessage.content : "") : undefined;
-  if (lastUserMessage) {
+  const shouldQueryCorpus = lastUserMessage && RECIPE_KEYWORDS.some(kw => lastUserMessage.toLowerCase().includes(kw));
+  if (lastUserMessage && shouldQueryCorpus) {
     const results = await queryCorpus(lastUserMessage, 3);
     const relevant = results.filter((r) => r.score < 0.3);
     if (relevant.length > 0) {
@@ -432,7 +442,7 @@ ${memoryContext}`;
                 const docId = `${verifiedUserId}-${Date.now()}`;
                 const recipeHash = `${verifiedUserId}-${Date.now()}-${firstLine}`;
                 try {
-                  const pointsResult = await SpoonPointSystem.awardPoints(verifiedUserId, 'GENERATE_RECIPE', docId, { recipeHash });
+                  const pointsResult = await awardPointsServer(verifiedUserId, 'GENERATE_RECIPE', docId, { recipeHash });
                   if (pointsResult.success) {
                     pointsAwarded = { points: pointsResult.points, message: 'Recipe generated successfully!' };
                   } else {

@@ -4,8 +4,16 @@
  */
 
 import { admin } from '../firebase/firebaseAdmin';
+import { ChatOpenAI } from '@langchain/openai';
+import { MODELS } from './models';
 
 const adminDb = admin.firestore();
+
+const translationModel = new ChatOpenAI({
+  model: MODELS.translation,
+  temperature: 0.3,
+  maxTokens: 2000,
+});
 
 interface ParsedRecipe {
   recipeTitle: string;
@@ -92,13 +100,27 @@ export async function handleSaveRecipe({ recipeContent, userId, classification }
   }
 }
 
-export async function handleGetSimilarRecipes({ recipeText, limit = 6 }: { recipeText: string; limit?: number }) {
+export async function handleGetSimilarRecipes({ recipeText, limit = 3 }: { recipeText: string; limit?: number }) {
   if (!recipeText || !recipeText.trim()) {
     return { similar: [], error: 'No recipe text provided.' };
   }
   try {
-    const { getSimilarRecipes } = await import('./stores/similarRecipesStore');
-    const results = await getSimilarRecipes('chat-search', recipeText, Math.min(limit, 8));
+    const { getSimilarRecipes, recipeToSearchText } = await import('./stores/similarRecipesStore');
+    const parsed = parseRecipe(recipeText);
+    const searchText = recipeToSearchText({
+      ingredients: parsed.ingredients,
+      directions: parsed.directions,
+    });
+    const options =
+      searchText.trim() && parsed.recipeTitle
+        ? { sourceTitle: parsed.recipeTitle, searchText }
+        : undefined;
+    const results = await getSimilarRecipes(
+      'chat-search',
+      searchText.trim() || recipeText,
+      Math.min(limit, 5),
+      options
+    );
     return {
       similar: results.map((r: { id: string; recipeTitle: string; cuisineType?: string }) => ({
         id: r.id,
@@ -218,27 +240,15 @@ export async function handleTranslateRecipe({ recipeContent, targetLanguage }: {
   if (!recipeContent || !targetLanguage) {
     return { success: false, error: 'Need recipe and target language.' };
   }
-  const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-  if (!OPENAI_API_KEY) return { success: false, error: 'Translation unavailable.' };
   try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_API_KEY}` },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        max_tokens: 2000,
-        temperature: 0.3,
-        messages: [
-          {
-            role: 'system',
-            content: `You are a recipe translator. Translate the given recipe into ${targetLanguage}. Keep the exact same structure: recipe name first, then Ingredients, then Directions. Preserve formatting (bullets, numbers). Do not add commentary. Output only the translated recipe.`,
-          },
-          { role: 'user', content: recipeContent },
-        ],
-      }),
-    });
-    const data = await res.json();
-    const translated = data.choices?.[0]?.message?.content;
+    const response = await translationModel.invoke([
+      {
+        role: 'system',
+        content: `You are a recipe translator. Translate the given recipe into ${targetLanguage}. Keep the exact same structure: recipe name first, then Ingredients, then Directions. Preserve formatting (bullets, numbers). Do not add commentary. Output only the translated recipe.`,
+      },
+      { role: 'user', content: recipeContent },
+    ]);
+    const translated = typeof response.content === 'string' ? response.content : '';
     if (!translated) return { success: false, error: 'Translation failed.' };
     return { success: true, translatedRecipe: translated, targetLanguage };
   } catch (err) {

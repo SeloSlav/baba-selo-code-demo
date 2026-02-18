@@ -68,16 +68,15 @@ export function createBabaChatTools(userId: string) {
       }
     ),
     tool(
-      async ({ recipeText, limit }) => {
-        const result = await handleGetSimilarRecipes({ recipeText, limit: limit ?? 6 });
+      async ({ recipeText }) => {
+        const result = await handleGetSimilarRecipes({ recipeText, limit: 3 });
         return JSON.stringify(result);
       },
       {
         name: "get_similar_recipes",
-        description: "Find recipes similar to a given one. Use when user asks 'what else is like this?', 'something similar to X'.",
+        description: "Find recipes similar to a given one. Use when user asks 'what else is like this?', 'something similar to X'. Returns 3 results.",
         schema: z.object({
           recipeText: z.string().describe("The recipe text to find similar recipes for."),
-          limit: z.number().optional().describe("Max number of results (default 6)."),
         }),
       }
     ),

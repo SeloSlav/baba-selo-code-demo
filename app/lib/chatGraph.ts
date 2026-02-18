@@ -1,11 +1,23 @@
 /**
  * LangGraph chat agent for Baba Selo.
- * Replaces the raw OpenAI tool-calling loop with a proper LangGraph agent.
+ * Uses a ReAct agent with streaming support for tool progress events.
  */
 import { createReactAgent } from "@langchain/langgraph/prebuilt";
 import { ChatOpenAI } from "@langchain/openai";
-import { HumanMessage, AIMessage, SystemMessage, type BaseMessage } from "@langchain/core/messages";
+import {
+  HumanMessage,
+  AIMessage,
+  SystemMessage,
+  type BaseMessage,
+} from "@langchain/core/messages";
+import { MODELS } from "./models";
 import { createBabaChatTools } from "./chatToolsLangchain";
+
+const chatModel = new ChatOpenAI({
+  model: MODELS.chat,
+  temperature: 1.0,
+  maxTokens: 1500,
+});
 
 export interface ChatGraphInput {
   messages: { role: string; content: string }[];
@@ -19,58 +31,48 @@ export interface ChatGraphOutput {
   lastMealPlanId?: string | null;
 }
 
-/**
- * Run the Baba chat agent using LangGraph.
- */
-export async function runChatGraph(input: ChatGraphInput): Promise<ChatGraphOutput> {
-  const { messages, systemPrompt, userId } = input;
-
-  const model = new ChatOpenAI({
-    model: "gpt-4o",
-    temperature: 1.0,
-    maxTokens: 1500,
-    openAIApiKey: process.env.OPENAI_API_KEY,
-  });
-
-  const tools = createBabaChatTools(userId);
-
-  const agent = createReactAgent({ llm: model, tools, prompt: systemPrompt } as unknown as Parameters<typeof createReactAgent>[0]);
-
-  const lcMessages: BaseMessage[] = messages.map((m) => {
+function toLangChainMessages(
+  messages: { role: string; content: string }[]
+): BaseMessage[] {
+  return messages.map((m) => {
     if (m.role === "user") return new HumanMessage(m.content);
     if (m.role === "assistant") return new AIMessage(m.content);
     return new SystemMessage(m.content);
   });
+}
 
-  const result = await agent.invoke({
-    messages: lcMessages,
-  });
+function extractChatResult(messages: BaseMessage[]): ChatGraphOutput {
+  const lastAIMessage = [...messages]
+    .reverse()
+    .find((m) => m._getType() === "ai") as AIMessage | undefined;
 
-  const finalMessages = result?.messages ?? [];
-  const lastAIMessage = [...finalMessages].reverse().find((m) => m._getType() === "ai") as AIMessage | undefined;
-  let assistantMessage = lastAIMessage?.content
-    ? typeof lastAIMessage.content === "string"
-      ? lastAIMessage.content
-      : Array.isArray(lastAIMessage.content)
-        ? (lastAIMessage.content as { type?: string; text?: string }[])
-            .filter((c) => c?.type === "text")
-            .map((c) => (c as { text?: string }).text)
-            .join("")
-        : ""
-    : "I'm sorry, I couldn't respond.";
+  let assistantMessage = "I'm sorry, I couldn't respond.";
+  if (lastAIMessage?.content) {
+    if (typeof lastAIMessage.content === "string") {
+      assistantMessage = lastAIMessage.content;
+    } else if (Array.isArray(lastAIMessage.content)) {
+      assistantMessage = (
+        lastAIMessage.content as { type?: string; text?: string }[]
+      )
+        .filter((c) => c?.type === "text")
+        .map((c) => c.text ?? "")
+        .join("");
+    }
+  }
 
   let timerSeconds: number | undefined;
   let lastMealPlanId: string | null = null;
 
-  for (const msg of finalMessages) {
+  for (const msg of messages) {
     if (msg._getType() === "tool") {
       try {
-        const content = typeof msg.content === "string" ? msg.content : "";
+        const content =
+          typeof msg.content === "string" ? msg.content : "";
         const parsed = JSON.parse(content);
         if (parsed.seconds) timerSeconds = parsed.seconds;
         if (parsed.planId) lastMealPlanId = parsed.planId;
       } catch {
-        // ignore
+        /* ignore unparseable tool results */
       }
     }
   }
@@ -80,6 +82,27 @@ export async function runChatGraph(input: ChatGraphInput): Promise<ChatGraphOutp
     ...(timerSeconds != null && { timerSeconds }),
     ...(lastMealPlanId && { lastMealPlanId }),
   };
+}
+
+export async function runChatGraph(
+  input: ChatGraphInput
+): Promise<ChatGraphOutput> {
+  const { messages, systemPrompt, userId } = input;
+  const tools = createBabaChatTools(userId);
+
+  // ChatOpenAI <-> LanguageModelLike version mismatch between @langchain/openai and @langchain/langgraph
+  type AgentLLM = Parameters<typeof createReactAgent>[0]["llm"];
+  const agent = createReactAgent({
+    llm: chatModel as unknown as AgentLLM,
+    tools,
+    messageModifier: new SystemMessage(systemPrompt),
+  });
+
+  const result = await agent.invoke({
+    messages: toLangChainMessages(messages),
+  });
+
+  return extractChatResult(result?.messages ?? []);
 }
 
 export type MealPlanProgressPayload = {
@@ -93,88 +116,110 @@ export type MealPlanProgressPayload = {
 
 export type ChatStreamEvent =
   | { type: "tool_started"; tool: string }
-  | { type: "meal_plan_progress"; recipeIndex: number; totalRecipes: number; recipeName: string; dayName: string; completedDays: number; timeSlot: string }
-  | { type: "done"; assistantMessage: string; timerSeconds?: number; lastMealPlanId?: string | null };
+  | {
+      type: "meal_plan_progress";
+      recipeIndex: number;
+      totalRecipes: number;
+      recipeName: string;
+      dayName: string;
+      completedDays: number;
+      timeSlot: string;
+    }
+  | {
+      type: "done";
+      assistantMessage: string;
+      timerSeconds?: number;
+      lastMealPlanId?: string | null;
+    };
 
 /**
  * Stream the chat agent, emitting tool_started when generate_meal_plan begins.
  * Yields events for the frontend to show the meal plan loader.
  */
-export async function* runChatGraphStream(input: ChatGraphInput): AsyncGenerator<ChatStreamEvent, ChatGraphOutput, unknown> {
+export async function* runChatGraphStream(
+  input: ChatGraphInput
+): AsyncGenerator<ChatStreamEvent, ChatGraphOutput, unknown> {
   const { messages, systemPrompt, userId } = input;
-
-  const model = new ChatOpenAI({
-    model: "gpt-4o",
-    temperature: 1.0,
-    maxTokens: 1500,
-    openAIApiKey: process.env.OPENAI_API_KEY,
-  });
-
   const tools = createBabaChatTools(userId);
-  const agent = createReactAgent({ llm: model, tools, prompt: systemPrompt } as unknown as Parameters<typeof createReactAgent>[0]);
 
-  const lcMessages: BaseMessage[] = messages.map((m) => {
-    if (m.role === "user") return new HumanMessage(m.content);
-    if (m.role === "assistant") return new AIMessage(m.content);
-    return new SystemMessage(m.content);
+  type AgentLLM = Parameters<typeof createReactAgent>[0]["llm"];
+  const agent = createReactAgent({
+    llm: chatModel as unknown as AgentLLM,
+    tools,
+    messageModifier: new SystemMessage(systemPrompt),
   });
 
   const stream = await agent.stream(
-    { messages: lcMessages },
+    { messages: toLangChainMessages(messages) },
     { streamMode: ["values", "custom"] as const }
   );
 
   let lastValue: { messages?: BaseMessage[] } = {};
   for await (const chunk of stream) {
-    // LangGraph yields [namespace, mode, payload] when multiple modes
     const arr = Array.isArray(chunk) ? chunk : [chunk];
-    const mode = arr.length >= 2 ? (arr.length === 3 ? arr[1] : arr[0]) : "values";
-    const data = arr.length >= 2 ? (arr.length === 3 ? arr[2] : arr[1]) : arr[0];
+    const mode =
+      arr.length >= 2
+        ? arr.length === 3
+          ? arr[1]
+          : arr[0]
+        : "values";
+    const data =
+      arr.length >= 2
+        ? arr.length === 3
+          ? arr[2]
+          : arr[1]
+        : arr[0];
+
     if (mode === "custom" && data && typeof data === "object") {
-      if ("tool" in data && typeof (data as { tool: string }).tool === "string") {
-        yield { type: "tool_started", tool: (data as { tool: string }).tool };
-      } else if ("type" in data && (data as { type: string }).type === "meal_plan_progress") {
-        const p = data as { type: string; recipeIndex?: number; totalRecipes?: number; recipeName?: string; dayName?: string; completedDays?: number; timeSlot?: string };
-        yield { type: "meal_plan_progress", recipeIndex: p.recipeIndex ?? 0, totalRecipes: p.totalRecipes ?? 0, recipeName: p.recipeName ?? "", dayName: p.dayName ?? "", completedDays: p.completedDays ?? 0, timeSlot: p.timeSlot ?? "" };
+      if (
+        "tool" in data &&
+        typeof (data as { tool: string }).tool === "string"
+      ) {
+        yield {
+          type: "tool_started",
+          tool: (data as { tool: string }).tool,
+        };
+      } else if (
+        "type" in data &&
+        (data as { type: string }).type === "meal_plan_progress"
+      ) {
+        const p = data as {
+          type: string;
+          recipeIndex?: number;
+          totalRecipes?: number;
+          recipeName?: string;
+          dayName?: string;
+          completedDays?: number;
+          timeSlot?: string;
+        };
+        yield {
+          type: "meal_plan_progress",
+          recipeIndex: p.recipeIndex ?? 0,
+          totalRecipes: p.totalRecipes ?? 0,
+          recipeName: p.recipeName ?? "",
+          dayName: p.dayName ?? "",
+          completedDays: p.completedDays ?? 0,
+          timeSlot: p.timeSlot ?? "",
+        };
       }
-    } else if (mode === "values" && data && typeof data === "object" && "messages" in data) {
+    } else if (
+      mode === "values" &&
+      data &&
+      typeof data === "object" &&
+      "messages" in data
+    ) {
       lastValue = data as { messages?: BaseMessage[] };
     }
   }
 
   const finalMessages = lastValue?.messages ?? [];
-  const lastAIMessage = [...finalMessages].reverse().find((m) => m._getType() === "ai") as AIMessage | undefined;
-  let assistantMessage = lastAIMessage?.content
-    ? typeof lastAIMessage.content === "string"
-      ? lastAIMessage.content
-      : Array.isArray(lastAIMessage.content)
-        ? (lastAIMessage.content as { type?: string; text?: string }[])
-            .filter((c) => c?.type === "text")
-            .map((c) => (c as { text?: string }).text)
-            .join("")
-        : ""
-    : "I'm sorry, I couldn't respond.";
+  const result = extractChatResult(finalMessages);
 
-  let timerSeconds: number | undefined;
-  let lastMealPlanId: string | null = null;
-  for (const msg of finalMessages) {
-    if (msg._getType() === "tool") {
-      try {
-        const content = typeof msg.content === "string" ? msg.content : "";
-        const parsed = JSON.parse(content);
-        if (parsed.seconds) timerSeconds = parsed.seconds;
-        if (parsed.planId) lastMealPlanId = parsed.planId;
-      } catch {
-        // ignore
-      }
-    }
-  }
-
-  const result: ChatGraphOutput = {
-    assistantMessage,
-    ...(timerSeconds != null && { timerSeconds }),
-    ...(lastMealPlanId && { lastMealPlanId }),
+  yield {
+    type: "done",
+    assistantMessage: result.assistantMessage,
+    timerSeconds: result.timerSeconds,
+    lastMealPlanId: result.lastMealPlanId,
   };
-  yield { type: "done", assistantMessage, timerSeconds, lastMealPlanId };
   return result;
 }

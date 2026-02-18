@@ -2,6 +2,7 @@ import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBookmark, faWineGlass, faAppleWhole, faUtensils, faGlobe, faClock, faGaugeHigh } from '@fortawesome/free-solid-svg-icons';
 import { RecipeClassification } from './types';
+import type { RecipeLink } from './types';
 import { linkifyOliveOil, parseRecipe } from './messageUtils';
 import { FilterTag } from './FilterTag';
 
@@ -10,7 +11,7 @@ interface RecipeMessageProps {
     messageRef: React.RefObject<HTMLDivElement> | null;
     classification: RecipeClassification | null;
     onSuggestionClick: (suggestion: string) => void;
-    onAssistantResponse: (assistantMsg: string) => void;
+    onAssistantResponse: (assistantMsg: string, recipeLinks?: RecipeLink[]) => void;
     setLoading: (loading: boolean) => void;
     handleSaveRecipe: (content: string, classification: RecipeClassification | null) => void;
 }
@@ -145,7 +146,10 @@ export const RecipeMessage: React.FC<RecipeMessageProps> = ({
                                         });
                                         if (response.ok) {
                                             const data = await response.json();
-                                            onAssistantResponse(data.suggestion || "No pairing suggestion available.");
+                                            onAssistantResponse(
+                                                data.suggestion || "No pairing suggestion available.",
+                                                data.recipeLinks
+                                            );
                                         } else {
                                             onAssistantResponse("Failed to fetch dish pairing.");
                                         }

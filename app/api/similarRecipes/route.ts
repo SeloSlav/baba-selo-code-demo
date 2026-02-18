@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { admin } from "../../firebase/firebaseAdmin";
-import { getSimilarRecipes, recipeToEmbeddingText } from "../../lib/stores/similarRecipesStore";
+import {
+  getSimilarRecipes,
+  recipeToSearchText,
+} from "../../lib/stores/similarRecipesStore";
 
 /** GET /api/similarRecipes?recipeId=xxx - returns similar recipes from pgvector */
 export async function GET(req: Request) {
@@ -22,18 +25,20 @@ export async function GET(req: Request) {
     const data = recipeDoc.data()!;
     const ingredients = Array.isArray(data.ingredients) ? data.ingredients : [];
     const directions = Array.isArray(data.directions) ? data.directions : [];
-    const recipeText = recipeToEmbeddingText({
-      recipeTitle: data.recipeTitle,
+    const searchText = recipeToSearchText({
       ingredients,
       directions,
       recipeSummary: data.recipeSummary,
     });
 
-    if (!recipeText.trim()) {
+    if (!searchText.trim()) {
       return NextResponse.json({ similar: [] });
     }
 
-    const similar = await getSimilarRecipes(recipeId, recipeText, limit);
+    const similar = await getSimilarRecipes(recipeId, searchText, limit, {
+      sourceTitle: data.recipeTitle,
+      searchText,
+    });
 
     // Fetch usernames for similar recipes
     const userIds = [...new Set(similar.map((r) => r.userId).filter(Boolean))].slice(0, 10);

@@ -1,31 +1,42 @@
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
+import { callLLM } from "../../lib/callLLM";
+import {
+  checkEnrichmentCache,
+  storeEnrichmentCache,
+} from "../../lib/stores/enrichmentCache";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const SYSTEM_PROMPT =
+  "You are an SEO expert specializing in recipe descriptions. Create natural, informative summaries that help recipes rank well in search results while providing valuable information to readers.";
 
 export async function POST(request: Request) {
   try {
-    const { title, ingredients, directions, cuisineType, diet, cookingTime, cookingDifficulty } = await request.json();
+    const {
+      title,
+      ingredients,
+      directions,
+      cuisineType,
+      diet,
+      cookingTime,
+      cookingDifficulty,
+    } = await request.json();
 
-    const safeDiet = Array.isArray(diet) ? diet.join(', ') : '';
+    const safeDiet = Array.isArray(diet) ? diet.join(", ") : "";
     const safeIngredients = Array.isArray(ingredients) ? ingredients : [];
     const safeDirections = Array.isArray(directions) ? directions : [];
 
-    const prompt = `Generate a brief, SEO-optimized description for a recipe with the following details:
+    const userContent = `Generate a brief, SEO-optimized description for a recipe with the following details:
 
-Title: ${title || 'Recipe'}
-Cuisine: ${cuisineType || 'Unknown'}
+Title: ${title || "Recipe"}
+Cuisine: ${cuisineType || "Unknown"}
 Diet: ${safeDiet}
-Cooking Time: ${cookingTime || 'Unknown'}
-Difficulty: ${cookingDifficulty || 'Unknown'}
+Cooking Time: ${cookingTime || "Unknown"}
+Difficulty: ${cookingDifficulty || "Unknown"}
 
 Ingredients:
-${safeIngredients.map((ingredient: string) => `- ${ingredient}`).join('\n')}
+${safeIngredients.map((i: string) => `- ${i}`).join("\n")}
 
 Directions:
-${safeDirections.map((direction: string, index: number) => `${index + 1}. ${direction}`).join('\n')}
+${safeDirections.map((d: string, idx: number) => `${idx + 1}. ${d}`).join("\n")}
 
 IMPORTANT RULES:
 1. Write a single paragraph (2-3 sentences)
@@ -39,35 +50,41 @@ IMPORTANT RULES:
 9. DO NOT use any quotation marks in the summary
 
 Example good summary:
-Traditional Croatian beef goulash simmered with paprika and root vegetables. This hearty stew features tender meat and rich flavors, perfect for cold weather meals. Naturally gluten-free and ready in under two hours.
+Traditional Croatian beef goulash simmered with paprika and root vegetables. This hearty stew features tender meat and rich flavors, perfect for cold weather meals. Naturally gluten-free and ready in under two hours.`;
 
-Example bad summary:
-"The most amazing and delicious recipe you'll ever try!" This incredible dish will blow your mind with its fantastic flavors and super easy preparation method that anyone can master!`;
+    const cacheKey = `${title}\n${safeIngredients.join("\n")}\n${safeDirections.join("\n")}\n${cuisineType}\n${cookingTime}\n${cookingDifficulty}`;
 
-    const completion = await openai.chat.completions.create({
-      messages: [
-        {
-          role: "system",
-          content: "You are an SEO expert specializing in recipe descriptions. Create natural, informative summaries that help recipes rank well in search results while providing valuable information to readers."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      model: "gpt-3.5-turbo",
-      temperature: 0.5,
-      max_tokens: 100,
-    });
+    try {
+      const cached = await checkEnrichmentCache<{ summary: string }>(
+        "summary",
+        cacheKey
+      );
+      if (cached?.summary) {
+        return NextResponse.json(cached);
+      }
+    } catch (err) {
+      console.error("Enrichment cache lookup failed:", err);
+    }
 
-    const summary = completion.choices[0].message.content?.trim();
+    const summary = (
+      await callLLM(SYSTEM_PROMPT, userContent, {
+        temperature: 0.5,
+        maxTokens: 100,
+      })
+    ).trim();
 
-    return NextResponse.json({ summary });
+    const result = { summary };
+
+    storeEnrichmentCache("summary", cacheKey, result).catch((err) =>
+      console.error("Failed to store summary cache:", err)
+    );
+
+    return NextResponse.json(result);
   } catch (error) {
-    console.error('Error in generateSummary:', error);
+    console.error("Error in generateSummary:", error);
     return NextResponse.json(
-      { error: 'Failed to generate summary' },
+      { error: "Failed to generate summary" },
       { status: 500 }
     );
   }
-} 
+}

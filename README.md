@@ -31,11 +31,12 @@ The app uses **LangChain** and **LangGraph** for all AI features. Chat runs as a
 ### Recipe Generation (LangGraph StateGraph)
 
 - **Location**: `app/lib/recipeGraph.ts`, `app/api/generateRecipeDetails/route.ts`
-- **Lib structure**: `app/lib/` is organized into `stores/` (vector stores), `meal-plan/` (meal plan logic), and root-level AI/chat files.
-- **Flow**: `StateGraph` with nodes: `check_cache` → [hit] `__end__` | [miss] `generate` → `enrich` → `store_cache` → `__end__`.
-- **Model**: `ChatOpenAI` (gpt-4o-mini) for JSON recipe generation.
+- **Lib structure**: `app/lib/` is organized into `stores/` (vector stores), `meal-plan/` (meal plan logic), `models.ts` (centralized model config), and root-level AI/chat files.
+- **Flow**: `StateGraph` with nodes: `check_cache` → [hit] `__end__` | [miss] `retrieve_corpus` → [direct match] `__end__` | [else] `generate` → `enrich` → `store_cache` → `__end__`.
+- **RAG**: The `retrieve_corpus` node queries the Balkan recipe corpus via pgvector. A very close match (cosine distance < 0.1) is returned directly with zero LLM calls. Otherwise, similar corpus recipes are injected as context for the generation prompt.
+- **Model**: `ChatOpenAI` (gpt-4o-mini) for JSON recipe generation — module-level singleton via `models.ts`.
 - **Caching**: `recipeVectorStore` checks semantic similarity before generating; on miss, generates, enriches (classify, summary, macro, pairing), then stores in the vector cache.
-- **Enrichment cache**: `enrichmentCache` caches classify/summary/macro/pairing API results by semantic similarity to avoid redundant calls.
+- **Enrichment cache**: `enrichmentCache` caches classify/summary/macro/pairing results by semantic similarity with pgvector metadata filtering (each enrichment type is filtered at the SQL level to avoid cross-type false positives). Macro and pairing enrichment run in parallel via `Promise.all`.
 
 ### Chat Tools (Baba Selo)
 
@@ -50,7 +51,7 @@ When you chat with Baba, the ReAct agent can call these tools:
 | `get_nutrition` | Fetches macros via `/api/macroInfo` |
 | `ingredient_substitution` | Balkan substitution lookup |
 | `set_timer` | Sets a timer (seconds); client shows the timer UI |
-| `translate_recipe` | Translates recipe content via OpenAI |
+| `translate_recipe` | Translates recipe content via LangChain `ChatOpenAI` |
 | `generate_meal_plan` | Generates a 7-day meal plan (requires login) |
 | `add_to_meal_plan` | Adds a recipe to the user's meal plan for a given day |
 | `seasonal_tips` | Monthly seasonal produce tips |
@@ -85,14 +86,21 @@ Timer handling: when Baba calls `set_timer`, the API returns `timerSeconds`; the
 
 The app uses **pgvector** via LangChain's `PGVectorStore` and `OpenAIEmbeddings` (`text-embedding-3-small`) for semantic search and caching. All stores use cosine distance. Tables are created automatically by LangChain on first use.
 
+### Architecture
+
+All vector stores share a single `OpenAIEmbeddings` instance, a single pgvector extension check, and a cached connection per table — managed by `lib/stores/vectorStoreFactory.ts`. Model names are centralized in `lib/models.ts`.
+
+Chat corpus RAG is gated behind a keyword intent check so non-recipe messages (greetings, stories, etc.) skip the embedding + pgvector call entirely.
+
 ### Vector Stores
 
 | Table | Lib | Purpose | Key Features |
 |-------|-----|---------|--------------|
 | **recipe_embeddings** | `lib/stores/recipeVectorStore.ts` | Semantic cache for generated recipes | Used by LangGraph `recipeGraph` pipeline. Before generating, checks if a similar query exists. Cache hit → 0 API calls. Cache miss → generate via OpenAI, enrich, then store for future hits. |
 | **recipe_index** | `lib/stores/similarRecipesStore.ts` | Similar recipes search | Recipes synced from Firestore. Powers `get_similar_recipes` and `find_by_ingredients` chat tools. Similarity search by embedding (title + ingredients + directions + summary). |
-| **enrichment_cache** | `lib/stores/enrichmentCache.ts` | Granular enrichment cache | Used by LangGraph `recipeGraph` enrich node. Caches classify, summary, macro, and pairing results by semantic similarity. Avoids redundant API calls for similar recipe content. |
-| **conversation_memory** | `lib/stores/conversationMemoryStore.ts` | Pro users chat recall | Injected into chat system prompt. Stores chat turns for semantic search. Enables queries like "what was that chicken recipe?" by retrieving relevant past turns. |
+| **enrichment_cache** | `lib/stores/enrichmentCache.ts` | Granular enrichment cache | Used by LangGraph `recipeGraph` enrich node. Caches classify, summary, macro, and pairing results. Uses pgvector metadata filtering by type (SQL-level) to prevent cross-type false positives. |
+| **conversation_memory** | `lib/stores/conversationMemoryStore.ts` | Pro users chat recall | Injected into chat system prompt. Uses pgvector metadata filtering by userId (SQL-level) for accurate per-user retrieval. Enables queries like "what was that chicken recipe?" |
+| **balkan_recipe_corpus** | `lib/stores/balkanCorpusStore.ts` | RAG corpus of authentic Balkan recipes | Pre-ingested via scraping pipeline. Queried by the `retrieve_corpus` node in the recipe graph and by the chat route for recipe-related messages. Direct match (distance < 0.1) = zero LLM calls. |
 
 ### Setup
 
@@ -125,8 +133,11 @@ Admin API: `POST /api/admin/sync-recipes` (admin-only).
 | Scenario | Before | After |
 |----------|--------|-------|
 | Recipe cache hit | 5+ API calls, ~3–5s | 0 API calls, ~100–200ms |
+| Corpus direct match | Full LLM generation | 0 LLM calls (pgvector only) |
+| Enrichment (macro + pairing) | Sequential (~2s) | Parallel via `Promise.all` (~1s) |
+| Non-recipe chat message | Embedding + pgvector call | Skipped (intent gate) |
 | Similar recipes | N/A | Semantic search over indexed recipes |
-| Pro chat recall | N/A | Semantic retrieval of past turns |
+| Pro chat recall | N/A | Metadata-filtered semantic retrieval |
 
 ---
 

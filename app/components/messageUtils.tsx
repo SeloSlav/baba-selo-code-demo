@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
+import type { NutritionalInfo, RecipeLink } from './types';
 
 export const renderMarkdown = (text: string): React.ReactNode => {
     // First handle images with markdown syntax ![alt](url)
@@ -60,7 +61,7 @@ export const renderMarkdown = (text: string): React.ReactNode => {
     });
 };
 
-export const renderNutritionInfo = (macros: any) => {
+export const renderNutritionInfo = (macros: NutritionalInfo) => {
     if (!macros || !macros.total || !macros.per_serving) {
         return <div>No macro information available.</div>;
     }
@@ -164,9 +165,22 @@ export const linkifyLastSelo = (text: string): React.ReactNode => {
     );
 };
 
-export const renderDishPairingLinks = (text: string, onSuggestionClick: (suggestion: string) => void): React.ReactNode => {
+export { type RecipeLink } from './types';
+
+export const renderDishPairingLinks = (
+    text: string,
+    onSuggestionClick: (suggestion: string) => void,
+    recipeLinks?: RecipeLink[]
+): React.ReactNode => {
+    const linkMap = new Map<string, RecipeLink>();
+    if (recipeLinks) {
+        for (const link of recipeLinks) {
+            linkMap.set(link.name.toLowerCase().trim(), link);
+        }
+    }
+
     const boldRegex = /[*_]{2}(.*?)[*_]{2}/g;
-    const parts = [];
+    const parts: React.ReactNode[] = [];
     let lastIndex = 0;
     let match;
 
@@ -176,15 +190,29 @@ export const renderDishPairingLinks = (text: string, onSuggestionClick: (suggest
         }
 
         const boldText = match[1];
-        parts.push(
-            <button
-                key={match.index}
-                onClick={() => onSuggestionClick(`Give me a recipe for ${boldText}`)}
-                className="font-bold text-blue-600 hover:underline cursor-pointer"
-            >
-                {boldText}
-            </button>
-        );
+        const link = linkMap.get(boldText.toLowerCase().trim());
+
+        if (link) {
+            parts.push(
+                <Link
+                    key={match.index}
+                    href={`/recipe/${link.recipeId}`}
+                    className="font-bold text-blue-600 hover:underline"
+                >
+                    {boldText}
+                </Link>
+            );
+        } else {
+            parts.push(
+                <button
+                    key={match.index}
+                    onClick={() => onSuggestionClick(`Give me a recipe for ${boldText}`)}
+                    className="font-bold text-blue-600 hover:underline cursor-pointer"
+                >
+                    {boldText}
+                </button>
+            );
+        }
 
         lastIndex = match.index + match[0].length;
     }
@@ -262,7 +290,7 @@ export const parseRecipe = (text: string) => {
     return { title: title || "Recipe", ingredients, directions };
 };
 
-export const isRecipe = (text: string) => {
+export const isRecipe = (text: unknown): text is string => {
     return (
         typeof text === "string" &&
         text.toLowerCase().includes("ingredients") &&

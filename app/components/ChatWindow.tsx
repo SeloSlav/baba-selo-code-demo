@@ -11,6 +11,7 @@ import React, {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPaperclip, faCamera, faArrowUp, faArrowDown, faImage, faMagicWandSparkles, faUpload, faFileUpload, faClock, faMicrophone, faCircleQuestion } from "@fortawesome/free-solid-svg-icons";
 import { ChatMessages } from "./ChatMessages";
+import type { Message, NutritionalInfo } from "./types";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
 import { ImageUploadPopup } from "./ImageUploadPopup";
@@ -21,12 +22,6 @@ import { usePoints } from '../context/PointsContext';
 import { TimerPopup } from "./TimerPopup";
 import { VoiceRecordPopup } from "./VoiceRecordPopup";
 import { BabaHelpPopup } from "./BabaHelpPopup";
-
-interface Message {
-  role: "user" | "assistant";
-  content: string;
-  imageUrl?: string;
-}
 
 interface ChatWindowProps {
   isSidebarOpen: boolean;
@@ -145,7 +140,8 @@ export const ChatWindow = forwardRef(
       if (!chatId || messages.length <= 1 || !onChatIdChange) return;
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = setTimeout(() => {
-        const title = messages.find((m) => m.role === "user")?.content?.slice(0, 50) || "New Chat";
+        const firstUserContent = messages.find((m) => m.role === "user")?.content;
+        const title = (typeof firstUserContent === "string" ? firstUserContent.slice(0, 50) : null) || "New Chat";
         saveChat(messages, chatId, title);
       }, 1500);
       return () => {
@@ -408,10 +404,13 @@ export const ChatWindow = forwardRef(
       sendMessage(suggestion);
     };
 
-    const onAssistantResponse = (assistantMsg: string) => {
+    const onAssistantResponse = (
+      assistantMsg: string | NutritionalInfo,
+      recipeLinks?: { name: string; recipeId: string; url: string }[]
+    ) => {
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: assistantMsg },
+        { role: "assistant", content: assistantMsg, ...(recipeLinks?.length && { recipeLinks }) },
       ]);
     };
 
