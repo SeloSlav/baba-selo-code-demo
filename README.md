@@ -8,26 +8,48 @@
 - **Recipe cards** – Save recipes, see nutrition info, pairings, and similar recipes. Recipe chat cards use FontAwesome icons and a polished layout.
 - **Pro plan** – Baba’s memory, multiple chats. Upgrade page shows annual savings ($12) and clear CTAs.
 - **Meal plans** – Free for everyone. Ask Baba in chat or go to Meal Plans for daily/weekly plans with shopping lists.’
-- **Chat tools** – Baba can save recipes, find similar ones, convert servings, get nutrition, suggest substitutions, set timers, translate recipes, add to meal plans, give seasonal tips, find by ingredients, and convert units.
+- **Chat tools** – Baba can save recipes, find similar ones, convert servings, get nutrition, suggest substitutions, set timers, translate recipes, add to meal plans, give seasonal tips, find by ingredients, convert units, and generate food images.
 
 ---
 
-## Chat Tools (Baba Selo)
+## LangChain, LangGraph & Tool Calls
 
-When you chat with Baba, she can use these tools:
+The app uses **LangChain** and **LangGraph** for all AI features. Chat runs as a **ReAct agent** with structured tool calls; recipe generation uses a **LangGraph StateGraph** pipeline; and vector stores (pgvector via LangChain) power semantic search and caching.
+
+### Chat Agent (LangGraph ReAct)
+
+- **Location**: `app/lib/chatGraph.ts`, `app/lib/chatToolsLangchain.ts`
+- **Flow**: `createReactAgent` from `@langchain/langgraph/prebuilt` — a ReAct-style agent that decides when to call tools vs. respond directly.
+- **Model**: `ChatOpenAI` (GPT-4o) from `@langchain/openai`.
+- **Tools**: Defined with `tool()` from `@langchain/core/tools` and Zod schemas. Each tool wraps handlers in `chatTools.js`.
+- **API**: `POST /api/chat` streams via `runChatGraphStream`, emitting `tool_started` when `generate_meal_plan` runs (for loader UX) and `done` with the final message, timer, and meal plan link.
+
+### Recipe Generation (LangGraph StateGraph)
+
+- **Location**: `app/lib/recipeGraph.ts`, `app/api/generateRecipeDetails/route.ts`
+- **Flow**: `StateGraph` with nodes: `check_cache` → [hit] `__end__` | [miss] `generate` → `enrich` → `store_cache` → `__end__`.
+- **Model**: `ChatOpenAI` (gpt-4o-mini) for JSON recipe generation.
+- **Caching**: `recipeVectorStore` checks semantic similarity before generating; on miss, generates, enriches (classify, summary, macro, pairing), then stores in the vector cache.
+- **Enrichment cache**: `enrichmentCache` caches classify/summary/macro/pairing API results by semantic similarity to avoid redundant calls.
+
+### Chat Tools (Baba Selo)
+
+When you chat with Baba, the ReAct agent can call these tools:
 
 | Tool | Description |
 |------|-------------|
+| `generate_image` | Generates a food image when the user asks for a picture of a dish |
 | `save_recipe` | Saves a recipe to Firestore for the user |
-| `get_similar_recipes` | Finds similar recipes via semantic search |
+| `get_similar_recipes` | Finds similar recipes via pgvector semantic search (`recipe_index`) |
 | `convert_servings` | Scales ingredients for different serving sizes |
 | `get_nutrition` | Fetches macros via `/api/macroInfo` |
 | `ingredient_substitution` | Balkan substitution lookup |
 | `set_timer` | Sets a timer (seconds); client shows the timer UI |
 | `translate_recipe` | Translates recipe content via OpenAI |
-| `add_to_meal_plan` | Adds a recipe to the user’s meal plan for a given day |
+| `generate_meal_plan` | Generates a 7-day meal plan (requires login) |
+| `add_to_meal_plan` | Adds a recipe to the user's meal plan for a given day |
 | `seasonal_tips` | Monthly seasonal produce tips |
-| `find_by_ingredients` | Finds recipes by ingredients (similarity search) |
+| `find_by_ingredients` | Finds recipes by ingredients (pgvector similarity search) |
 | `unit_conversion` | Converts g↔cups, ml↔cups, tbsp↔tsp |
 
 Timer handling: when Baba calls `set_timer`, the API returns `timerSeconds`; the client adds a `TIMER_REQUEST_<seconds>` message so the timer UI appears.
@@ -54,18 +76,18 @@ Timer handling: when Baba calls `set_timer`, the API returns `timerSeconds`; the
 
 ---
 
-## Vector Store Features (pgvector)
+## Vector Store Features (pgvector + LangChain)
 
-The app uses **pgvector** with LangChain for semantic search and caching. All vector stores use the `text-embedding-3-small` model and cosine distance. Tables are created automatically by LangChain on first use.
+The app uses **pgvector** via LangChain's `PGVectorStore` and `OpenAIEmbeddings` (`text-embedding-3-small`) for semantic search and caching. All stores use cosine distance. Tables are created automatically by LangChain on first use.
 
 ### Vector Stores
 
-| Table | Purpose | Key Features |
-|-------|---------|--------------|
-| **recipe_embeddings** | Semantic cache for generated recipes | Before generating, checks if a similar query exists. Cache hit → 0 API calls. Cache miss → generate via OpenAI, then store for future hits. Reduces 5+ LLM calls to near-zero on repeats. |
-| **recipe_index** | Similar recipes search | Recipes synced from Firestore; similarity search by embedding (title + ingredients + directions + summary). Powers "Similar recipes" on recipe pages. |
-| **enrichment_cache** | Granular enrichment cache | Caches classify, summary, macro, and pairing results by semantic similarity on input text. Avoids redundant API calls for similar recipe content. |
-| **conversation_memory** | Pro users chat recall | Stores chat turns for semantic search. Enables queries like "what was that chicken recipe?" by retrieving relevant past turns. |
+| Table | Lib | Purpose | Key Features |
+|-------|-----|---------|--------------|
+| **recipe_embeddings** | `recipeVectorStore.ts` | Semantic cache for generated recipes | Used by LangGraph `recipeGraph` pipeline. Before generating, checks if a similar query exists. Cache hit → 0 API calls. Cache miss → generate via OpenAI, enrich, then store for future hits. |
+| **recipe_index** | `similarRecipesStore.ts` | Similar recipes search | Recipes synced from Firestore. Powers `get_similar_recipes` and `find_by_ingredients` chat tools. Similarity search by embedding (title + ingredients + directions + summary). |
+| **enrichment_cache** | `enrichmentCache.ts` | Granular enrichment cache | Used by LangGraph `recipeGraph` enrich node. Caches classify, summary, macro, and pairing results by semantic similarity. Avoids redundant API calls for similar recipe content. |
+| **conversation_memory** | `conversationMemoryStore.ts` | Pro users chat recall | Injected into chat system prompt. Stores chat turns for semantic search. Enables queries like "what was that chicken recipe?" by retrieving relevant past turns. |
 
 ### Setup
 
