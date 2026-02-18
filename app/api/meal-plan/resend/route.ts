@@ -41,10 +41,30 @@ export async function POST(req: Request) {
     }
 
     const planData = planSnap.data();
-    const shoppingList = planData?.shoppingList;
+    const rawShoppingList = planData?.shoppingList;
     const planType = planData?.type || 'weekly';
 
-    if (!shoppingList || typeof shoppingList !== 'string') {
+    let shoppingList: string;
+    if (typeof rawShoppingList === 'string') {
+      shoppingList = rawShoppingList;
+    } else if (rawShoppingList && typeof rawShoppingList === 'object' && !Array.isArray(rawShoppingList)) {
+      const lines: string[] = [];
+      for (const [cat, val] of Object.entries(rawShoppingList)) {
+        if (val == null) continue;
+        const label = cat.charAt(0).toUpperCase() + cat.slice(1);
+        if (typeof val === 'string') {
+          if (val.trim()) lines.push(`${label}:\n${val.trim()}`);
+        } else if (Array.isArray(val)) {
+          const items = val.filter((v) => v != null && String(v).trim()).map((v) => `- ${String(v).trim()}`);
+          if (items.length) lines.push(`${label}:\n${items.join('\n')}`);
+        }
+      }
+      shoppingList = lines.join('\n\n');
+    } else {
+      return NextResponse.json({ error: 'This plan has no shopping list to resend' }, { status: 400 });
+    }
+
+    if (!shoppingList.trim()) {
       return NextResponse.json({ error: 'This plan has no shopping list to resend' }, { status: 400 });
     }
 

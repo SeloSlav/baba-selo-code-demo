@@ -13,6 +13,7 @@ import {
   handleSetTimer,
   handleTranslateRecipe,
   handleGenerateMealPlan,
+  handleGetTodaysMeals,
   handleAddToMealPlan,
   handleSeasonalTips,
   handleFindByIngredients,
@@ -149,23 +150,48 @@ export function createBabaChatTools(userId: string) {
       }
     ),
     tool(
+      async () => {
+        const result = await handleGetTodaysMeals({ userId: uid });
+        return JSON.stringify(result);
+      },
+      {
+        name: "get_todays_meals",
+        description:
+          "Get what the user is eating today from their meal plan. Use when user asks 'what's for dinner?', 'what am I eating today?', 'what's for lunch?', 'show my plan for today', 'what's on my meal plan today'.",
+        schema: z.object({}),
+      }
+    ),
+    tool(
       async (input, config?: { writer?: (chunk: unknown) => void }) => {
-        const { preferences, days } = input as { preferences?: string; days?: number };
+        const { preferences, days, variety, slots, reuseLastWeek } = input as {
+          preferences?: string;
+          days?: number;
+          variety?: string;
+          slots?: string[];
+          reuseLastWeek?: boolean;
+        };
         config?.writer?.({ tool: "generate_meal_plan" });
         const result = await handleGenerateMealPlan({
           userId: uid,
           preferences: preferences || undefined,
           days: days ?? 7,
+          variety: variety as "varied" | "same_every_day" | "same_every_week" | "leftovers" | "meal_prep_sunday" | undefined,
+          slots: Array.isArray(slots) ? slots.filter((s) => ["breakfast", "lunch", "dinner", "snack"].includes(s)) as ("breakfast" | "lunch" | "dinner" | "snack")[] : undefined,
+          reuseLastWeek,
+          onProgress: (p) => config?.writer?.({ type: "meal_plan_progress", ...p }),
         });
         return JSON.stringify(result);
       },
       {
         name: "generate_meal_plan",
         description:
-          "Generate a 7-day meal plan. Call ONLY when user has confirmed they're ready (e.g. 'create it', 'go ahead') or given 2+ preferences. If they shared only one preference, ask a follow-up first—don't call yet. Pass preferences (their exact words) and days=7.",
+          "Generate a 7-day meal plan. Call ONLY when user has confirmed they're ready (e.g. 'create it', 'go ahead') or given 2+ preferences. If they shared only one preference, ask a follow-up first—don't call yet. Pass preferences (their exact words) and days=7. Use variety/slots/reuseLastWeek when user specifies (e.g. 'same every day', 'just dinners', 'repeat last week').",
         schema: z.object({
           preferences: z.string().optional().describe("User's preferences in their own words—diet, cuisines, time limits, ingredients to use, etc. Required if they've shared any."),
           days: z.number().optional().describe("Always 7 for weekly plans."),
+          variety: z.enum(["varied", "same_every_day", "same_every_week", "leftovers", "meal_prep_sunday"]).optional().describe("Plan structure: varied (default), same_every_day, same_every_week, leftovers, meal_prep_sunday."),
+          slots: z.array(z.enum(["breakfast", "lunch", "dinner", "snack"])).optional().describe("Which meals to include. Default: breakfast, lunch, dinner."),
+          reuseLastWeek: z.boolean().optional().describe("True to reuse last week's plan instead of generating new."),
         }),
       }
     ),

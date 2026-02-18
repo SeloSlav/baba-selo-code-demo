@@ -44,7 +44,7 @@ function normalizeResult(result: Record<string, unknown> | null) {
 
 export async function POST(request: Request) {
   try {
-    const { recipeTitle, recipeContent, generateAll = false } = await request.json();
+    const { recipeTitle, recipeContent, generateAll = false, skipMacroAndPairing = false } = await request.json();
     const baseUrl = getBaseUrl();
 
     const queryText =
@@ -60,6 +60,7 @@ export async function POST(request: Request) {
         recipeTitle,
         recipeContent: recipeContent || "",
         generateAll,
+        skipMacroAndPairing,
         baseUrl,
         result: null,
         fromCache: false,

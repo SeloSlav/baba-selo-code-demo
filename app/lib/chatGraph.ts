@@ -82,8 +82,18 @@ export async function runChatGraph(input: ChatGraphInput): Promise<ChatGraphOutp
   };
 }
 
+export type MealPlanProgressPayload = {
+  recipeIndex: number;
+  totalRecipes: number;
+  recipeName: string;
+  dayName: string;
+  completedDays: number;
+  timeSlot: string;
+};
+
 export type ChatStreamEvent =
   | { type: "tool_started"; tool: string }
+  | { type: "meal_plan_progress"; recipeIndex: number; totalRecipes: number; recipeName: string; dayName: string; completedDays: number; timeSlot: string }
   | { type: "done"; assistantMessage: string; timerSeconds?: number; lastMealPlanId?: string | null };
 
 /**
@@ -120,8 +130,13 @@ export async function* runChatGraphStream(input: ChatGraphInput): AsyncGenerator
     const arr = Array.isArray(chunk) ? chunk : [chunk];
     const mode = arr.length >= 2 ? (arr.length === 3 ? arr[1] : arr[0]) : "values";
     const data = arr.length >= 2 ? (arr.length === 3 ? arr[2] : arr[1]) : arr[0];
-    if (mode === "custom" && data && typeof data === "object" && "tool" in data && typeof (data as { tool: string }).tool === "string") {
-      yield { type: "tool_started", tool: (data as { tool: string }).tool };
+    if (mode === "custom" && data && typeof data === "object") {
+      if ("tool" in data && typeof (data as { tool: string }).tool === "string") {
+        yield { type: "tool_started", tool: (data as { tool: string }).tool };
+      } else if ("type" in data && (data as { type: string }).type === "meal_plan_progress") {
+        const p = data as { type: string; recipeIndex?: number; totalRecipes?: number; recipeName?: string; dayName?: string; completedDays?: number; timeSlot?: string };
+        yield { type: "meal_plan_progress", recipeIndex: p.recipeIndex ?? 0, totalRecipes: p.totalRecipes ?? 0, recipeName: p.recipeName ?? "", dayName: p.dayName ?? "", completedDays: p.completedDays ?? 0, timeSlot: p.timeSlot ?? "" };
+      }
     } else if (mode === "values" && data && typeof data === "object" && "messages" in data) {
       lastValue = data as { messages?: BaseMessage[] };
     }

@@ -252,7 +252,32 @@ function extractBabaTip(plan: string): string {
   return match ? match[1].trim() : '';
 }
 
-export async function handleGenerateMealPlan({ userId, preferences, days = 7 }: { userId: string; preferences?: string; days?: number }) {
+export type MealPlanProgressCallback = (p: {
+  recipeIndex: number;
+  totalRecipes: number;
+  recipeName: string;
+  dayName: string;
+  completedDays: number;
+  timeSlot: string;
+}) => void;
+
+export async function handleGenerateMealPlan({
+  userId,
+  preferences,
+  days = 7,
+  variety,
+  slots,
+  reuseLastWeek,
+  onProgress,
+}: {
+  userId: string;
+  preferences?: string;
+  days?: number;
+  variety?: 'varied' | 'same_every_day' | 'same_every_week' | 'leftovers' | 'meal_prep_sunday';
+  slots?: ('breakfast' | 'lunch' | 'dinner' | 'snack')[];
+  reuseLastWeek?: boolean;
+  onProgress?: MealPlanProgressCallback;
+}) {
   if (!userId || userId === 'anonymous') {
     return { success: false, error: 'Sign in to create and save meal plans. Your plans will be saved with clickable recipe links!' };
   }
@@ -281,6 +306,10 @@ export async function handleGenerateMealPlan({ userId, preferences, days = 7 }: 
         type: 'weekly',
         includeShoppingList: true,
         source: 'chat',
+        variety,
+        slots,
+        reuseLastWeek,
+        onProgress,
       });
 
       const plan = result.planTextWithLinks;
@@ -312,6 +341,60 @@ export async function handleGenerateMealPlan({ userId, preferences, days = 7 }: 
   } catch (err) {
     console.error('Generate meal plan error:', err);
     return { success: false, error: (err as Error).message };
+  }
+}
+
+export async function handleGetTodaysMeals({ userId }: { userId: string }) {
+  if (!userId || userId === 'anonymous') {
+    return { success: false, error: 'Sign in to see your meal plan!', meals: [] };
+  }
+  try {
+    const userDoc = await adminDb.collection('users').doc(userId).get();
+    const userData = userDoc?.data() || {};
+    const activePlanId = userData.activePlanId as string | undefined;
+    const activePlanStartDay = (userData.activePlanStartDay as number) ?? 1; // 0=Sun, 1=Mon, ..., 6=Sat
+
+    let planDoc: { exists: boolean; id: string; data: () => Record<string, unknown> | undefined } | null = null;
+    if (activePlanId) {
+      const snap = await adminDb.collection('users').doc(userId).collection('mealPlanHistory').doc(activePlanId).get();
+      if (snap.exists) planDoc = snap;
+    }
+    if (!planDoc?.exists) {
+      const recent = await adminDb.collection('users').doc(userId).collection('mealPlanHistory')
+        .where('type', '==', 'weekly')
+        .limit(1)
+        .get();
+      const sorted = recent.docs.sort((a, b) => {
+        const aT = (a.data().createdAt as { toDate?: () => Date })?.toDate?.()?.getTime?.() ?? 0;
+        const bT = (b.data().createdAt as { toDate?: () => Date })?.toDate?.()?.getTime?.() ?? 0;
+        return bT - aT;
+      });
+      if (sorted[0]?.exists) planDoc = sorted[0];
+    }
+    if (!planDoc?.exists) {
+      return { success: true, meals: [], message: "You don't have a meal plan yet. Ask me to create one!" };
+    }
+
+    const data = planDoc.data();
+    const days = data?.days as { day: number; dayName: string; slots: { timeSlot: string; recipeId: string; recipeName: string; description: string }[] }[] | undefined;
+    if (!Array.isArray(days) || days.length === 0) {
+      return { success: true, meals: [], message: "Your plan doesn't have daily meals." };
+    }
+
+    const now = new Date();
+    const todayWeekday = now.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+    const planDayIndex = ((todayWeekday - activePlanStartDay + 7) % 7) + 1;
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayData = days.find((d) => d.day === planDayIndex);
+    return {
+      success: true,
+      meals: dayData?.slots ?? [],
+      dayName: dayNames[todayWeekday],
+      planId: planDoc.id,
+    };
+  } catch (err) {
+    console.error('Get todays meals error:', err);
+    return { success: false, error: (err as Error).message, meals: [] };
   }
 }
 

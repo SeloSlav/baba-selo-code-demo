@@ -15,6 +15,7 @@ const RecipeStateAnnotation = Annotation.Root({
   recipeTitle: Annotation<string>,
   recipeContent: Annotation<string>,
   generateAll: Annotation<boolean>,
+  skipMacroAndPairing: Annotation<boolean>,
   baseUrl: Annotation<string>,
   result: Annotation<Partial<CachedRecipeData> | null>,
   fromCache: Annotation<boolean>,
@@ -96,7 +97,7 @@ Rules:
 async function enrichNode(state: RecipeState): Promise<Partial<RecipeState>> {
   if (state.fromCache || !state.generateAll || !state.result) return {};
 
-  const { result, baseUrl, recipeTitle } = state;
+  const { result, baseUrl, recipeTitle, skipMacroAndPairing } = state;
   const ingredients = result.ingredients ?? [];
   const directions = result.directions ?? [];
 
@@ -159,32 +160,33 @@ async function enrichNode(state: RecipeState): Promise<Partial<RecipeState>> {
     }
     if (summaryData) result.summary = summaryData.summary;
 
-    // Macros (with cache)
-    const recipeForMacros = `${recipeTitle}\n\nIngredients:\n${ingredients.join("\n")}\n\nDirections:\n${directions.join("\n")}`;
-    let macroData = await checkEnrichmentCache<{ macros?: unknown }>("macro", recipeForMacros);
-    if (!macroData) {
-      const macroRes = await fetch(`${baseUrl}/api/macroInfo`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recipe: recipeForMacros }),
-      });
-      macroData = macroRes.ok ? await macroRes.json() : null;
-      if (macroData) await storeEnrichmentCache("macro", recipeForMacros, macroData);
-    }
-    if (macroData) result.macroInfo = macroData.macros || macroData;
+    // Macros and Pairings (skip for meal plan recipes to save time)
+    if (!skipMacroAndPairing) {
+      const recipeForMacros = `${recipeTitle}\n\nIngredients:\n${ingredients.join("\n")}\n\nDirections:\n${directions.join("\n")}`;
+      let macroData = await checkEnrichmentCache<{ macros?: unknown }>("macro", recipeForMacros);
+      if (!macroData) {
+        const macroRes = await fetch(`${baseUrl}/api/macroInfo`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ recipe: recipeForMacros }),
+        });
+        macroData = macroRes.ok ? await macroRes.json() : null;
+        if (macroData) await storeEnrichmentCache("macro", recipeForMacros, macroData);
+      }
+      if (macroData) result.macroInfo = macroData.macros || macroData;
 
-    // Pairings (with cache)
-    let pairingData = await checkEnrichmentCache<{ suggestion: string }>("pairing", recipeForMacros);
-    if (!pairingData) {
-      const pairingRes = await fetch(`${baseUrl}/api/dishPairing`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recipe: recipeForMacros }),
-      });
-      pairingData = pairingRes.ok ? await pairingRes.json() : null;
-      if (pairingData) await storeEnrichmentCache("pairing", recipeForMacros, pairingData);
+      let pairingData = await checkEnrichmentCache<{ suggestion: string }>("pairing", recipeForMacros);
+      if (!pairingData) {
+        const pairingRes = await fetch(`${baseUrl}/api/dishPairing`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ recipe: recipeForMacros }),
+        });
+        pairingData = pairingRes.ok ? await pairingRes.json() : null;
+        if (pairingData) await storeEnrichmentCache("pairing", recipeForMacros, pairingData);
+      }
+      if (pairingData) result.dishPairings = pairingData.suggestion;
     }
-    if (pairingData) result.dishPairings = pairingData.suggestion;
   } catch (err) {
     console.error("Enrich step error:", err);
   }

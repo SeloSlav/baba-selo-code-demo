@@ -59,6 +59,14 @@ export const ChatWindow = forwardRef(
     ]);
     const [loading, setLoading] = useState<boolean>(false);
     const [isGeneratingMealPlan, setIsGeneratingMealPlan] = useState(false);
+    const [mealPlanProgress, setMealPlanProgress] = useState<{
+      recipeIndex: number;
+      totalRecipes: number;
+      recipeName: string;
+      dayName: string;
+      completedDays: number;
+      timeSlot: string;
+    } | null>(null);
     const [windowWidth, setWindowWidth] = useState<number | null>(null);
     const [translateY, setTranslateY] = useState(0);
     const [isInputFocused, setIsInputFocused] = useState(false);
@@ -300,6 +308,16 @@ export const ChatWindow = forwardRef(
                 const event = JSON.parse(line);
                 if (event.type === "tool_started" && event.tool === "generate_meal_plan") {
                   setIsGeneratingMealPlan(true);
+                  setMealPlanProgress(null);
+                } else if (event.type === "meal_plan_progress") {
+                  setMealPlanProgress({
+                    recipeIndex: event.recipeIndex,
+                    totalRecipes: event.totalRecipes,
+                    recipeName: event.recipeName,
+                    dayName: event.dayName,
+                    completedDays: event.completedDays,
+                    timeSlot: event.timeSlot,
+                  });
                 } else if (event.type === "done") {
                   doneEvent = event;
                 } else if (event.type === "error") {
@@ -322,6 +340,7 @@ export const ChatWindow = forwardRef(
           }
 
           setIsGeneratingMealPlan(false);
+          setMealPlanProgress(null);
           if (doneEvent?.assistantMessage) {
             setMessages((prev) => {
               const next: Message[] = [...prev, { role: "assistant", content: doneEvent!.assistantMessage! }];
@@ -381,6 +400,7 @@ export const ChatWindow = forwardRef(
       } finally {
         setLoading(false);
         setIsGeneratingMealPlan(false);
+        setMealPlanProgress(null);
       }
     };
 
@@ -574,6 +594,7 @@ export const ChatWindow = forwardRef(
               onSuggestionClick={onSuggestionClick}
               onAssistantResponse={onAssistantResponse}
               isGeneratingMealPlan={isGeneratingMealPlan}
+              mealPlanProgress={mealPlanProgress}
             />
 
             {/* Chat input area for mobile */}

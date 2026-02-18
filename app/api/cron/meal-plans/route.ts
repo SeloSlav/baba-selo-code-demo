@@ -67,6 +67,10 @@ export async function GET(req: Request) {
       if (!email) continue;
 
       try {
+        const variety = (d.mealPlanVariety || 'varied') as 'varied' | 'same_every_day' | 'same_every_week' | 'leftovers' | 'meal_prep_sunday';
+        const slots = Array.isArray(d.mealPlanSlots) && d.mealPlanSlots.length > 0
+          ? d.mealPlanSlots.filter((s: string) => ['breakfast', 'lunch', 'dinner', 'snack'].includes(s))
+          : undefined;
         const result = await generateMealPlanWithRecipes({
           userId: doc.id,
           mealPlanPrompt: (d.mealPlanPrompt || '').trim(),
@@ -76,6 +80,9 @@ export async function GET(req: Request) {
           preferredCookingOil: d.preferredCookingOil || 'olive oil',
           type: planType,
           includeShoppingList: d.includeShoppingList ?? true,
+          variety,
+          slots: slots as ('breakfast' | 'lunch' | 'dinner' | 'snack')[] | undefined,
+          reuseLastWeek: variety === 'same_every_week',
         });
 
         const isWeekly = planType === 'weekly';

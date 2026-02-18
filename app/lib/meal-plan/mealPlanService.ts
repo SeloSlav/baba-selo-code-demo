@@ -39,6 +39,19 @@ function formatPlanForEmail(
   return lines.join('\n').trim();
 }
 
+export interface MealPlanProgress {
+  day: number;
+  dayName: string;
+  recipeIndex: number;
+  totalRecipes: number;
+  recipeName: string;
+  completedDays: number;
+  timeSlot: string;
+}
+
+export type MealPlanVariety = 'varied' | 'same_every_day' | 'same_every_week' | 'leftovers' | 'meal_prep_sunday';
+export type MealSlot = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+
 export interface MealPlanServiceOptions {
   userId: string;
   mealPlanPrompt?: string;
@@ -49,6 +62,13 @@ export interface MealPlanServiceOptions {
   type?: 'weekly' | 'daily';
   includeShoppingList?: boolean;
   source?: 'mealPlan' | 'chat' | 'cron';
+  onProgress?: (p: MealPlanProgress) => void;
+  /** Plan structure: varied (default), same_every_day, same_every_week, leftovers, meal_prep_sunday */
+  variety?: MealPlanVariety;
+  /** Which meal slots to include. Default: breakfast, lunch, dinner */
+  slots?: MealSlot[];
+  /** Reuse last week's plan (only for weekly). Overrides variety when true. */
+  reuseLastWeek?: boolean;
 }
 
 export interface MealPlanServiceResult {
@@ -60,6 +80,10 @@ export interface MealPlanServiceResult {
   babaTip: string;
   shoppingList?: string;
 }
+
+const DEFAULT_SLOTS: MealSlot[] = ['breakfast', 'lunch', 'dinner'];
+const ALL_SLOTS: MealSlot[] = ['breakfast', 'lunch', 'dinner', 'snack'];
+const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 export async function generateMealPlanWithRecipes(
   options: MealPlanServiceOptions
@@ -74,7 +98,84 @@ export async function generateMealPlanWithRecipes(
     type = 'weekly',
     includeShoppingList = true,
     source = 'mealPlan',
+    onProgress,
+    variety = 'varied',
+    slots: requestedSlots,
+    reuseLastWeek = false,
   } = options;
+
+  const slots = (requestedSlots?.length ? requestedSlots : DEFAULT_SLOTS).filter((s) =>
+    ALL_SLOTS.includes(s)
+  ) as MealSlot[];
+  const slotList = slots.join(', ');
+
+  const firestore = admin.firestore();
+  const historyCol = firestore.collection('users').doc(userId).collection('mealPlanHistory');
+
+  // Reuse last week: clone most recent weekly plan
+  if (type === 'weekly' && reuseLastWeek) {
+    const lastPlansSnap = await historyCol.where('type', '==', 'weekly').limit(20).get();
+    const sorted = lastPlansSnap.docs.sort((a, b) => {
+      const aT = (a.data().createdAt as { toDate?: () => Date })?.toDate?.()?.getTime?.() ?? 0;
+      const bT = (b.data().createdAt as { toDate?: () => Date })?.toDate?.()?.getTime?.() ?? 0;
+      return bT - aT;
+    });
+    const lastDoc = sorted[0];
+    if (lastDoc?.exists) {
+      const data = lastDoc.data();
+      const days = data.days as { day: number; dayName: string; slots: { timeSlot: string; recipeId: string; recipeName: string; description: string }[] }[];
+      if (Array.isArray(days) && days.length > 0) {
+        const filteredDays = days.map((d) => ({
+          ...d,
+          slots: (d.slots || []).filter((s) => slots.includes(s.timeSlot as MealSlot)),
+        })).filter((d) => d.slots.length > 0);
+        if (filteredDays.length > 0) {
+          const babaTip = data.babaTip || '';
+          const shoppingList = data.shoppingList;
+          const linkLines: string[] = [];
+          for (const day of filteredDays) {
+            const dayLines = [`**Day ${day.day}: ${day.dayName}**`];
+            for (const slot of day.slots) {
+              dayLines.push(`  ${slot.timeSlot.charAt(0).toUpperCase() + slot.timeSlot.slice(1)}: [${slot.recipeName}](/recipe/${slot.recipeId}) - ${slot.description}`);
+            }
+            linkLines.push(dayLines.join('\n'));
+          }
+          if (babaTip) linkLines.push(`\n**Baba's Tip:** ${babaTip}`);
+          if (shoppingList) {
+            const slStr = typeof shoppingList === 'string' ? shoppingList : Object.entries(shoppingList)
+              .map(([cat, val]) => `${cat.charAt(0).toUpperCase() + cat.slice(1)}:\n${Array.isArray(val) ? val.join('\n') : val}`)
+              .join('\n\n');
+            linkLines.push(`\n**Shopping List:**\n${slStr}`);
+          }
+          const plainContent = formatPlanForEmail(
+            { ...data, days: filteredDays, shoppingList },
+            true
+          );
+          const historyRef = await historyCol.add({
+            type: 'weekly',
+            content: plainContent,
+            subject: "Baba Selo's Weekly Meal Plan",
+            babaTip,
+            slots: [],
+            days: filteredDays,
+            shoppingList: shoppingList ?? null,
+            source: source || 'mealPlan',
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+          return {
+            planId: historyRef.id,
+            plainContent,
+            planTextWithLinks: linkLines.join('\n\n'),
+            storedDays: filteredDays,
+            storedSlots: [],
+            babaTip,
+            shoppingList: typeof shoppingList === 'string' ? shoppingList : (shoppingList ? Object.entries(shoppingList).map(([cat, val]) => `${cat.charAt(0).toUpperCase() + cat.slice(1)}:\n${Array.isArray(val) ? val.join('\n') : val}`).join('\n\n') : undefined),
+          };
+        }
+      }
+    }
+    // Fall through to generate if no last plan
+  }
 
   const preferenceContext = mealPlanPrompt.trim()
     ? `The user's preferences (in their own words): ${mealPlanPrompt.trim()}`
@@ -90,31 +191,48 @@ export async function generateMealPlanWithRecipes(
       : '';
 
   const isWeekly = type === 'weekly';
+
+  const varietyInstructions: Record<MealPlanVariety, string> = {
+    varied: 'Create a 7-day weekly meal plan with variety—different meals each day.',
+    same_every_day: 'Create ONE day of meals. The same meals will be repeated every day of the week. Design one balanced day.',
+    same_every_week: 'Create a 7-day weekly meal plan with variety.',
+    leftovers: 'Create a plan where the user cooks 2-3 large dinners and eats the same dinner 2-3 times. E.g. Monday/Tuesday same dinner, Wednesday/Thursday same, Friday/Saturday same. Breakfast and lunch can vary or repeat. Minimize cooking days.',
+    meal_prep_sunday: 'Create a plan where the user meal preps on Sunday: the SAME lunch is eaten Monday-Friday. Dinners vary each night. Breakfast can be simple/repeat.',
+  };
+
   const systemContent = isWeekly
-    ? `You are Baba Selo. Create a 7-day weekly meal plan with variety. Return a JSON object with this exact structure (no other text):
+    ? (variety === 'same_every_day'
+      ? `You are Baba Selo. ${varietyInstructions.same_every_day} Return a JSON object with this exact structure (no other text):
 {
   "babaTip": "A warm Baba tip at the end",
-  "shoppingList": "${includeShoppingList ? 'Consolidated shopping list by category (produce, dairy, pantry, etc.)' : 'omit this field'}",
   "days": [
     { "day": 1, "dayName": "Monday", "slots": [
-      { "timeSlot": "breakfast", "recipeName": "Dish name", "description": "Brief description" },
-      { "timeSlot": "lunch", "recipeName": "Dish name", "description": "Brief description" },
-      { "timeSlot": "dinner", "recipeName": "Dish name", "description": "Brief description" }
-    ]},
-    ...repeat for days 2-7 (Tuesday through Sunday)
+      ${slots.map((s) => `{ "timeSlot": "${s}", "recipeName": "Dish name", "description": "Brief description" }`).join(',\n      ')}
+    ]}
   ]
 }
+NOTE: Only ONE day. It will be duplicated for all 7 days.
 ${preferenceContext}${ingredientsContext}${calorieContext}`
+      : `You are Baba Selo. ${varietyInstructions[variety]} Return a JSON object with this exact structure (no other text):
+{
+  "babaTip": "A warm Baba tip at the end",
+  "days": [
+    { "day": 1, "dayName": "Monday", "slots": [
+      ${slots.map((s) => `{ "timeSlot": "${s}", "recipeName": "Dish name", "description": "Brief description" }`).join(',\n      ')}
+    ]},
+    ...repeat for days 2-7 (Tuesday through Sunday). ${variety === 'leftovers' ? 'Reuse dinner recipes across 2-3 days as described.' : variety === 'meal_prep_sunday' ? 'Same lunch for days 1-5, varied dinners.' : ''}
+  ]
+}
+Include only these slots: ${slotList}.
+${preferenceContext}${ingredientsContext}${calorieContext}`)
     : `You are Baba Selo. Create a daily meal plan. Return a JSON object with this exact structure (no other text):
 {
   "babaTip": "A warm Baba tip at the end",
   "slots": [
-    { "timeSlot": "breakfast", "recipeName": "Dish name", "description": "Brief description" },
-    { "timeSlot": "lunch", "recipeName": "Dish name", "description": "Brief description" },
-    { "timeSlot": "dinner", "recipeName": "Dish name", "description": "Brief description" },
-    { "timeSlot": "snack", "recipeName": "Suggestion", "description": "Brief description" }
+    ${slots.map((s) => `{ "timeSlot": "${s}", "recipeName": "Dish name", "description": "Brief description" }`).join(',\n    ')}
   ]
 }
+Include only these slots: ${slotList}.
 ${preferenceContext}${ingredientsContext}${calorieContext}`;
 
   const completion = await openai.chat.completions.create({
@@ -141,12 +259,30 @@ ${preferenceContext}${ingredientsContext}${calorieContext}`;
     parsed = { babaTip: rawContent, slots: [] };
   }
 
-  const firestore = admin.firestore();
+  // same_every_day: duplicate 1 day to 7
+  if (isWeekly && variety === 'same_every_day' && parsed.days?.length === 1) {
+    const template = parsed.days[0];
+    parsed.days = DAY_NAMES.map((dayName, i) => ({
+      day: i + 1,
+      dayName,
+      slots: [...(template.slots || [])],
+    }));
+  }
+
+  // Filter slots to only requested ones
+  const filterSlots = <T extends { timeSlot: string }>(arr: T[]) =>
+    arr.filter((s) => slots.includes(s.timeSlot as MealSlot));
+  if (parsed.days) {
+    parsed.days = parsed.days.map((d) => ({ ...d, slots: filterSlots(d.slots || []) }));
+  }
+  if (parsed.slots) {
+    parsed.slots = filterSlots(parsed.slots);
+  }
+
   const recipesCol = firestore.collection('recipes');
-  const historyCol = firestore.collection('users').doc(userId).collection('mealPlanHistory');
   const baseUrl = getBaseUrl();
 
-  const createRecipe = async (recipeName: string, description: string): Promise<string> => {
+  const createRecipe = async (recipeName: string, description: string): Promise<{ recipeId: string; ingredients: string[] }> => {
     const recipeContent = `${recipeName}\n\nDescription: ${description}`;
     let details: {
       ingredients?: string[];
@@ -164,7 +300,7 @@ ${preferenceContext}${ingredientsContext}${calorieContext}`;
       const genRes = await fetch(`${baseUrl}/api/generateRecipeDetails`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recipeTitle: recipeName, recipeContent, generateAll: true }),
+        body: JSON.stringify({ recipeTitle: recipeName, recipeContent, generateAll: true, skipMacroAndPairing: true }),
       });
       if (genRes.ok) {
         details = await genRes.json();
@@ -177,16 +313,7 @@ ${preferenceContext}${ingredientsContext}${calorieContext}`;
     const directions = details?.directions?.length ? details.directions : [description];
     const recipeContentFull = `${recipeName}\n\nIngredients:\n${ingredients.map((i) => `- ${i}`).join('\n')}\n\nDirections:\n${directions.map((d, i) => `${i + 1}. ${d}`).join('\n')}`;
 
-    let macroInfo: unknown = details?.macroInfo ?? null;
-    const macros = macroInfo as { total?: Record<string, unknown>; per_serving?: unknown } | null;
-    if (macros?.total && macros?.per_serving) {
-      macroInfo = {
-        servings: 1,
-        total: macros.total,
-        per_serving: { ...macros.total },
-      };
-    }
-
+    // Skip macroInfo and dishPairings for meal plan recipes (saves API calls)
     const recipeRef = await recipesCol.add({
       recipeTitle: recipeName,
       recipeContent: recipeContentFull,
@@ -200,24 +327,39 @@ ${preferenceContext}${ingredientsContext}${calorieContext}`;
       source: 'mealPlan',
       mealPlanDescription: description,
       recipeSummary: details?.recipeSummary || '',
-      macroInfo,
-      dishPairings: details?.dishPairings || '',
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
-    return recipeRef.id;
+    return { recipeId: recipeRef.id, ingredients };
   };
 
   const storedSlots: { timeSlot: string; recipeId: string; recipeName: string; description: string }[] = [];
   const storedDays: { day: number; dayName: string; slots: { timeSlot: string; recipeId: string; recipeName: string; description: string }[] }[] = [];
   const linkLines: string[] = [];
+  const allIngredients: string[] = [];
+
+  const totalRecipes = isWeekly && parsed.days?.length
+    ? parsed.days.reduce((sum, d) => sum + (d.slots?.length || 0), 0)
+    : (parsed.slots?.length || 0);
 
   if (isWeekly && parsed.days?.length) {
+    let recipeIndex = 0;
     for (const day of parsed.days) {
       const daySlots: { timeSlot: string; recipeId: string; recipeName: string; description: string }[] = [];
       const dayLines = [`**Day ${day.day}: ${day.dayName}**`];
 
       for (const slot of day.slots || []) {
-        const recipeId = await createRecipe(slot.recipeName, slot.description);
+        onProgress?.({
+          day: day.day,
+          dayName: day.dayName,
+          recipeIndex: recipeIndex + 1,
+          totalRecipes,
+          recipeName: slot.recipeName,
+          completedDays: storedDays.length,
+          timeSlot: slot.timeSlot,
+        });
+        const { recipeId, ingredients } = await createRecipe(slot.recipeName, slot.description);
+        allIngredients.push(...ingredients);
+        recipeIndex++;
         daySlots.push({ timeSlot: slot.timeSlot, recipeId, recipeName: slot.recipeName, description: slot.description });
         const link = `[${slot.recipeName}](/recipe/${recipeId})`;
         dayLines.push(`  ${slot.timeSlot.charAt(0).toUpperCase() + slot.timeSlot.slice(1)}: ${link} - ${slot.description}`);
@@ -227,18 +369,68 @@ ${preferenceContext}${ingredientsContext}${calorieContext}`;
       linkLines.push(dayLines.join('\n'));
     }
   } else if (parsed.slots?.length) {
+    let recipeIndex = 0;
     for (const slot of parsed.slots) {
-      const recipeId = await createRecipe(slot.recipeName, slot.description);
+      onProgress?.({
+        day: 1,
+        dayName: 'Today',
+        recipeIndex: recipeIndex + 1,
+        totalRecipes,
+        recipeName: slot.recipeName,
+        completedDays: 0,
+        timeSlot: slot.timeSlot,
+      });
+      const { recipeId, ingredients } = await createRecipe(slot.recipeName, slot.description);
+      allIngredients.push(...ingredients);
+      recipeIndex++;
       storedSlots.push({ timeSlot: slot.timeSlot, recipeId, recipeName: slot.recipeName, description: slot.description });
       const link = `[${slot.recipeName}](/recipe/${recipeId})`;
       linkLines.push(`  ${slot.timeSlot.charAt(0).toUpperCase() + slot.timeSlot.slice(1)}: ${link} - ${slot.description}`);
     }
   }
 
-  if (parsed.babaTip) linkLines.push(`\n**Baba's Tip:** ${parsed.babaTip}`);
-  if (parsed.shoppingList) linkLines.push(`\n**Shopping List:**\n${parsed.shoppingList}`);
+  let shoppingList: string | Record<string, string | string[]> | undefined;
+  if (includeShoppingList && allIngredients.length > 0) {
+    try {
+      const consolidateRes = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        max_tokens: 2000,
+        temperature: 0.3,
+        response_format: { type: 'json_object' },
+        messages: [
+          {
+            role: 'system',
+            content: `You are a helpful assistant that consolidates recipe ingredients into a shopping list. Given a list of ingredients from multiple recipes (each with quantity/amount), create a consolidated shopping list. Combine duplicate ingredients and add their amounts where sensible (e.g. "2 tbsp olive oil" + "3 tbsp olive oil" = "5 tbsp olive oil"). Group by category: Produce, Dairy, Protein, Pantry, Bakery, etc. Return JSON: { "produce": "item1\\nitem2", "dairy": "...", "protein": "...", "pantry": "...", "bakery": "..." } - use category keys as needed. Each line must include the amount (e.g. "2 cups rice", "1 lb chicken").`,
+          },
+          {
+            role: 'user',
+            content: `Consolidate these ingredients into a shopping list with amounts:\n\n${allIngredients.map((i) => `- ${i}`).join('\n')}`,
+          },
+        ],
+      });
+      const raw = consolidateRes.choices?.[0]?.message?.content || '{}';
+      const consolidated = JSON.parse(raw) as Record<string, string | string[]>;
+      if (typeof consolidated === 'object' && Object.keys(consolidated).length > 0) {
+        shoppingList = consolidated;
+      } else {
+        shoppingList = allIngredients.join('\n');
+      }
+    } catch (e) {
+      console.error('Failed to consolidate shopping list:', e);
+      shoppingList = allIngredients.join('\n');
+    }
+  }
 
-  const plainContent = formatPlanForEmail(parsed, isWeekly) || rawContent;
+  if (parsed.babaTip) linkLines.push(`\n**Baba's Tip:** ${parsed.babaTip}`);
+  if (shoppingList) {
+    const slStr = typeof shoppingList === 'string' ? shoppingList : Object.entries(shoppingList)
+      .map(([cat, val]) => `${cat.charAt(0).toUpperCase() + cat.slice(1)}:\n${Array.isArray(val) ? val.join('\n') : val}`)
+      .join('\n\n');
+    linkLines.push(`\n**Shopping List:**\n${slStr}`);
+  }
+
+  const parsedForEmail = { ...parsed, shoppingList: shoppingList ? (typeof shoppingList === 'string' ? shoppingList : Object.entries(shoppingList).map(([cat, val]) => `${cat.charAt(0).toUpperCase() + cat.slice(1)}:\n${Array.isArray(val) ? val.join('\n') : val}`).join('\n\n')) : undefined };
+  const plainContent = formatPlanForEmail(parsedForEmail, isWeekly) || rawContent;
   const planTextWithLinks = linkLines.join('\n\n');
 
   const subject = isWeekly ? "Baba Selo's Weekly Meal Plan" : "Baba Selo's Daily Meal Plan";
@@ -252,7 +444,7 @@ ${preferenceContext}${ingredientsContext}${calorieContext}`;
     source,
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   };
-  if (parsed.shoppingList != null) historyDoc.shoppingList = parsed.shoppingList;
+  if (shoppingList != null) historyDoc.shoppingList = shoppingList;
 
   const historyRef = await historyCol.add(historyDoc);
 
@@ -263,6 +455,6 @@ ${preferenceContext}${ingredientsContext}${calorieContext}`;
     storedDays,
     storedSlots,
     babaTip: parsed.babaTip || '',
-    shoppingList: parsed.shoppingList,
+    shoppingList: typeof shoppingList === 'string' ? shoppingList : (shoppingList ? Object.entries(shoppingList).map(([cat, val]) => `${cat.charAt(0).toUpperCase() + cat.slice(1)}:\n${Array.isArray(val) ? val.join('\n') : val}`).join('\n\n') : undefined),
   };
 }

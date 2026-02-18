@@ -94,6 +94,26 @@ const WEEKDAYS = [
   { value: 6, label: "Saturday" },
 ];
 
+/** Format shoppingList for display - handles string or object (e.g. { produce: "...", dairy: "..." }) */
+function formatShoppingListForDisplay(sl: unknown): string {
+  if (typeof sl === "string") return sl;
+  if (sl && typeof sl === "object" && !Array.isArray(sl)) {
+    const lines: string[] = [];
+    for (const [cat, val] of Object.entries(sl)) {
+      if (val == null) continue;
+      const label = cat.charAt(0).toUpperCase() + cat.slice(1);
+      if (typeof val === "string") {
+        if (val.trim()) lines.push(`${label}:\n${val.trim()}`);
+      } else if (Array.isArray(val)) {
+        const items = val.filter((v) => v != null && String(v).trim()).map((v) => `- ${String(v).trim()}`);
+        if (items.length) lines.push(`${label}:\n${items.join("\n")}`);
+      }
+    }
+    return lines.join("\n\n");
+  }
+  return "";
+}
+
 function formatTimeForDisplay(time: string): string {
   const [h, m] = time.split(":").map(Number);
   const min = String(m || 0).padStart(2, "0");
@@ -154,10 +174,20 @@ function MealPlansContent() {
   });
   const [includeShoppingList, setIncludeShoppingList] = useState(true);
   const [calorieTarget, setCalorieTarget] = useState<number | "">(2000);
+  const [mealPlanVariety, setMealPlanVariety] = useState<"varied" | "same_every_day" | "same_every_week" | "leftovers" | "meal_prep_sunday">("varied");
+  const [mealPlanSlots, setMealPlanSlots] = useState<("breakfast" | "lunch" | "dinner" | "snack")[]>(["breakfast", "lunch", "dinner"]);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [sendingNow, setSendingNow] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [mealPlanProgress, setMealPlanProgress] = useState<{
+    recipeIndex: number;
+    totalRecipes: number;
+    recipeName: string;
+    dayName: string;
+    completedDays: number;
+    timeSlot: string;
+  } | null>(null);
   const [funFacts, setFunFacts] = useState<string[]>([]);
   const [funFactIndex, setFunFactIndex] = useState(0);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
@@ -210,6 +240,8 @@ function MealPlansContent() {
       }
       if (d?.activePlanId != null) setActivePlanId(d.activePlanId);
       if (d?.activePlanStartDay != null) setActivePlanStartDay(d.activePlanStartDay);
+      if (d?.mealPlanVariety && ["varied", "same_every_day", "same_every_week", "leftovers", "meal_prep_sunday"].includes(d.mealPlanVariety)) setMealPlanVariety(d.mealPlanVariety);
+      if (Array.isArray(d?.mealPlanSlots) && d.mealPlanSlots.length > 0) setMealPlanSlots(d.mealPlanSlots.filter((s: string) => ["breakfast", "lunch", "dinner", "snack"].includes(s)));
     };
     load();
   }, [user]);
@@ -440,6 +472,8 @@ function MealPlansContent() {
         mealPlanType,
         includeShoppingList,
         mealPlanCalorieTarget: calorieTarget !== "" && calorieTarget > 0 ? calorieTarget : null,
+        mealPlanVariety,
+        mealPlanSlots,
         mealPlanSchedule: {
           enabled: mealPlanEnabled,
           time: mealPlanTime,
@@ -476,6 +510,7 @@ function MealPlansContent() {
     if (!user) return;
     setSendingNow(true);
     setSendError(null);
+    setMealPlanProgress(null);
     setFunFactIndex(0);
     setFunFacts([]);
 
@@ -493,7 +528,7 @@ function MealPlansContent() {
       .catch(() => []);
 
     const token = await user.getIdToken();
-    const mealPlanPromise = fetch("/api/meal-plan/send", {
+    const res = await fetch("/api/meal-plan/send", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({
@@ -501,6 +536,10 @@ function MealPlansContent() {
         includeShoppingList,
         ingredientsOnHand: ingredientsOnHand.trim() || undefined,
         calorieTarget: calorieTarget !== "" && calorieTarget > 0 ? calorieTarget : undefined,
+        variety: mealPlanVariety,
+        slots: mealPlanSlots,
+        reuseLastWeek: mealPlanVariety === "same_every_week",
+        stream: true,
       }),
     });
 
@@ -512,24 +551,71 @@ function MealPlansContent() {
     if (facts.length > 0) setFunFacts(facts);
 
     try {
-      const res = await mealPlanPromise;
-      const data = await res.json();
-      if (res.ok) {
-        setSaveSuccess(true);
-        setTimeout(() => setSaveSuccess(false), 2000);
-        const plans = await fetchPlanHistory();
-        setActiveTab("plans");
-        setExpandedPlanId(data.planId || plans[0]?.id || null);
-        if (!data.emailSent) {
-          setSendError(data.message || "Email not configured");
+      const contentType = res.headers.get("content-type") || "";
+      if (contentType.includes("ndjson") && res.body) {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let lastData: { planId?: string; emailSent?: boolean; message?: string } | null = null;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            try {
+              const obj = JSON.parse(line) as { type: string; error?: string; planId?: string; emailSent?: boolean; message?: string; recipeIndex?: number; totalRecipes?: number; recipeName?: string; dayName?: string; completedDays?: number; timeSlot?: string };
+              if (obj.type === "progress") {
+                setMealPlanProgress({
+                  recipeIndex: obj.recipeIndex ?? 0,
+                  totalRecipes: obj.totalRecipes ?? 0,
+                  recipeName: obj.recipeName ?? "",
+                  dayName: obj.dayName ?? "",
+                  completedDays: obj.completedDays ?? 0,
+                  timeSlot: obj.timeSlot ?? "",
+                });
+              } else if (obj.type === "done") {
+                lastData = { planId: obj.planId, emailSent: obj.emailSent, message: obj.message };
+              } else if (obj.type === "error") {
+                setSendError(obj.error || "Failed to generate meal plan");
+              }
+            } catch {
+              // skip malformed lines
+            }
+          }
+        }
+        if (lastData) {
+          setSaveSuccess(true);
+          setTimeout(() => setSaveSuccess(false), 2000);
+          const plans = await fetchPlanHistory();
+          setActiveTab("plans");
+          setExpandedPlanId(lastData.planId || plans[0]?.id || null);
+          if (lastData.emailSent === false && lastData.message) {
+            setSendError(lastData.message);
+          }
         }
       } else {
-        setSendError(data.error || "Failed to send");
+        const data = await res.json();
+        if (res.ok) {
+          setSaveSuccess(true);
+          setTimeout(() => setSaveSuccess(false), 2000);
+          const plans = await fetchPlanHistory();
+          setActiveTab("plans");
+          setExpandedPlanId(data.planId || plans[0]?.id || null);
+          if (!data.emailSent) {
+            setSendError(data.message || "Email not configured");
+          }
+        } else {
+          setSendError(data.error || "Failed to send");
+        }
       }
     } catch {
       setSendError("Failed to send meal plan");
     } finally {
       setSendingNow(false);
+      setMealPlanProgress(null);
     }
 
     // If fun facts arrived after our 4s wait, use them for next time (or if overlay still showing)
@@ -623,6 +709,27 @@ function MealPlansContent() {
                   Generating your meal plan...
                 </div>
               </div>
+              {mealPlanProgress && mealPlanProgress.totalRecipes > 0 && (
+                <div className="mb-4 p-4 bg-white/80 rounded-xl border border-amber-100 text-left">
+                  <p className="text-sm font-medium text-amber-900 mb-1">
+                    Recipe {mealPlanProgress.recipeIndex} of {mealPlanProgress.totalRecipes}
+                  </p>
+                  <p className="text-gray-700 truncate" title={mealPlanProgress.recipeName}>
+                    {mealPlanProgress.dayName} · {mealPlanProgress.timeSlot}: {mealPlanProgress.recipeName}
+                  </p>
+                  {mealPlanProgress.completedDays > 0 && (
+                    <p className="text-xs text-amber-700 mt-2">
+                      {mealPlanProgress.completedDays} day{mealPlanProgress.completedDays !== 1 ? "s" : ""} complete
+                    </p>
+                  )}
+                  <div className="mt-2 h-1.5 bg-amber-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-amber-500 rounded-full transition-all duration-300"
+                      style={{ width: `${(mealPlanProgress.recipeIndex / mealPlanProgress.totalRecipes) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              )}
               <p className="text-gray-600 text-sm mb-6">
                 This may take a minute or two. Feel free to leave—your plan will be ready when you come back!
               </p>
@@ -750,7 +857,7 @@ function MealPlansContent() {
                     <div className="space-y-2">
                       {planHistory.map((plan) => {
                         const isActive = activePlanId === plan.id;
-                        const hasShoppingList = !!(plan.shoppingList && plan.shoppingList.trim());
+                        const hasShoppingList = !!formatShoppingListForDisplay(plan.shoppingList).trim();
                         return (
                         <div
                           key={plan.id}
@@ -872,12 +979,15 @@ function MealPlansContent() {
                                         </div>
                                       </div>
                                     ))}
-                                    {plan.shoppingList && (
-                                      <div className="pt-2 border-t border-amber-200">
-                                        <h4 className="font-semibold text-amber-900 mb-1">Shopping list</h4>
-                                        <pre className="text-xs text-gray-600 whitespace-pre-wrap">{plan.shoppingList}</pre>
-                                      </div>
-                                    )}
+                                    {(() => {
+                                      const slFormatted = formatShoppingListForDisplay(plan.shoppingList);
+                                      return slFormatted.trim() ? (
+                                        <div className="pt-2 border-t border-amber-200">
+                                          <h4 className="font-semibold text-amber-900 mb-1">Shopping list</h4>
+                                          <pre className="text-xs text-gray-600 whitespace-pre-wrap">{slFormatted}</pre>
+                                        </div>
+                                      ) : null;
+                                    })()}
                                     {plan.babaTip && (
                                       <p className="pt-2 text-amber-800/90 italic border-t border-amber-200 mt-2">
                                         Baba Tip: {plan.babaTip}
@@ -977,6 +1087,41 @@ function MealPlansContent() {
                   </div>
                 )}
 
+                <div className="mt-4 pt-4 border-t border-amber-100 space-y-4">
+                  <div>
+                    <label className="text-xs font-medium text-gray-700 block mb-2">Plan style</label>
+                    <select
+                      value={mealPlanVariety}
+                      onChange={(e) => setMealPlanVariety(e.target.value as typeof mealPlanVariety)}
+                      className="w-full p-2.5 text-sm border border-amber-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    >
+                      <option value="varied">Varied—different meals each day</option>
+                      <option value="same_every_day">Same every day—one day repeated</option>
+                      <option value="same_every_week">Repeat last week&apos;s plan</option>
+                      <option value="leftovers">Leftovers—cook 2–3 dinners, eat same 2–3x</option>
+                      <option value="meal_prep_sunday">Meal prep Sunday—same lunch all week</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-700 block mb-2">Meal slots to include</label>
+                    <div className="flex flex-wrap gap-3">
+                      {(["breakfast", "lunch", "dinner", "snack"] as const).map((slot) => (
+                        <label key={slot} className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={mealPlanSlots.includes(slot)}
+                            onChange={(e) => {
+                              if (e.target.checked) setMealPlanSlots((s) => [...s, slot].sort());
+                              else setMealPlanSlots((s) => s.filter((x) => x !== slot));
+                            }}
+                            className="w-4 h-4 rounded"
+                          />
+                          <span className="text-sm capitalize">{slot}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
                 <div className="mt-4 pt-4 border-t border-amber-100 grid sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs font-medium text-gray-700 block mb-1">Ingredients on hand <span className="text-gray-400">(optional)</span></label>

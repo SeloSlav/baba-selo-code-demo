@@ -27,6 +27,15 @@ import { parseRecipe, isRecipe } from "./messageUtils";
 import { SpoonPointSystem } from "../lib/spoonPoints";
 import { usePoints } from '../context/PointsContext';
 
+interface MealPlanProgress {
+    recipeIndex: number;
+    totalRecipes: number;
+    recipeName: string;
+    dayName: string;
+    completedDays: number;
+    timeSlot: string;
+}
+
 interface ChatMessagesProps {
     messages: Message[];
     loading: boolean;
@@ -35,6 +44,8 @@ interface ChatMessagesProps {
     onAssistantResponse: (assistantMsg: string) => void;
     /** When true, show meal plan loader (from backend tool_started event). Overrides heuristic. */
     isGeneratingMealPlan?: boolean;
+    /** Progress during meal plan generation (recipe X of Y, day, etc.) */
+    mealPlanProgress?: MealPlanProgress | null;
 }
 
 // Function to extract and format food items
@@ -93,6 +104,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
     onSuggestionClick,
     onAssistantResponse,
     isGeneratingMealPlan: isGeneratingMealPlanFromBackend = false,
+    mealPlanProgress: mealPlanProgressFromBackend = null,
 }) => {
     const [recipeClassification, setRecipeClassification] = useState<Record<number, RecipeClassification | null>>({});
     const [formattedPairings, setFormattedPairings] = useState<Record<number, string>>({});
@@ -402,6 +414,27 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                                 <LoadingSpinner />
                                 {loadingLabel && <span className="text-sm text-gray-600">{loadingLabel}</span>}
                             </div>
+                            {isMealPlanFlow && mealPlanProgressFromBackend && mealPlanProgressFromBackend.totalRecipes > 0 && (
+                                <div className="p-3 bg-amber-50/80 rounded-xl border border-amber-100 text-left">
+                                    <p className="text-xs font-medium text-amber-900 mb-1">
+                                        Recipe {mealPlanProgressFromBackend.recipeIndex} of {mealPlanProgressFromBackend.totalRecipes}
+                                    </p>
+                                    <p className="text-gray-700 text-xs truncate" title={mealPlanProgressFromBackend.recipeName}>
+                                        {mealPlanProgressFromBackend.dayName} · {mealPlanProgressFromBackend.timeSlot}: {mealPlanProgressFromBackend.recipeName}
+                                    </p>
+                                    {mealPlanProgressFromBackend.completedDays > 0 && (
+                                        <p className="text-xs text-amber-700 mt-1">
+                                            {mealPlanProgressFromBackend.completedDays} day{mealPlanProgressFromBackend.completedDays !== 1 ? "s" : ""} complete
+                                        </p>
+                                    )}
+                                    <div className="mt-2 h-1 bg-amber-100 rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full bg-amber-500 rounded-full transition-all duration-300"
+                                            style={{ width: `${(mealPlanProgressFromBackend.recipeIndex / mealPlanProgressFromBackend.totalRecipes) * 100}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            )}
                             {isMealPlanFlow && (
                                 <p className="text-gray-500 text-xs">
                                     This may take a minute or two. You can leave this chat and find your plan in Meal Plans later if you&apos;re busy—otherwise wait right here, dear!
