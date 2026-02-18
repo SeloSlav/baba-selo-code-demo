@@ -337,29 +337,43 @@ ${preferenceContext}${ingredientsContext}${calorieContext}`;
   const linkLines: string[] = [];
   const allIngredients: string[] = [];
 
+  // For same_every_day: only create recipes once (day 1), reuse for days 2-7
+  const isSameEveryDay = isWeekly && variety === 'same_every_day' && parsed.days?.length > 0;
   const totalRecipes = isWeekly && parsed.days?.length
-    ? parsed.days.reduce((sum, d) => sum + (d.slots?.length || 0), 0)
+    ? (isSameEveryDay ? (parsed.days[0]?.slots?.length || 0) : parsed.days.reduce((sum, d) => sum + (d.slots?.length || 0), 0))
     : (parsed.slots?.length || 0);
 
   if (isWeekly && parsed.days?.length) {
     let recipeIndex = 0;
+    const recipeCache = new Map<string, { recipeId: string; ingredients: string[] }>(); // key: `${recipeName}|${description}`
+
     for (const day of parsed.days) {
       const daySlots: { timeSlot: string; recipeId: string; recipeName: string; description: string }[] = [];
       const dayLines = [`**Day ${day.day}: ${day.dayName}**`];
 
       for (const slot of day.slots || []) {
-        onProgress?.({
-          day: day.day,
-          dayName: day.dayName,
-          recipeIndex: recipeIndex + 1,
-          totalRecipes,
-          recipeName: slot.recipeName,
-          completedDays: storedDays.length,
-          timeSlot: slot.timeSlot,
-        });
-        const { recipeId, ingredients } = await createRecipe(slot.recipeName, slot.description);
+        const cacheKey = `${slot.recipeName}|${slot.description}`;
+        let result: { recipeId: string; ingredients: string[] };
+
+        if (isSameEveryDay && recipeCache.has(cacheKey)) {
+          result = recipeCache.get(cacheKey)!;
+        } else {
+          onProgress?.({
+            day: day.day,
+            dayName: day.dayName,
+            recipeIndex: recipeIndex + 1,
+            totalRecipes,
+            recipeName: slot.recipeName,
+            completedDays: storedDays.length,
+            timeSlot: slot.timeSlot,
+          });
+          result = await createRecipe(slot.recipeName, slot.description);
+          if (isSameEveryDay) recipeCache.set(cacheKey, result);
+          recipeIndex++;
+        }
+
+        const { recipeId, ingredients } = result;
         allIngredients.push(...ingredients);
-        recipeIndex++;
         daySlots.push({ timeSlot: slot.timeSlot, recipeId, recipeName: slot.recipeName, description: slot.description });
         const link = `[${slot.recipeName}](/recipe/${recipeId})`;
         dayLines.push(`  ${slot.timeSlot.charAt(0).toUpperCase() + slot.timeSlot.slice(1)}: ${link} - ${slot.description}`);
