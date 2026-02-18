@@ -13,6 +13,7 @@ import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import admin from "firebase-admin";
+import type { IndexedRecipe } from "../app/lib/similarRecipesStore";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, "..");
@@ -41,21 +42,6 @@ function estimateCost(tokens: number): number {
 function formatCost(cents: number): string {
   if (cents < 0.01) return "<$0.01";
   return `$${cents.toFixed(2)}`;
-}
-
-interface IndexedRecipe {
-  id: string;
-  recipeTitle: string;
-  userId: string;
-  cuisineType?: string;
-  cookingDifficulty?: string;
-  cookingTime?: string;
-  diet?: string[];
-  directions?: string[];
-  ingredients?: string[];
-  imageURL?: string;
-  recipeSummary?: string;
-  username?: string;
 }
 
 function recipeToEmbeddingText(recipe: IndexedRecipe): string {
