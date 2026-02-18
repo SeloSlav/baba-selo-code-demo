@@ -1,4 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Baba Selo
+
+**Baba Selo** is an AI-powered Balkan recipe companion. Think of it as your digital grandma—warm, knowledgeable, and full of real advice. No generic bot nonsense: Baba gives you accurate recipes, cooking tips, ingredient substitutions, and meal planning help, all in a cozy, grandma-like tone.
+
+## What the App Does
+
+- **Recipe chat** – Ask for recipes, cooking tips, or anything food-related. Baba responds with detailed, culturally authentic Balkan recipes.
+- **Recipe cards** – Save recipes, see nutrition info, pairings, and similar recipes. Recipe chat cards use FontAwesome icons and a polished layout.
+- **Pro plan** – Baba’s memory, multiple chats, and meal planning. Upgrade page shows annual savings ($12) and clear CTAs.
+- **Meal plans** – Pro users get meal planning with Baba’s image at the top and a focused layout.
+- **Chat tools** – Baba can save recipes, find similar ones, convert servings, get nutrition, suggest substitutions, set timers, translate recipes, add to meal plans, give seasonal tips, find by ingredients, and convert units.
+
+---
+
+## Chat Tools (Baba Selo)
+
+When you chat with Baba, she can use these tools:
+
+| Tool | Description |
+|------|-------------|
+| `save_recipe` | Saves a recipe to Firestore for the user |
+| `get_similar_recipes` | Finds similar recipes via semantic search |
+| `convert_servings` | Scales ingredients for different serving sizes |
+| `get_nutrition` | Fetches macros via `/api/macroInfo` |
+| `ingredient_substitution` | Balkan substitution lookup |
+| `set_timer` | Sets a timer (seconds); client shows the timer UI |
+| `translate_recipe` | Translates recipe content via OpenAI |
+| `add_to_meal_plan` | Adds a recipe to the user’s meal plan for a given day |
+| `seasonal_tips` | Monthly seasonal produce tips |
+| `find_by_ingredients` | Finds recipes by ingredients (similarity search) |
+| `unit_conversion` | Converts g↔cups, ml↔cups, tbsp↔tsp |
+
+Timer handling: when Baba calls `set_timer`, the API returns `timerSeconds`; the client adds a `TIMER_REQUEST_<seconds>` message so the timer UI appears.
+
+---
+
+## Copy & CRO
+
+- **Login** – Subtitle emphasizes Balkan companion, grandma vibes, real advice.
+- **RecipeList** – Sign-up CTA for non-logged-in users.
+- **ProfileMenu** – Tagline and “one click” copy.
+- **ChatWindow** – Welcome message with Baba’s personality.
+- **Upgrade page** – $7/mo annual, $8/mo monthly; “Save $12” badge; Pro on left; secondary CTA after FAQ.
+- **Meal plans** – Pro copy; Baba image at top for non-logged-in view.
+- **ChatList** – Upgrade copy for free users.
+
+---
+
+## Recipe UI
+
+- **Notes** – Hidden in the recipe UI (`SHOW_NOTES = false`); data kept, UI removed.
+- **RecipeMessage** – Layout with title/subtitle, tags, buttons; FontAwesome icons for Save Recipe, Pairing, Calories, and tags.
+- **RecipeNavigation** – `showNotes` prop hides Notes nav when notes are disabled.
+
+---
 
 ## Vector Store Features (pgvector)
 
