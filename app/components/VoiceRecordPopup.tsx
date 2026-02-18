@@ -188,19 +188,19 @@ export const VoiceRecordPopup: React.FC<VoiceRecordPopupProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose();
         }
       }}
     >
-      <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-xl">
+      <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-xl border border-amber-100">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-100 rounded-xl">
-              <FontAwesomeIcon icon={faMicrophone} className="text-xl text-purple-600" />
+            <div className="p-2 bg-amber-100 rounded-xl">
+              <FontAwesomeIcon icon={faMicrophone} className="text-xl text-amber-700" />
             </div>
             <div>
               <h2 className="text-xl font-bold">Voice Message</h2>
@@ -211,10 +211,10 @@ export const VoiceRecordPopup: React.FC<VoiceRecordPopupProps> = ({
                     icon={faCircleInfo} 
                     className="text-gray-400 hover:text-gray-600 text-sm cursor-help"
                   />
-                  <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-56 md:w-64 p-3 bg-black text-white text-xs md:text-sm rounded-lg shadow-lg z-50">
+                  <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-56 md:w-64 p-3 bg-amber-900 text-amber-50 text-xs md:text-sm rounded-lg shadow-lg z-50">
                     <div className="relative">
                       <p>Click the microphone button to start recording. Click the stop button to finish recording.</p>
-                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 translate-y-full w-2 h-2 bg-black rotate-45"></div>
+                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 translate-y-full w-2 h-2 bg-amber-900 rotate-45"></div>
                     </div>
                   </div>
                 </div>
@@ -223,7 +223,7 @@ export const VoiceRecordPopup: React.FC<VoiceRecordPopupProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="p-1.5 rounded-full text-amber-600/70 hover:text-amber-800 hover:bg-amber-50 transition-colors"
           >
             <FontAwesomeIcon icon={faTimes} className="text-xl" />
           </button>
@@ -250,8 +250,8 @@ export const VoiceRecordPopup: React.FC<VoiceRecordPopupProps> = ({
               isRecording 
                 ? 'bg-red-500 scale-110' 
                 : isTranscribing
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-purple-500 hover:bg-purple-600'
+                  ? 'bg-amber-200 cursor-not-allowed'
+                  : 'bg-amber-500 hover:bg-amber-600'
             }`}
           >
             <FontAwesomeIcon 
@@ -281,7 +281,7 @@ export const VoiceRecordPopup: React.FC<VoiceRecordPopupProps> = ({
               value={transcribedText}
               onChange={(e) => setTranscribedText(e.target.value)}
               disabled={isTranscribing}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 min-h-[100px] disabled:bg-gray-50"
+              className="w-full px-3 py-2 border border-amber-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-400 min-h-[100px] disabled:bg-amber-50/50"
             />
           </div>
         )}
@@ -290,17 +290,17 @@ export const VoiceRecordPopup: React.FC<VoiceRecordPopupProps> = ({
         <div className="flex justify-end gap-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="px-4 py-2 text-amber-800 hover:bg-amber-50 rounded-xl border border-amber-200 transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={!transcribedText.trim() || isTranscribing}
-            className={`px-6 py-2 rounded-lg transition-colors flex items-center gap-2
+            className={`px-6 py-2 rounded-xl transition-colors flex items-center gap-2
               ${!transcribedText.trim() || isTranscribing
-                ? "bg-gray-200 text-gray-400 cursor-not-allowed" 
-                : "bg-black text-white hover:bg-gray-800"}`}
+                ? "bg-amber-100 text-amber-400 cursor-not-allowed" 
+                : "bg-amber-600 text-white hover:bg-amber-700"}`}
           >
             <FontAwesomeIcon icon={faMicrophone} />
             Send Message

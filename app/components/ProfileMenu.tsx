@@ -111,14 +111,9 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
                     </li>
                     <hr />
                     <li className="flex items-center px-4 py-2 rounded-md hover:bg-amber-50 cursor-pointer">
-                        <Link href="/meal-plans" className="flex items-center w-full justify-between">
-                            <div className="flex items-center">
-                                <FontAwesomeIcon icon={faCalendarDays} className="text-amber-700 mr-3" />
-                                <span>Meal Plans</span>
-                            </div>
-                            <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full font-medium">
-                                Pro ⭐
-                            </span>
+                        <Link href="/meal-plans" className="flex items-center w-full">
+                            <FontAwesomeIcon icon={faCalendarDays} className="text-amber-700 mr-3" />
+                            <span>Meal Plans</span>
                         </Link>
                     </li>
                     <hr />
@@ -193,14 +188,9 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onLog
                 <hr />
                 {/* Engagement: plan → earn → redeem */}
                 <li className="flex items-center px-4 py-2 rounded-md hover:bg-amber-50 cursor-pointer">
-                    <Link href="/meal-plans" className="flex items-center w-full justify-between">
-                        <div className="flex items-center">
-                            <FontAwesomeIcon icon={faCalendarDays} className="text-amber-700 mr-3" />
-                            <span>Meal Plans</span>
-                        </div>
-                        <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full font-medium">
-                            Pro ⭐
-                        </span>
+                    <Link href="/meal-plans" className="flex items-center w-full">
+                        <FontAwesomeIcon icon={faCalendarDays} className="text-amber-700 mr-3" />
+                        <span>Meal Plans</span>
                     </Link>
                 </li>
                 <li className="flex items-center px-4 py-2 rounded-md hover:bg-amber-50 cursor-pointer">

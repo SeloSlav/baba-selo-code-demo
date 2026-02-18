@@ -3,7 +3,6 @@ import { AuthProvider } from "./context/AuthContext";
 import { DeleteRecipeProvider } from "./context/DeleteRecipeContext";
 import { PointsProvider } from "./context/PointsContext";
 import { PlanDebugProvider } from "./context/PlanDebugContext";
-import PWABanner from "./components/PWABanner";
 import { PlanDebugToggle } from "./components/PlanDebugToggle";
 
 export const viewport = {
@@ -68,7 +67,6 @@ export default function RootLayout({
           <PlanDebugProvider>
             <DeleteRecipeProvider>
               <PointsProvider>
-                <PWABanner />
                 {children}
                 <PlanDebugToggle />
               </PointsProvider>

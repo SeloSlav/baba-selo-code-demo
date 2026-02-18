@@ -8,6 +8,7 @@ import {
     linkifyLastSelo,
     renderDishPairingLinks
 } from './messageUtils';
+import { MealPlanMessage, isMealPlan } from './MealPlanMessage';
 import { getAuth } from 'firebase/auth';
 
 interface Message {
@@ -196,27 +197,11 @@ const Timer: React.FC<{ initialSeconds: number }> = ({ initialSeconds }) => {
         return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     };
 
-    const getTimerText = (totalSeconds: number) => {
-        const hours = Math.floor(totalSeconds / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
-        const seconds = totalSeconds % 60;
-        
-        const parts = [];
-        if (hours > 0) parts.push(`${hours} hour${hours !== 1 ? 's' : ''}`);
-        if (minutes > 0) parts.push(`${minutes} minute${minutes !== 1 ? 's' : ''}`);
-        if (seconds > 0 || parts.length === 0) parts.push(`${seconds} second${seconds !== 1 ? 's' : ''}`);
-        
-        return parts.join(' ');
-    };
-
     return (
         <div className="bg-white rounded-2xl shadow-md p-4 max-w-xs mx-auto border border-gray-200 mb-2">
             <div className="text-center mb-4">
-                <div className={`text-3xl font-bold mb-2 font-mono ${hasFinished ? 'text-red-500' : 'text-gray-800'}`}>
+                <div className={`text-3xl font-bold font-mono ${hasFinished ? 'text-red-500' : 'text-gray-800'}`}>
                     {formatTime(timeLeft)}
-                </div>
-                <div className="text-sm text-gray-500 mb-4">
-                    {hasFinished ? 'Time\'s up!' : getTimerText(timeLeft)}
                 </div>
             </div>
             <div className="flex justify-center gap-2">
@@ -379,6 +364,14 @@ export const MessageRenderer: React.FC<MessageRendererProps> = ({
                     <div className="bg-[#fef3c7] text-[#171717] px-5 py-2.5 rounded-3xl">
                         {linkifyLastSelo(message.content)}
                     </div>
+                </AssistantMessageWrapper>
+            );
+        }
+
+        if (isMealPlan(message.content)) {
+            return (
+                <AssistantMessageWrapper messageRef={messageRef}>
+                    <MealPlanMessage content={message.content} />
                 </AssistantMessageWrapper>
             );
         }

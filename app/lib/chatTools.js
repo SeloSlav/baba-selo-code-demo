@@ -249,10 +249,81 @@ export async function handleTranslateRecipe({ recipeContent, targetLanguage }) {
   }
 }
 
+// --- generate_meal_plan ---
+function extractBabaTip(plan) {
+  const match = (plan || '').match(/Baba'?s?\s*Tip\s*:?\s*(.+?)(?:\n|$)/is);
+  return match ? match[1].trim() : '';
+}
+
+export async function handleGenerateMealPlan({ userId, preferences, days = 7 }) {
+  if (!userId || userId === 'anonymous') {
+    return { success: false, error: 'Sign in to create and save meal plans. Your plans will be saved with clickable recipe links!' };
+  }
+  try {
+    let mealPlanPrompt = (preferences || '').trim();
+    let dietaryPreferences = [];
+    let preferredCookingOil = 'olive oil';
+
+    const userDoc = await adminDb.collection('users').doc(userId).get();
+    const userData = userDoc?.data() || {};
+    if (!mealPlanPrompt) mealPlanPrompt = (userData.mealPlanPrompt || '').trim();
+    dietaryPreferences = Array.isArray(userData.dietaryPreferences) ? userData.dietaryPreferences : [];
+    preferredCookingOil = userData.preferredCookingOil || 'olive oil';
+
+    const numDays = Math.min(Math.max(1, parseInt(days, 10) || 7), 7);
+    let plan;
+    let planId = null;
+
+    try {
+        const { generateMealPlanWithRecipes } = await import('./mealPlanService');
+        const result = await generateMealPlanWithRecipes({
+          userId,
+          mealPlanPrompt,
+          ingredientsOnHand: (userData.ingredientsOnHand || '').trim(),
+          calorieTarget: userData.mealPlanCalorieTarget,
+          dietaryPreferences,
+          preferredCookingOil,
+          type: 'weekly',
+          includeShoppingList: true,
+          source: 'chat',
+        });
+
+        plan = result.planTextWithLinks;
+        planId = result.planId;
+      } catch (e) {
+        console.error('Structured meal plan failed, falling back to simple:', e);
+        const { generateMealPlan } = await import('./mealPlanGenerator');
+        plan = await generateMealPlan({
+          mealPlanPrompt,
+          dietaryPreferences,
+          preferredCookingOil,
+          days: numDays,
+        });
+        if (plan) {
+          const historyCol = adminDb.collection('users').doc(userId).collection('mealPlanHistory');
+          const historyRef = await historyCol.add({
+            type: 'weekly',
+            content: plan,
+            subject: "Baba Selo's Weekly Meal Plan",
+            babaTip: extractBabaTip(plan) || '',
+            source: 'chat',
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+          planId = historyRef.id;
+        }
+      }
+
+    return { success: true, mealPlan: plan || '', planId };
+  } catch (err) {
+    console.error('Generate meal plan error:', err);
+    return { success: false, error: err.message };
+  }
+}
+
 // --- add_to_meal_plan ---
 export async function handleAddToMealPlan({ recipeContent, dayOfWeek, userId }) {
   if (!userId || userId === 'anonymous') {
-    return { success: false, error: 'Pro users can add recipes to meal plans. Sign in and upgrade!' };
+    return { success: false, error: 'Sign in to add recipes to your meal plan!' };
   }
   const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
   const day = (dayOfWeek || 'saturday').toLowerCase();

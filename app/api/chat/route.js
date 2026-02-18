@@ -336,7 +336,8 @@ You have multiple modes of response:
    - ingredient_substitution: When the user asks "what can I use instead of X?", "I don't have kajmak", "substitute for sour cream". Pass the ingredient name.
    - set_timer: When the user wants a timer (e.g. "timer for 5 minutes", "remind me in 20 minutes"). Pass seconds. Then tell them the timer is set—the app will show it.
    - translate_recipe: When the user says "give me this in Croatian", "translate to Serbian", "in [language]". Pass the recipe and target language.
-   - add_to_meal_plan: When a Pro user says "add this to Saturday", "put in my meal plan for Monday". Pass recipe content and day. Pro only.
+   - generate_meal_plan: REQUIRED when user asks for meal planning ("help me plan my meals", "plan my meals for the week", "give me a meal plan", "what should I eat this week"). You MUST call this tool—do NOT generate a meal plan yourself. If the user is not logged in, the tool will return an error—tell them to sign in to create and save meal plans. IMPORTANT—gather info before calling: (1) If the user has not shared any preferences, ask warmly: "I'd love to plan your week! Tell me—what do you like? Any diet, cuisines, time limits, or ingredients you want to use?" (2) If they shared only one thing (e.g. just "mediterranean" or "keto"), do NOT call the tool yet. Instead ask a follow-up: "Lovely! Anything else—cuisines you love, time limits for weeknight meals, or ingredients you have on hand? Or if you're ready, just say 'create it' or 'go ahead' and I'll make your plan!" (3) Only call the tool when: the user says "create it", "go ahead", "that's all", "ready", "make it", or similar; OR they've given 2+ preferences (e.g. diet + cuisines, or diet + time limits). Always use days=7. When the tool returns success with a planId, the plan was saved. End your response with: "I've saved this to your meal plans—view it [here](/meal-plans?plan=PLAN_ID)." Replace PLAN_ID with the actual planId from the tool result.
+   - add_to_meal_plan: When user says "add this to Saturday", "put in my meal plan for Monday". Pass recipe content and day. If the user is not logged in, the tool will return an error—tell them to sign in.
    - seasonal_tips: When the user asks "what's in season?", "what's good now?", "seasonal produce". Pass region (balkan or northern).
    - find_by_ingredients: When the user says "I have chicken, paprika, rice—what can I make?", "recipes with these ingredients". Pass an array of ingredients.
    - unit_conversion: When the user asks "how many cups is 200g flour?", "convert 1 cup to ml", "tbsp to tsp". Pass amount, fromUnit, toUnit.
@@ -491,8 +492,23 @@ ${memoryContext}`;
     {
       type: "function",
       function: {
+        name: "generate_meal_plan",
+        description: "Generate a 7-day meal plan. Call ONLY when user has confirmed they're ready (e.g. 'create it', 'go ahead') or given 2+ preferences. If they shared only one preference, ask a follow-up first—don't call yet. Pass preferences (their exact words) and days=7.",
+        parameters: {
+          type: "object",
+          properties: {
+            preferences: { type: "string", description: "User's preferences in their own words—diet, cuisines, time limits, ingredients to use, etc. Required if they've shared any." },
+            days: { type: "number", description: "Always 7 for weekly plans." }
+          },
+          required: []
+        }
+      }
+    },
+    {
+      type: "function",
+      function: {
         name: "add_to_meal_plan",
-        description: "Add a recipe to the user's meal plan for a specific day. Pro users only. Use when user says 'add this to Saturday', 'put in my meal plan'.",
+        description: "Add a recipe to the user's meal plan for a specific day. Use when user says 'add this to Saturday', 'put in my meal plan'.",
         parameters: {
           type: "object",
           properties: {
@@ -555,6 +571,7 @@ ${memoryContext}`;
     ];
     let assistantMessage = null;
     let timerSecondsFromTool = null;
+    let lastMealPlanId = null;
     let maxIterations = 5;
 
     while (maxIterations--) {
@@ -594,7 +611,7 @@ ${memoryContext}`;
 
       currentMessages.push(msg);
 
-      const { handleSaveRecipe, handleGetSimilarRecipes, handleConvertServings, handleGetNutrition, handleIngredientSubstitution, handleSetTimer, handleTranslateRecipe, handleAddToMealPlan, handleSeasonalTips, handleFindByIngredients, handleUnitConversion } = await import("../../lib/chatTools");
+      const { handleSaveRecipe, handleGetSimilarRecipes, handleConvertServings, handleGetNutrition, handleIngredientSubstitution, handleSetTimer, handleTranslateRecipe, handleGenerateMealPlan, handleAddToMealPlan, handleSeasonalTips, handleFindByIngredients, handleUnitConversion } = await import("../../lib/chatTools");
 
       for (const tc of msg.tool_calls) {
         let args = {};
@@ -656,6 +673,10 @@ ${memoryContext}`;
           case "translate_recipe":
             toolResult = await handleTranslateRecipe({ recipeContent: args.recipeContent, targetLanguage: args.targetLanguage });
             break;
+          case "generate_meal_plan":
+            toolResult = await handleGenerateMealPlan({ userId: verifiedUserId, preferences: args.preferences, days: args.days });
+            if (toolResult.success && toolResult.planId) lastMealPlanId = toolResult.planId;
+            break;
           case "add_to_meal_plan":
             toolResult = await handleAddToMealPlan({ recipeContent: args.recipeContent, dayOfWeek: args.dayOfWeek, userId: verifiedUserId });
             break;
@@ -682,6 +703,19 @@ ${memoryContext}`;
 
     if (!assistantMessage) {
       assistantMessage = "I'm sorry, something went wrong.";
+    }
+
+    // Ensure meal plan link has actual planId (AI may output PLAN_ID or null literally)
+    if (lastMealPlanId) {
+      const correctLink = `[here](/meal-plans?plan=${lastMealPlanId})`;
+      if (assistantMessage.includes(`plan=${lastMealPlanId}`)) {
+        // AI got it right, nothing to do
+      } else if (assistantMessage.includes("/meal-plans?plan=")) {
+        // AI included a link but wrong id—replace it
+        assistantMessage = assistantMessage.replace(/\/meal-plans\?plan=[^)\s]+/g, `/meal-plans?plan=${lastMealPlanId}`);
+      } else {
+        assistantMessage += `\n\nI've saved this to your meal plans—view it ${correctLink}.`;
+      }
     }
 
     // Pro: store conversation turn for memory

@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 
 export const renderMarkdown = (text: string): React.ReactNode => {
     // First handle images with markdown syntax ![alt](url)
@@ -17,6 +18,24 @@ export const renderMarkdown = (text: string): React.ReactNode => {
                         loading="lazy"
                     />
                 </div>
+            );
+        }
+        // Check if this part is a markdown link [text](url)
+        const linkMatch = part.match(/^\[(.*?)\]\((.*?)\)$/);
+        if (linkMatch) {
+            const [, linkText, href] = linkMatch;
+            const isInternal = href.startsWith('/');
+            if (isInternal) {
+                return (
+                    <Link key={index} href={href} className="text-amber-700 hover:text-amber-800 font-medium underline">
+                        {linkText}
+                    </Link>
+                );
+            }
+            return (
+                <a key={index} href={href} target="_blank" rel="noopener noreferrer" className="text-amber-700 hover:text-amber-800 font-medium underline">
+                    {linkText}
+                </a>
             );
         }
         

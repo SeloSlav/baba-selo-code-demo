@@ -77,12 +77,12 @@ export const TimerPopup: React.FC<TimerPopupProps> = ({
         }
       }}
     >
-      <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-xl">
+      <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-xl border border-amber-100">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-yellow-100 rounded-xl">
-              <FontAwesomeIcon icon={faClock} className="text-xl text-yellow-600" />
+            <div className="p-2 bg-amber-100 rounded-xl">
+              <FontAwesomeIcon icon={faClock} className="text-xl text-amber-700" />
             </div>
             <div>
               <h2 className="text-xl font-bold">Set a Timer</h2>
@@ -91,7 +91,7 @@ export const TimerPopup: React.FC<TimerPopupProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="p-1.5 rounded-full text-amber-600/70 hover:text-amber-800 hover:bg-amber-50 transition-colors"
           >
             <FontAwesomeIcon icon={faTimes} className="text-xl" />
           </button>
@@ -115,7 +115,7 @@ export const TimerPopup: React.FC<TimerPopupProps> = ({
                 onChange={handleHoursChange}
                 min="0"
                 max="2"
-                className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                className="w-full p-3 border border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-400"
                 placeholder="0"
               />
             </div>
@@ -127,7 +127,7 @@ export const TimerPopup: React.FC<TimerPopupProps> = ({
                 onChange={handleMinutesChange}
                 min="0"
                 max="59"
-                className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                className="w-full p-3 border border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-400"
                 placeholder="0"
               />
             </div>
@@ -139,7 +139,7 @@ export const TimerPopup: React.FC<TimerPopupProps> = ({
                 onChange={handleSecondsChange}
                 min="0"
                 max="59"
-                className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                className="w-full p-3 border border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-400"
                 placeholder="0"
               />
             </div>
@@ -158,17 +158,17 @@ export const TimerPopup: React.FC<TimerPopupProps> = ({
         <div className="flex justify-end gap-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="px-4 py-2 text-amber-800 hover:bg-amber-50 rounded-xl border border-amber-200 transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={hours === 0 && minutes === 0 && seconds === 0}
-            className={`px-6 py-2 rounded-lg transition-colors flex items-center gap-2
+            className={`px-6 py-2 rounded-xl transition-colors flex items-center gap-2
               ${hours === 0 && minutes === 0 && seconds === 0
-                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                : "bg-black text-white hover:bg-gray-800"
+                ? "bg-amber-100 text-amber-400 cursor-not-allowed"
+                : "bg-amber-600 text-white hover:bg-amber-700"
               }`}
           >
             <FontAwesomeIcon icon={faClock} />

@@ -21,18 +21,18 @@ export const DeleteRecipePopup: React.FC<DeleteRecipePopupProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose();
         }
       }}
     >
-      <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-xl">
+      <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-xl border border-amber-100">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-100 rounded-xl">
+            <div className="p-2 bg-red-50 rounded-xl">
               <FontAwesomeIcon icon={faTrashAlt} className="text-xl text-red-600" />
             </div>
             <div>
@@ -42,7 +42,7 @@ export const DeleteRecipePopup: React.FC<DeleteRecipePopupProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="p-1.5 rounded-full text-amber-600/70 hover:text-amber-800 hover:bg-amber-50 transition-colors"
           >
             <FontAwesomeIcon icon={faTimes} className="text-xl" />
           </button>
@@ -62,7 +62,7 @@ export const DeleteRecipePopup: React.FC<DeleteRecipePopupProps> = ({
         <div className="flex justify-end gap-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="px-4 py-2 text-amber-800 hover:bg-amber-50 rounded-xl border border-amber-200 transition-colors"
           >
             Cancel
           </button>
@@ -71,7 +71,7 @@ export const DeleteRecipePopup: React.FC<DeleteRecipePopupProps> = ({
               onConfirm();
               onClose();
             }}
-            className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+            className="px-6 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors flex items-center gap-2"
           >
             <FontAwesomeIcon icon={faTrashAlt} />
             Delete Recipe

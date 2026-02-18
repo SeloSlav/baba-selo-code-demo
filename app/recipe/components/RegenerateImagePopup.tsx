@@ -21,19 +21,19 @@ export const RegenerateImagePopup: React.FC<RegenerateImagePopupProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose();
         }
       }}
     >
-      <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-xl">
+      <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-xl border border-amber-100">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-xl">
-              <FontAwesomeIcon icon={faImage} className="text-xl text-blue-600" />
+            <div className="p-2 bg-amber-100 rounded-xl">
+              <FontAwesomeIcon icon={faImage} className="text-xl text-amber-700" />
             </div>
             <div>
               <h2 className="text-xl font-bold">Regenerate Image</h2>
@@ -42,7 +42,7 @@ export const RegenerateImagePopup: React.FC<RegenerateImagePopupProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="p-1.5 rounded-full text-amber-600/70 hover:text-amber-800 hover:bg-amber-50 transition-colors"
           >
             <FontAwesomeIcon icon={faTimes} className="text-xl" />
           </button>
@@ -62,7 +62,7 @@ export const RegenerateImagePopup: React.FC<RegenerateImagePopupProps> = ({
         <div className="flex justify-end gap-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="px-4 py-2 text-amber-800 hover:bg-amber-50 rounded-xl border border-amber-200 transition-colors"
           >
             Cancel
           </button>
@@ -71,7 +71,7 @@ export const RegenerateImagePopup: React.FC<RegenerateImagePopupProps> = ({
               onConfirm();
               onClose();
             }}
-            className="px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center gap-2"
+            className="px-6 py-2 bg-amber-600 text-white rounded-xl hover:bg-amber-700 transition-colors flex items-center gap-2"
           >
             <FontAwesomeIcon icon={faImage} />
             Regenerate

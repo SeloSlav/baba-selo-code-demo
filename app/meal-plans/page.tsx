@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "../context/AuthContext";
 import { useEffectivePlan } from "../context/PlanDebugContext";
@@ -140,12 +141,15 @@ async function fetchPlan(): Promise<"free" | "pro"> {
 
 export default function MealPlansPage() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const rawPlanId = searchParams.get("plan");
+  const planIdFromUrl = rawPlanId && !/^(null|undefined|PLAN_ID)$/i.test(rawPlanId.trim()) ? rawPlanId.trim() : null;
   const [plan, setPlan] = useState<"free" | "pro" | null>(null);
   const effectivePlan = useEffectivePlan(plan ?? "free");
 
   const [mealPlanPrompt, setMealPlanPrompt] = useState("");
   const [ingredientsOnHand, setIngredientsOnHand] = useState("");
-  const [mealPlanType, setMealPlanType] = useState<"daily" | "weekly">("weekly");
+  const mealPlanType = "weekly" as const; // Always weekly
   const [mealPlanEnabled, setMealPlanEnabled] = useState(false);
   const [mealPlanTime, setMealPlanTime] = useState("08:00");
   const [mealPlanDay, setMealPlanDay] = useState(6); // Saturday default for weekly
@@ -193,13 +197,12 @@ export default function MealPlansPage() {
 
 
   useEffect(() => {
-    if (!user || effectivePlan !== "pro") return;
+    if (!user) return;
     const load = async () => {
       const userDoc = await getDoc(doc(db, "users", user.uid));
       const d = userDoc.data();
       if (d?.mealPlanPrompt != null) setMealPlanPrompt(d.mealPlanPrompt);
       if (d?.ingredientsOnHand != null) setIngredientsOnHand(d.ingredientsOnHand);
-      if (d?.mealPlanType === "daily" || d?.mealPlanType === "weekly") setMealPlanType(d.mealPlanType);
       if (d?.includeShoppingList != null) setIncludeShoppingList(d.includeShoppingList);
       if (d?.mealPlanCalorieTarget != null && typeof d.mealPlanCalorieTarget === "number" && d.mealPlanCalorieTarget > 0) setCalorieTarget(d.mealPlanCalorieTarget);
       else if (d && "mealPlanCalorieTarget" in d && d.mealPlanCalorieTarget == null) setCalorieTarget("");
@@ -212,7 +215,7 @@ export default function MealPlansPage() {
       }
     };
     load();
-  }, [user, effectivePlan]);
+  }, [user]);
 
   const fetchPlanHistory = useCallback(async (): Promise<typeof planHistory> => {
     if (!user) return [];
@@ -242,7 +245,32 @@ export default function MealPlansPage() {
         const bT = b.createdAt?.toDate?.()?.getTime?.() ?? 0;
         return bT - aT;
       });
-      const result = plans.slice(0, 50);
+      let result = plans.slice(0, 50);
+      // If URL has plan=id and it's not in the list (e.g. just created), fetch it directly
+      if (planIdFromUrl && !result.some((p) => p.id === planIdFromUrl)) {
+        try {
+          const planRef = doc(db, "users", user.uid, "mealPlanHistory", planIdFromUrl);
+          const planSnap = await getDoc(planRef);
+          if (planSnap.exists()) {
+            const data = planSnap.data();
+            const createdAt = data.createdAt;
+            const newPlan = {
+              id: planSnap.id,
+              type: data.type || "weekly",
+              content: data.content || "",
+              subject: data.subject || "",
+              babaTip: data.babaTip,
+              slots: data.slots,
+              days: data.days,
+              shoppingList: data.shoppingList,
+              createdAt: createdAt && typeof createdAt.toDate === "function" ? createdAt : undefined,
+            };
+            result = [newPlan, ...result];
+          }
+        } catch {
+          // ignore
+        }
+      }
       setPlanHistory(result);
       return result;
     } catch (e: unknown) {
@@ -256,13 +284,26 @@ export default function MealPlansPage() {
     } finally {
       setLoadingHistory(false);
     }
-  }, [user]);
+  }, [user, planIdFromUrl]);
 
   useEffect(() => {
-    if (user && effectivePlan === "pro" && activeTab === "plans") {
+    if (user && activeTab === "plans") {
       fetchPlanHistory();
     }
-  }, [user, effectivePlan, activeTab, fetchPlanHistory]);
+  }, [user, activeTab, fetchPlanHistory]);
+
+  useEffect(() => {
+    if (planIdFromUrl && user) {
+      setActiveTab("plans");
+    }
+  }, [planIdFromUrl, user]);
+
+  useEffect(() => {
+    if (planIdFromUrl && planHistory.length > 0) {
+      const found = planHistory.some((p) => p.id === planIdFromUrl);
+      if (found) setExpandedPlanId(planIdFromUrl);
+    }
+  }, [planIdFromUrl, planHistory]);
 
   const handleDeletePlan = async (planId: string) => {
     if (!user) return;
@@ -479,12 +520,11 @@ export default function MealPlansPage() {
     );
   }
 
-  // Pro user
-  if (effectivePlan === "pro") {
-    const displayFacts = funFacts.length > 0 ? funFacts : FALLBACK_FUN_FACTS;
-    const currentFact = displayFacts[funFactIndex % displayFacts.length] || displayFacts[0];
+  // Logged-in user (meal plans are free for everyone)
+  const displayFacts = funFacts.length > 0 ? funFacts : FALLBACK_FUN_FACTS;
+  const currentFact = displayFacts[funFactIndex % displayFacts.length] || displayFacts[0];
 
-    return (
+  return (
       <SidebarLayout>
         {/* Loading overlay with cycling fun facts */}
         {sendingNow && (
@@ -556,7 +596,7 @@ export default function MealPlansPage() {
                           </span>
                           <span className="text-gray-600 text-sm">
                             Next: {WEEKDAYS[mealPlanDay]?.label || "—"} at {formatTimeForDisplay(mealPlanTime)} {userTimezone === "UTC" ? "UTC" : `(${getTimezoneLabel(userTimezone)})`}
-                            {mealPlanType === "weekly" && " (weekly)"}
+                            {" (weekly)"}
                           </span>
                         </>
                       ) : (
@@ -794,27 +834,25 @@ export default function MealPlansPage() {
                       onChange={(e) => setMealPlanEnabled(e.target.checked)}
                       className="w-4 h-4 rounded"
                     />
-                    <span>Email me {mealPlanType === "daily" ? "daily" : "weekly"} meal plans</span>
+                    <span>Email me weekly meal plans</span>
                   </label>
                   {mealPlanEnabled && (
                     <div className="flex flex-wrap items-center gap-4">
-                      {mealPlanType === "weekly" && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-500">On</span>
-                          <select
-                            value={mealPlanDay}
-                            onChange={(e) => setMealPlanDay(Number(e.target.value))}
-                            className="p-2 border border-amber-200 rounded-lg focus:outline-none focus:border-amber-500"
-                          >
-                            {WEEKDAYS.map((d) => (
-                              <option key={d.value} value={d.value}>
-                                {d.label}
-                              </option>
-                            ))}
-                          </select>
-                          <span className="text-xs text-gray-500">(shop next day)</span>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-500">On</span>
+                        <select
+                          value={mealPlanDay}
+                          onChange={(e) => setMealPlanDay(Number(e.target.value))}
+                          className="p-2 border border-amber-200 rounded-lg focus:outline-none focus:border-amber-500"
+                        >
+                          {WEEKDAYS.map((d) => (
+                            <option key={d.value} value={d.value}>
+                              {d.label}
+                            </option>
+                          ))}
+                        </select>
+                        <span className="text-xs text-gray-500">(shop next day)</span>
+                      </div>
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-gray-500">at</span>
                         <input
@@ -825,58 +863,22 @@ export default function MealPlansPage() {
                         />
                         <span className="text-xs text-gray-500">{userTimezone === "UTC" ? "UTC" : getTimezoneLabel(userTimezone)}</span>
                       </div>
-                      {mealPlanType === "daily" && parseInt(mealPlanTime?.split(":")[0] || "0", 10) >= 18 && (
-                        <p className="text-xs text-amber-700 mt-1">You&apos;ll get it the night before—wake up ready for breakfast.</p>
-                      )}
                     </div>
                   )}
                 </div>
 
                 <div className="bg-white rounded-2xl border border-amber-100 shadow-lg p-6">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">Plan type</h2>
-                  <div className="grid grid-cols-2 gap-4">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMealPlanType("daily");
-                        if (mealPlanTime === "08:00") setMealPlanTime("20:00"); // Optimal: evening = plan for next morning
-                      }}
-                      className={`p-4 rounded-xl border-2 text-left transition-all ${
-                        mealPlanType === "daily"
-                          ? "border-amber-500 bg-amber-50"
-                          : "border-amber-100 hover:border-amber-200"
-                      }`}
-                    >
-                      <div className="font-semibold text-gray-900">Daily</div>
-                      <div className="text-sm text-gray-500 mt-1">One day at a time.</div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMealPlanType("weekly");
-                        if (mealPlanTime === "20:00") setMealPlanTime("08:00"); // Optimal: Saturday morning = shop Sunday
-                      }}
-                      className={`p-4 rounded-xl border-2 text-left transition-all ${
-                        mealPlanType === "weekly"
-                          ? "border-amber-500 bg-amber-50"
-                          : "border-amber-100 hover:border-amber-200"
-                      }`}
-                    >
-                      <div className="font-semibold text-gray-900">Weekly</div>
-                      <div className="text-sm text-gray-500 mt-1">Full week + list.</div>
-                    </button>
-                  </div>
-                  {mealPlanType === "weekly" && (
-                    <label className="flex items-center gap-2 mt-4 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={includeShoppingList}
-                        onChange={(e) => setIncludeShoppingList(e.target.checked)}
-                        className="w-4 h-4 rounded"
-                      />
-                      <span>Include shopping list</span>
-                    </label>
-                  )}
+                  <h2 className="text-lg font-semibold text-gray-900 mb-2">Weekly plan</h2>
+                  <p className="text-sm text-gray-500 mb-4">Full 7-day plan with shopping list. Delivered on the day you choose so you can shop the next day.</p>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={includeShoppingList}
+                      onChange={(e) => setIncludeShoppingList(e.target.checked)}
+                      className="w-4 h-4 rounded"
+                    />
+                    <span>Include shopping list</span>
+                  </label>
                 </div>
 
                 {sendError && <p className="text-red-600 text-sm">{sendError}</p>}
@@ -921,66 +923,5 @@ export default function MealPlansPage() {
           </div>
         </div>
       </SidebarLayout>
-    );
-  }
-
-  // Free user - CRO
-  return (
-    <SidebarLayout>
-      <div className="min-h-screen bg-gradient-to-b from-amber-50/50 to-white">
-        <div className="max-w-4xl mx-auto px-4 py-12">
-          {/* Logo at top */}
-          <div className="flex justify-center mb-10">
-            <Image src="/baba-removebg.png" alt="Baba Selo" width={140} height={140} className="object-contain" />
-          </div>
-
-          {/* Content */}
-          <div className="text-center md:text-left max-w-2xl mx-auto md:mx-0">
-            <p className="text-amber-600 font-semibold text-sm uppercase tracking-wider mb-2">Pro</p>
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Baba remembers. Keep all your chats. Meal plans in your inbox.
-            </h1>
-            <p className="text-lg text-gray-600 mb-6">
-              Pro gives you Baba&apos;s memory, multiple saved chats, and meal plans—daily or weekly, with shopping lists, on your schedule.
-            </p>
-            <div className="flex flex-wrap gap-4 justify-center md:justify-start mb-8">
-              {["Baba remembers your preferences", "Keep all your chats", "Meal plans + shopping lists"].map((item) => (
-                <span key={item} className="flex items-center gap-2 text-gray-700">
-                  <FontAwesomeIcon icon={faCheck} className="text-amber-500" />
-                  {item}
-                </span>
-              ))}
-            </div>
-            <div className="flex flex-col items-center md:items-start">
-              <Link
-                href="/upgrade"
-                className="inline-flex items-center gap-2 px-10 py-4 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl"
-              >
-                Upgrade to Pro
-                <FontAwesomeIcon icon={faArrowRight} className="text-sm" />
-              </Link>
-              <p className="mt-4 text-sm text-gray-500">30-day guarantee · Cancel anytime</p>
-            </div>
-          </div>
-
-          {/* FAQ for free users too */}
-          <div className="mt-16 pt-12 w-full max-w-2xl mx-auto md:mx-0">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 text-center mb-3">How it works</h2>
-            <p className="text-gray-500 text-center mb-10 text-sm md:text-base">Everything you need to know about meal plans</p>
-            <div className="bg-white rounded-2xl border border-amber-100 shadow-lg shadow-amber-900/5 overflow-hidden">
-              {MEAL_PLAN_FAQ.map((item, i) => (
-                <MealPlanFaqItem
-                  key={i}
-                  question={item.q}
-                  answer={item.a}
-                  isOpen={openFaq === i}
-                  onToggle={() => setOpenFaq(openFaq === i ? null : i)}
-                />
-              ))}
-            </div>
-          </div>
-          </div>
-        </div>
-    </SidebarLayout>
   );
 }

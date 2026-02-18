@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faUtensils, faFaceSmile, faHeart, faLeaf, faClock, faCalendarDays, faSun } from "@fortawesome/free-solid-svg-icons";
 import { getAuth } from "firebase/auth"; // Import Firebase auth to get current user
 import { LoadingSpinner } from "./LoadingSpinner";
 import { MessageRenderer } from "./MessageRenderer";
@@ -234,43 +236,34 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
         });
     }, [messages, formattedPairings]);
 
-    const suggestions = [
-        "Create a traditional recipe",
-        "What's your secret to perfect homemade meals?", 
-        "Help me use up these leftovers",
-        "Tell me a funny story",
-        "Give me a recipe for my date",
-        "Tell me about SELO olive oil", 
-        "Set a timer for 15 minutes",
-        
-    ].map(s => s.trim()); // Ensure no extra whitespace that could affect alignment
+    const suggestions: { text: string; icon: React.ReactNode }[] = [
+        { text: "I'd like a traditional Balkan recipe", icon: <FontAwesomeIcon icon={faUtensils} className="w-3 h-3 text-amber-700/80 shrink-0" /> },
+        { text: "What's your secret to perfect homemade meals?", icon: <FontAwesomeIcon icon={faUtensils} className="w-3 h-3 text-amber-700/80 shrink-0" /> },
+        { text: "Tell me a funny story from the kitchen", icon: <FontAwesomeIcon icon={faFaceSmile} className="w-3 h-3 text-amber-700/80 shrink-0" /> },
+        { text: "Give me a recipe for a romantic dinner", icon: <FontAwesomeIcon icon={faHeart} className="w-3 h-3 text-amber-700/80 shrink-0" /> },
+        { text: "Tell me about SELO olive oil", icon: <FontAwesomeIcon icon={faLeaf} className="w-3 h-3 text-amber-700/80 shrink-0" /> },
+        { text: "Can you set a timer for 15 minutes?", icon: <FontAwesomeIcon icon={faClock} className="w-3 h-3 text-amber-700/80 shrink-0" /> },
+        { text: "What's in season right now?", icon: <FontAwesomeIcon icon={faSun} className="w-3 h-3 text-amber-700/80 shrink-0" /> },
+        { text: "Help me plan my meals for the week", icon: <FontAwesomeIcon icon={faCalendarDays} className="w-3 h-3 text-amber-700/80 shrink-0" /> },
+        { text: "What should I cook for dinner tonight?", icon: <FontAwesomeIcon icon={faUtensils} className="w-3 h-3 text-amber-700/80 shrink-0" /> },
+    ];
 
     const [firstMessage, ...restMessages] = messages;
 
     return (
         <div className="w-full max-w-2xl mx-auto px-0 md:px-4 space-y-4">
             {firstMessage && firstMessage.role === "assistant" && (
-                <div className="flex flex-wrap gap-2 mt-4">
-                    {suggestions.map((suggestion, i) => {
-                        let emoji = "";
-                        if (suggestion.toLowerCase().includes("traditional")) emoji = "🌍";
-                        else if (suggestion.toLowerCase().includes("homemade")) emoji = "👩‍🍳";
-                        else if (suggestion.toLowerCase().includes("leftovers")) emoji = "🥘";
-                        else if (suggestion.toLowerCase().includes("funny")) emoji = "😅";
-                        else if (suggestion.toLowerCase().includes("date")) emoji = "❤️";
-                        else if (suggestion.toLowerCase().includes("olive")) emoji = "🌿";
-                        else if (suggestion.toLowerCase().includes("timer")) emoji = "⏲️";
-
-                        return (
-                            <button
-                                key={i}
-                                onClick={() => onSuggestionClick(suggestion)}
-                                className="px-4 py-3 bg-white rounded-xl hover:bg-amber-50 text-gray-900 font-medium text-left w-full md:w-auto border-2 border-amber-200 hover:border-amber-300 shadow-sm hover:shadow-md transition-all"
-                            >
-                                {emoji} {suggestion}
-                            </button>
-                        );
-                    })}
+                <div className="flex flex-wrap gap-1.5 mt-4">
+                    {suggestions.map((suggestion, i) => (
+                        <button
+                            key={i}
+                            onClick={() => onSuggestionClick(suggestion.text)}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-sm bg-white rounded-lg hover:bg-amber-50 text-gray-800 font-medium text-left border border-amber-200 hover:border-amber-300 shadow-sm hover:shadow transition-all"
+                        >
+                            {suggestion.icon}
+                            <span>{suggestion.text}</span>
+                        </button>
+                    ))}
                 </div>
             )}
 
@@ -296,13 +289,26 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                 );
             })}
 
-            {loading && (
-                <div className="flex justify-start">
-                    <div className="bg-white rounded-3xl px-4 py-2">
-                        <LoadingSpinner />
+            {loading && (() => {
+                const lastMsg = messages[messages.length - 1];
+                const prevMsg = messages[messages.length - 2];
+                const prevContent = (prevMsg?.content || "").toLowerCase();
+                const isMealPlanFlow = messages.length >= 2 &&
+                    lastMsg?.role === "user" &&
+                    prevMsg?.role === "assistant" &&
+                    (prevContent.includes("plan your week") || prevContent.includes("meal plan") || prevContent.includes("plan my meals") ||
+                     (prevContent.includes("tell me") && (prevContent.includes("diet") || prevContent.includes("cuisines") || prevContent.includes("ingredients"))) ||
+                     prevContent.includes("anything else") || prevContent.includes("make your plan"));
+                const loadingLabel = isMealPlanFlow ? "Generating your meal plan now..." : null;
+                return (
+                    <div className="flex justify-start">
+                        <div className="bg-white rounded-3xl px-4 py-2 flex items-center gap-3">
+                            <LoadingSpinner />
+                            {loadingLabel && <span className="text-sm text-gray-600">{loadingLabel}</span>}
+                        </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
             <div ref={bottomRef}></div>
         </div>
     );

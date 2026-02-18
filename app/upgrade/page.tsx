@@ -8,7 +8,7 @@ import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
 const FAQ_ITEMS = [
     {
         q: "What's included in Pro?",
-        a: "Baba remembers your conversations—she recalls what you like, what you've asked before, and gives advice that fits. You keep all your chats—start new ones anytime, save and pin the ones you love. Plus meal plans in your inbox: daily or weekly, with shopping lists, on your schedule. Everything in Free, plus these.",
+        a: "Baba remembers your conversations—she recalls what you like, what you've asked before, and gives advice that fits. You keep all your chats—start new ones anytime, save and pin the ones you love. Everything in Free, plus persistent memory and unlimited chats.",
     },
     {
         q: "Can I cancel anytime?",
@@ -20,7 +20,7 @@ const FAQ_ITEMS = [
     },
     {
         q: "How do meal plans work?",
-        a: "Go to Meal Plans, tell Baba what you like in plain words—diet, cuisines, time limits—and choose daily or weekly. Weekly plans come with a shopping list so you can shop once. Plans land in your inbox when you choose—e.g., Saturday morning so you can shop for the week.",
+        a: "Meal plans are free for everyone! Go to Meal Plans, tell Baba what you like—diet, cuisines, time limits—and choose daily or weekly. You can also ask Baba in chat: 'Help me plan my meals for the week' and she'll create a plan right there.",
     },
     {
         q: "What payment methods do you accept?",
@@ -83,7 +83,7 @@ export default function UpgradePlan() {
                         Pro
                     </p>
                     <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 max-w-2xl mx-auto leading-tight">
-                        Baba remembers. Keep all your chats. Meal plans in your inbox.
+                        Baba remembers. Keep all your chats.
                     </h1>
                     <p className="text-gray-600 max-w-xl mx-auto text-lg">
                         From ${annualPricePerMonth}/month when you pay annually. Cancel anytime.
@@ -168,7 +168,7 @@ export default function UpgradePlan() {
                             )}
 
                             <p className="text-gray-700 mb-6">
-                                The complete Baba experience—she remembers, you keep chats, you get meal plans.
+                                The complete Baba experience—she remembers, you keep all your chats.
                             </p>
 
                             <Link
@@ -186,10 +186,6 @@ export default function UpgradePlan() {
                                 <li className="flex items-start gap-3">
                                     <span className="text-amber-500 mt-0.5">✓</span>
                                     <span><strong>Keep all your chats</strong>—start new conversations, save and pin the ones you love</span>
-                                </li>
-                                <li className="flex items-start gap-3">
-                                    <span className="text-amber-500 mt-0.5">✓</span>
-                                    <span><strong>Meal plans in your inbox</strong>—daily or weekly, with shopping lists, on your schedule</span>
                                 </li>
                             </ul>
 

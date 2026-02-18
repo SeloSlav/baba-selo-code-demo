@@ -6,8 +6,8 @@
 
 - **Recipe chat** – Ask for recipes, cooking tips, or anything food-related. Baba responds with detailed, culturally authentic Balkan recipes.
 - **Recipe cards** – Save recipes, see nutrition info, pairings, and similar recipes. Recipe chat cards use FontAwesome icons and a polished layout.
-- **Pro plan** – Baba’s memory, multiple chats, and meal planning. Upgrade page shows annual savings ($12) and clear CTAs.
-- **Meal plans** – Pro users get meal planning with Baba’s image at the top and a focused layout.
+- **Pro plan** – Baba’s memory, multiple chats. Upgrade page shows annual savings ($12) and clear CTAs.
+- **Meal plans** – Free for everyone. Ask Baba in chat or go to Meal Plans for daily/weekly plans with shopping lists.’
 - **Chat tools** – Baba can save recipes, find similar ones, convert servings, get nutrition, suggest substitutions, set timers, translate recipes, add to meal plans, give seasonal tips, find by ingredients, and convert units.
 
 ---
@@ -41,7 +41,7 @@ Timer handling: when Baba calls `set_timer`, the API returns `timerSeconds`; the
 - **ProfileMenu** – Tagline and “one click” copy.
 - **ChatWindow** – Welcome message with Baba’s personality.
 - **Upgrade page** – $7/mo annual, $8/mo monthly; “Save $12” badge; Pro on left; secondary CTA after FAQ.
-- **Meal plans** – Pro copy; Baba image at top for non-logged-in view.
+- **Meal plans** – Free for all; Baba image at top for non-logged-in view.
 - **ChatList** – Upgrade copy for free users.
 
 ---

@@ -80,19 +80,19 @@ export const ImageUploadPopup: React.FC<ImageUploadPopupProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose();
         }
       }}
     >
-      <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-xl">
+      <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-xl border border-amber-100">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-xl">
-              <FontAwesomeIcon icon={faCamera} className="text-xl text-blue-600" />
+            <div className="p-2 bg-amber-100 rounded-xl">
+              <FontAwesomeIcon icon={faCamera} className="text-xl text-amber-700" />
             </div>
             <div>
               <h2 className="text-xl font-bold">Share an Image</h2>
@@ -103,7 +103,7 @@ export const ImageUploadPopup: React.FC<ImageUploadPopupProps> = ({
                     icon={faCircleInfo} 
                     className="text-gray-400 hover:text-gray-600 text-sm cursor-help"
                   />
-                  <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-56 md:w-64 p-3 bg-black text-white text-xs md:text-sm rounded-lg shadow-lg z-50">
+                  <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-56 md:w-64 p-3 bg-amber-900 text-amber-50 text-xs md:text-sm rounded-lg shadow-lg z-50">
                     <div className="relative">
                       <p className="font-medium mb-1.5">Share an image to get:</p>
                       <ul className="space-y-1">
@@ -124,7 +124,7 @@ export const ImageUploadPopup: React.FC<ImageUploadPopupProps> = ({
                           <span>Cooking tips for your homemade dishes</span>
                         </li>
                       </ul>
-                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 translate-y-full w-2 h-2 bg-black rotate-45"></div>
+                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 translate-y-full w-2 h-2 bg-amber-900 rotate-45"></div>
                     </div>
                   </div>
                 </div>
@@ -133,7 +133,7 @@ export const ImageUploadPopup: React.FC<ImageUploadPopupProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="p-1.5 rounded-full text-amber-600/70 hover:text-amber-800 hover:bg-amber-50 transition-colors"
           >
             <FontAwesomeIcon icon={faTimes} className="text-xl" />
           </button>
@@ -154,9 +154,9 @@ export const ImageUploadPopup: React.FC<ImageUploadPopupProps> = ({
               {/* Take Photo Option */}
               <button
                 onClick={() => cameraInputRef.current?.click()}
-                className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
+                className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-amber-200 rounded-xl hover:bg-amber-50/50 transition-colors"
               >
-                <FontAwesomeIcon icon={faCamera} className="text-3xl text-gray-400 mb-3" />
+                <FontAwesomeIcon icon={faCamera} className="text-3xl text-amber-500 mb-3" />
                 <p className="text-sm text-gray-600 font-medium">Take a Photo</p>
                 <p className="text-xs text-gray-400 mt-1">Use your camera</p>
                 <input
@@ -172,9 +172,9 @@ export const ImageUploadPopup: React.FC<ImageUploadPopupProps> = ({
               {/* Upload Option */}
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
+                className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-amber-200 rounded-xl hover:bg-amber-50/50 transition-colors"
               >
-                <FontAwesomeIcon icon={faUpload} className="text-3xl text-gray-400 mb-3" />
+                <FontAwesomeIcon icon={faUpload} className="text-3xl text-amber-500 mb-3" />
                 <p className="text-sm text-gray-600 font-medium">Upload Photo</p>
                 <p className="text-xs text-gray-400 mt-1">From your device</p>
                 <input
@@ -192,7 +192,7 @@ export const ImageUploadPopup: React.FC<ImageUploadPopupProps> = ({
               onClick={() => fileInputRef.current?.click()}
               onDrop={handleDrop}
               onDragOver={handleDragOver}
-              className="hidden md:block relative border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:bg-gray-50 transition-colors cursor-pointer"
+              className="hidden md:block relative border-2 border-dashed border-amber-200 rounded-xl p-6 text-center hover:bg-amber-50/50 transition-colors cursor-pointer"
             >
               <p className="text-gray-600 mb-2">
                 Or drag & drop your image here
@@ -223,17 +223,17 @@ export const ImageUploadPopup: React.FC<ImageUploadPopupProps> = ({
         <div className="flex justify-end gap-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="px-4 py-2 text-amber-800 hover:bg-amber-50 rounded-xl border border-amber-200 transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={!selectedFile}
-            className={`px-6 py-2 rounded-lg transition-colors flex items-center gap-2
+            className={`px-6 py-2 rounded-xl transition-colors flex items-center gap-2
               ${!selectedFile 
-                ? "bg-gray-200 text-gray-400 cursor-not-allowed" 
-                : "bg-black text-white hover:bg-gray-800"}`}
+                ? "bg-amber-100 text-amber-400 cursor-not-allowed" 
+                : "bg-amber-600 text-white hover:bg-amber-700"}`}
           >
             <FontAwesomeIcon icon={faCamera} />
             {selectedFile ? "Share with Baba" : "Select an Image"}
