@@ -34,8 +34,8 @@ const MEAL_PLAN_FAQ = [
     a: "Anything that matters to you: diet (vegan, keto, etc.), cuisines, time limits (30-min meals), allergies, ingredients you love or avoid. The more you add, the more tailored the plans.",
   },
   {
-    q: "How are the plans generated?",
-    a: "Baba uses AI to create plans based on your preferences. Each plan is generated fresh—daily plans are new each day, weekly plans are new each week. They're emailed to you via Resend.",
+    q: "How are the plans created?",
+    a: "Baba creates plans based on what you tell her—diet, cuisines, time limits. Each plan is fresh—daily plans are new each day, weekly plans are new each week. They show up in your inbox when you choose.",
   },
   {
     q: "Do I need a shopping list?",
@@ -414,11 +414,13 @@ export default function MealPlansPage() {
     return (
       <SidebarLayout>
         <div className="min-h-screen bg-gradient-to-b from-amber-50/50 to-white">
-          <div className="max-w-4xl mx-auto px-4 py-16 flex flex-col md:flex-row items-center gap-12">
-            <div className="flex-shrink-0">
+          <div className="max-w-4xl mx-auto px-4 py-16">
+            {/* Baba image at top */}
+            <div className="flex justify-center mb-10">
               <Image src="/baba-removebg.png" alt="Baba Selo" width={160} height={160} className="object-contain" />
             </div>
-            <div className="flex-1 text-center md:text-left">
+
+            <div className="text-center md:text-left max-w-2xl mx-auto">
               <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
                 Meal plans that fit your life
               </h1>
@@ -435,15 +437,17 @@ export default function MealPlansPage() {
                   </span>
                 ))}
               </div>
-              <Link
-                href="/login"
-                className="inline-flex items-center gap-2 px-8 py-4 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl"
-              >
-                Sign in to get started
-                <FontAwesomeIcon icon={faArrowRight} className="text-sm" />
-              </Link>
+              <div className="flex justify-center md:justify-start">
+                <Link
+                  href="/login"
+                  className="inline-flex items-center gap-2 px-8 py-4 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl"
+                >
+                  Sign in to get started
+                  <FontAwesomeIcon icon={faArrowRight} className="text-sm" />
+                </Link>
+              </div>
 
-              <div className="mt-16 pt-12 w-full max-w-2xl">
+              <div className="mt-16 pt-12 w-full">
                 <h2 className="text-2xl md:text-3xl font-bold text-gray-900 text-center mb-3">How it works</h2>
                 <p className="text-gray-500 text-center mb-10 text-sm md:text-base">Everything you need to know about meal plans</p>
                 <div className="bg-white rounded-2xl border border-amber-100 shadow-lg shadow-amber-900/5 overflow-hidden">
@@ -934,13 +938,13 @@ export default function MealPlansPage() {
           <div className="text-center md:text-left max-w-2xl mx-auto md:mx-0">
             <p className="text-amber-600 font-semibold text-sm uppercase tracking-wider mb-2">Pro</p>
             <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Weekly plans, shopping lists, your way
+              Baba remembers. Keep all your chats. Meal plans in your inbox.
             </h1>
             <p className="text-lg text-gray-600 mb-6">
-              Choose daily or weekly. Get a consolidated shopping list. Tell Baba what you like—in plain language.
+              Pro gives you Baba&apos;s memory, multiple saved chats, and meal plans—daily or weekly, with shopping lists, on your schedule.
             </p>
             <div className="flex flex-wrap gap-4 justify-center md:justify-start mb-8">
-              {["Daily or weekly", "Shopping list", "Tell Baba in plain words"].map((item) => (
+              {["Baba remembers your preferences", "Keep all your chats", "Meal plans + shopping lists"].map((item) => (
                 <span key={item} className="flex items-center gap-2 text-gray-700">
                   <FontAwesomeIcon icon={faCheck} className="text-amber-500" />
                   {item}

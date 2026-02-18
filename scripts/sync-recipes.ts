@@ -4,7 +4,7 @@
  * Batched with cost estimation and verification.
  *
  * Run: npm run sync:recipes
- * Or: npx tsx scripts/sync-recipes.ts [--dry-run] [--batch=50] [--delay=500]
+ * Or: npx tsx scripts/sync-recipes.ts [--dry-run] [--batch=50] [--delay=500] [--limit=N]
  *
  * Requires: .env.local with FIREBASE_SERVICE_ACCOUNT_KEY, POSTGRES_URL, OPENAI_API_KEY
  */

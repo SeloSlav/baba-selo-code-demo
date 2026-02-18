@@ -9,7 +9,7 @@ export const UpgradeButton = () => {
                     <div className="flex flex-col gap-2 mb-2">
                         <span className="text-lg font-semibold">Upgrade to Pro</span>
                     </div>
-                    <p className="text-sm text-amber-100 mb-2">Voice chat, meal plans & more</p>
+                    <p className="text-sm text-amber-100 mb-2">Baba remembers, keep all chats, meal plans</p>
                     <div className="flex items-center justify-between text-xs text-amber-100/90">
                         <span>Starting at $8/month</span>
                         <span className="flex items-center gap-1">

@@ -144,17 +144,83 @@ export async function indexRecipes(
   }
 }
 
+let _embeddingPool: Pool | null = null;
+
+function getEmbeddingPool(): Pool | null {
+  if (_embeddingPool) return _embeddingPool;
+  const config = getConnectionConfig();
+  if (!config) return null;
+  _embeddingPool = new Pool(config);
+  return _embeddingPool;
+}
+
+/** Get stored embedding for a recipe (avoids OpenAI call when recipe is indexed) */
+async function getStoredEmbedding(recipeId: string): Promise<number[] | null> {
+  const pool = getEmbeddingPool();
+  if (!pool) return null;
+
+  try {
+    const res = await pool.query(
+      `SELECT embedding FROM ${TABLE_NAME} WHERE metadata->>'recipeId' = $1 LIMIT 1`,
+      [recipeId]
+    );
+    const row = res.rows[0];
+    if (!row?.embedding) return null;
+
+    const vec = row.embedding;
+    if (Array.isArray(vec)) return vec;
+    if (typeof vec === "string") {
+      try {
+        return JSON.parse(vec) as number[];
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export interface SimilarRecipesTiming {
+  getStoredEmbeddingMs?: number;
+  similaritySearchMs: number;
+  usedStoredEmbedding: boolean;
+}
+
 /** Find similar recipes by recipe ID (excludes the given recipe) */
 export async function getSimilarRecipes(
   recipeId: string,
   recipeText: string,
   limit = DEFAULT_LIMIT
 ): Promise<IndexedRecipe[]> {
+  const { results } = await getSimilarRecipesWithTiming(recipeId, recipeText, limit);
+  return results;
+}
+
+/** Same as getSimilarRecipes but returns timing breakdown (for profiling) */
+export async function getSimilarRecipesWithTiming(
+  recipeId: string,
+  recipeText: string,
+  limit = DEFAULT_LIMIT
+): Promise<{ results: IndexedRecipe[]; timing: SimilarRecipesTiming }> {
   const store = await getVectorStore();
-  if (!store) return [];
+  const timing: SimilarRecipesTiming = { similaritySearchMs: 0, usedStoredEmbedding: false };
+
+  if (!store) return { results: [], timing };
 
   try {
-    const results = await store.similaritySearchWithScore(recipeText, limit + 5);
+    let t0 = Date.now();
+    const storedVec = await getStoredEmbedding(recipeId);
+    timing.getStoredEmbeddingMs = Date.now() - t0;
+    timing.usedStoredEmbedding = !!storedVec;
+
+    t0 = Date.now();
+    const results = storedVec
+      ? await store.similaritySearchVectorWithScore(storedVec, limit + 5)
+      : await store.similaritySearchWithScore(recipeText, limit + 5);
+    timing.similaritySearchMs = Date.now() - t0;
+
     const seen = new Set<string>();
     const out: IndexedRecipe[] = [];
 
@@ -168,9 +234,9 @@ export async function getSimilarRecipes(
       if (out.length >= limit) break;
     }
 
-    return out;
+    return { results: out, timing };
   } catch (err) {
     console.error("Similar recipes search failed:", err);
-    return [];
+    return { results: [], timing };
   }
 }

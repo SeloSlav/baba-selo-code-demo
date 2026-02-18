@@ -12,6 +12,7 @@ interface RecipeNavigationProps {
   notesRef: RefObject<HTMLDivElement>;
   macroInfoRef: RefObject<HTMLDivElement>;
   pairingsRef: RefObject<HTMLDivElement>;
+  showNotes?: boolean;
 }
 
 export const RecipeNavigation = ({
@@ -24,6 +25,7 @@ export const RecipeNavigation = ({
   notesRef,
   macroInfoRef,
   pairingsRef,
+  showNotes = true,
 }: RecipeNavigationProps) => {
   return (
     <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm -mx-6 px-6 py-4 -mt-2 mb-4 rounded-b-lg shadow-sm border-b border-amber-100">
@@ -52,16 +54,18 @@ export const RecipeNavigation = ({
               >
                 👩‍🍳 Directions
               </button>
-              <button
-                onClick={() => scrollToSection(notesRef, 'notes')}
-                className={`px-4 py-2 rounded-full transition-all duration-200 ${
-                  activeSection === 'notes'
-                    ? 'bg-black text-white'
-                    : 'bg-amber-100 hover:bg-amber-200'
-                }`}
-              >
-                📝 Notes
-              </button>
+              {showNotes && (
+                <button
+                  onClick={() => scrollToSection(notesRef, 'notes')}
+                  className={`px-4 py-2 rounded-full transition-all duration-200 ${
+                    activeSection === 'notes'
+                      ? 'bg-black text-white'
+                      : 'bg-amber-100 hover:bg-amber-200'
+                  }`}
+                >
+                  📝 Notes
+                </button>
+              )}
               <button
                 onClick={() => scrollToSection(macroInfoRef, 'macros')}
                 className={`px-4 py-2 rounded-full transition-all duration-200 ${
@@ -165,16 +169,18 @@ export const RecipeNavigation = ({
                 >
                   👩‍🍳 Directions
                 </button>
-                <button
-                  onClick={() => scrollToSection(notesRef, 'notes')}
-                  className={`px-3 py-1.5 rounded-full text-sm transition-all duration-200 whitespace-nowrap ${
-                    activeSection === 'notes'
-                      ? 'bg-black text-white'
-                      : 'bg-amber-100 hover:bg-amber-200'
-                  }`}
-                >
-                  📝 Notes
-                </button>
+                {showNotes && (
+                  <button
+                    onClick={() => scrollToSection(notesRef, 'notes')}
+                    className={`px-3 py-1.5 rounded-full text-sm transition-all duration-200 whitespace-nowrap ${
+                      activeSection === 'notes'
+                        ? 'bg-black text-white'
+                        : 'bg-amber-100 hover:bg-amber-200'
+                    }`}
+                  >
+                    📝 Notes
+                  </button>
+                )}
                 <button
                   onClick={() => scrollToSection(macroInfoRef, 'macros')}
                   className={`px-3 py-1.5 rounded-full text-sm transition-all duration-200 whitespace-nowrap ${

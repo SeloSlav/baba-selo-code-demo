@@ -58,6 +58,9 @@ const toBase64 = (str: string) =>
 
 const POINTS_FOR_LIKE = 50; // Points awarded when someone likes your recipe
 
+/** Notes feature hidden from UI (data preserved). Set to true to re-enable. */
+const SHOW_NOTES = false;
+
 const RecipeDetails = () => {
   const [recipe, setRecipe] = useState<Recipe | null>(null); // State to store the recipe details
   const [checkedDirections, setCheckedDirections] = useState<boolean[]>([]); // Track checked directions
@@ -100,6 +103,7 @@ const RecipeDetails = () => {
   const [currentUsername, setCurrentUsername] = useState<string>('');
   const [isUserAdmin, setIsUserAdmin] = useState(false);
   const [similarRecipes, setSimilarRecipes] = useState<Recipe[]>([]);
+  const [similarRecipesLoading, setSimilarRecipesLoading] = useState(false);
 
   useEffect(() => {
     if (!id) return; // If no id, do nothing
@@ -163,23 +167,79 @@ const RecipeDetails = () => {
     fetchRecipe();
   }, [id, auth]);
 
-  // Fetch similar recipes via pgvector (semantic similarity)
+  // Fetch similar recipes (Firestore: recent recipes, prefer same cuisine)
   useEffect(() => {
     if (!recipe || !id) return;
 
     const fetchSimilarRecipes = async () => {
+      setSimilarRecipesLoading(true);
       try {
-        const res = await fetch(`/api/similarRecipes?recipeId=${id}&limit=4`);
-        if (!res.ok) {
-          // Fallback: no similar recipes if API fails (e.g. not synced yet)
-          setSimilarRecipes([]);
-          return;
+        const recipesQuery = query(
+          collection(db, "recipes"),
+          orderBy("createdAt", "desc"),
+          limit(25)
+        );
+        const snapshot = await getDocs(recipesQuery);
+        const allRecipes = snapshot.docs
+          .filter((d) => d.id !== id)
+          .map((d) => {
+            const data = d.data();
+            const directions = Array.isArray(data.directions) ? data.directions : [];
+            const ingredients = Array.isArray(data.ingredients) ? data.ingredients : [];
+            return {
+              id: d.id,
+              recipeTitle: data.recipeTitle || "No title",
+              recipeContent: "",
+              userId: data.userId || "",
+              cuisineType: data.cuisineType || "Unknown",
+              cookingDifficulty: data.cookingDifficulty || "Unknown",
+              cookingTime: data.cookingTime || "Unknown",
+              diet: data.diet || [],
+              directions,
+              ingredients,
+              imageURL: data.imageURL || "",
+              recipeSummary: data.recipeSummary || "",
+              recipeNotes: data.recipeNotes || "",
+              macroInfo: data.macroInfo || null,
+              dishPairings: data.dishPairings || "",
+              pinned: data.pinned || false,
+              lastPinnedAt: data.lastPinnedAt || null,
+              likes: data.likes || [],
+              username: data.username || "Anonymous Chef",
+            } as Recipe;
+          });
+
+        const cuisine = recipe.cuisineType || "Unknown";
+        const similar = allRecipes
+          .sort((a, b) => {
+            const aMatch = a.cuisineType === cuisine ? 1 : 0;
+            const bMatch = b.cuisineType === cuisine ? 1 : 0;
+            return bMatch - aMatch;
+          })
+          .slice(0, 4);
+
+        const userIds = new Set(similar.map((r) => r.userId).filter(Boolean));
+        const userMap = new Map<string, string>();
+        if (userIds.size > 0) {
+          const usersQuery = query(
+            collection(db, "users"),
+            where("__name__", "in", Array.from(userIds).slice(0, 10))
+          );
+          const userDocs = await getDocs(usersQuery);
+          userDocs.docs.forEach((d) => userMap.set(d.id, d.data().username || "Anonymous Chef"));
         }
-        const { similar } = await res.json();
-        setSimilarRecipes((similar || []).map((r: Recipe) => ({ ...r, recipeContent: "" })));
+
+        const withUsernames = similar.map((r) => ({
+          ...r,
+          username: userMap.get(r.userId) || "Anonymous Chef",
+        }));
+
+        setSimilarRecipes(withUsernames);
       } catch (error) {
         console.error("Error fetching similar recipes:", error);
         setSimilarRecipes([]);
+      } finally {
+        setSimilarRecipesLoading(false);
       }
     };
 
@@ -194,7 +254,7 @@ const RecipeDetails = () => {
       const sections = [
         { id: 'ingredients', ref: ingredientsRef },
         { id: 'directions', ref: directionsRef },
-        { id: 'notes', ref: notesRef },
+        ...(SHOW_NOTES ? [{ id: 'notes' as const, ref: notesRef }] : []),
         { id: 'macros', ref: macroInfoRef },
         { id: 'pairings', ref: pairingsRef }
       ];
@@ -1099,6 +1159,7 @@ const RecipeDetails = () => {
             notesRef={notesRef}
             macroInfoRef={macroInfoRef}
             pairingsRef={pairingsRef}
+            showNotes={SHOW_NOTES}
           />
 
           <RecipeIngredients
@@ -1118,18 +1179,20 @@ const RecipeDetails = () => {
             directionsRef={directionsRef}
           />
 
-          <RecipeNotes
-            recipe={recipe}
-            isOwner={isOwner}
-            isUserAdmin={isUserAdmin}
-            notes={notes}
-            savingNotes={savingNotes}
-            hasNoteChanges={hasNoteChanges}
-            notesRef={notesRef}
-            setNotes={setNotes}
-            setHasNoteChanges={setHasNoteChanges}
-            handleSaveNotes={handleSaveNotes}
-          />
+          {SHOW_NOTES && (
+            <RecipeNotes
+              recipe={recipe}
+              isOwner={isOwner}
+              isUserAdmin={isUserAdmin}
+              notes={notes}
+              savingNotes={savingNotes}
+              hasNoteChanges={hasNoteChanges}
+              notesRef={notesRef}
+              setNotes={setNotes}
+              setHasNoteChanges={setHasNoteChanges}
+              handleSaveNotes={handleSaveNotes}
+            />
+          )}
 
           <RecipeMacros
             recipe={recipe}
@@ -1171,20 +1234,28 @@ ${recipe.directions.map((direction, index) => `${index + 1}. ${direction}`).join
           </div>
 
           {/* Similar Recipes */}
-          {similarRecipes.length > 0 && (
+          {(similarRecipesLoading || similarRecipes.length > 0) && (
             <div className="mt-12 pt-8 border-t border-amber-100">
               <h2 className="text-xl font-semibold text-amber-900/90 mb-6">Similar Recipes</h2>
-              <div className="grid grid-cols-2 gap-4">
-                {similarRecipes.map((similar) => (
-                  <RecipeCard
-                    key={similar.id}
-                    recipe={similar}
-                    onLike={handleLikeSimilar}
-                    currentUser={user}
-                    showUsername={true}
-                  />
-                ))}
-              </div>
+              {similarRecipesLoading ? (
+                <div className="grid grid-cols-2 gap-4">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="rounded-xl bg-amber-50/50 animate-pulse h-48" />
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  {similarRecipes.map((similar) => (
+                    <RecipeCard
+                      key={similar.id}
+                      recipe={similar}
+                      onLike={handleLikeSimilar}
+                      currentUser={user}
+                      showUsername={true}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

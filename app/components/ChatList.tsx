@@ -214,7 +214,7 @@ export const ChatList: React.FC<ChatListProps> = ({
               <div className="text-xl mb-1.5">💬</div>
               <p className="font-medium text-gray-700 text-sm">No chats yet</p>
               <p className="text-gray-500 text-xs mt-0.5">
-                {isPro ? "Start a conversation to save it" : "Free: last 3 chats saved. Upgrade for unlimited."}
+                {isPro ? "Start a conversation to save it" : "Upgrade so Baba remembers your chats and you can keep multiple conversations"}
               </p>
             </div>
           )}

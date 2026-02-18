@@ -56,14 +56,14 @@ export const RecipeMessage: React.FC<RecipeMessageProps> = ({
                 </ol>
 
                 {classification && (
-                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                    <div className="mb-3 flex flex-wrap items-center gap-1.5">
                         {classification.diet && classification.diet.length > 0 && classification.diet.map((d) => (
                             <FilterTag
                                 key={d}
                                 type="diet"
                                 value={d}
                                 icon="🍲"
-                                className="flex items-center bg-white border border-gray-300 shadow-sm rounded-full px-3 py-1 hover:bg-gray-50 transition-colors"
+                                className="flex items-center text-xs bg-white border border-gray-300 shadow-sm rounded-full px-2 py-0.5 hover:bg-gray-50 transition-colors [&_span:first-child]:mr-1"
                             >
                                 {d.charAt(0).toUpperCase() + d.slice(1)}
                             </FilterTag>
@@ -73,7 +73,7 @@ export const RecipeMessage: React.FC<RecipeMessageProps> = ({
                                 type="cuisine"
                                 value={classification.cuisine}
                                 icon="🍽️"
-                                className="flex items-center bg-white border border-gray-300 shadow-sm rounded-full px-3 py-1 hover:bg-gray-50 transition-colors"
+                                className="flex items-center text-xs bg-white border border-gray-300 shadow-sm rounded-full px-2 py-0.5 hover:bg-gray-50 transition-colors [&_span:first-child]:mr-1"
                             >
                                 {classification.cuisine.charAt(0).toUpperCase() + classification.cuisine.slice(1)}
                             </FilterTag>
@@ -83,7 +83,7 @@ export const RecipeMessage: React.FC<RecipeMessageProps> = ({
                                 type="time"
                                 value={classification.cooking_time}
                                 icon="⏲️"
-                                className="flex items-center bg-white border border-gray-300 shadow-sm rounded-full px-3 py-1 hover:bg-gray-50 transition-colors"
+                                className="flex items-center text-xs bg-white border border-gray-300 shadow-sm rounded-full px-2 py-0.5 hover:bg-gray-50 transition-colors [&_span:first-child]:mr-1"
                             >
                                 {classification.cooking_time}
                             </FilterTag>
@@ -93,7 +93,7 @@ export const RecipeMessage: React.FC<RecipeMessageProps> = ({
                                 type="difficulty"
                                 value={classification.difficulty}
                                 icon="🧩"
-                                className="flex items-center bg-white border border-gray-300 shadow-sm rounded-full px-3 py-1 hover:bg-gray-50 transition-colors"
+                                className="flex items-center text-xs bg-white border border-gray-300 shadow-sm rounded-full px-2 py-0.5 hover:bg-gray-50 transition-colors [&_span:first-child]:mr-1"
                             >
                                 {classification.difficulty.charAt(0).toUpperCase() + classification.difficulty.slice(1)}
                             </FilterTag>
