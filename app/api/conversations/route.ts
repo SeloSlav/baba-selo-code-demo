@@ -1,0 +1,19 @@
+import { NextResponse } from 'next/server';
+import dotenv from 'dotenv';
+dotenv.config();
+
+export async function GET() {
+  try {
+    const response = await fetch('https://api.elevenlabs.io/v1/convai/conversations', {
+      method: 'GET',
+      headers: {
+        'xi-api-key': `${process.env.ELEVENLABS_API_KEY}`,
+      },
+    });
+    const data = await response.json();
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('Error fetching conversations:', error);
+    return NextResponse.json({ error: 'Failed to fetch conversations' }, { status: 500 });
+  }
+}

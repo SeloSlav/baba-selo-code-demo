@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { FALLBACK_FUN_FACTS } from "../lib/mealPlanFacts";
+import { FALLBACK_FUN_FACTS } from "../lib/meal-plan/mealPlanFacts";
 
 /** User message indicates they're ready to generate (not just giving a preference like "mediterranean") */
 function isUserReadyToGenerate(userContent: string): boolean {

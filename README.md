@@ -18,15 +18,16 @@ The app uses **LangChain** and **LangGraph** for all AI features. Chat runs as a
 
 ### Chat Agent (LangGraph ReAct)
 
-- **Location**: `app/lib/chatGraph.ts`, `app/lib/chatToolsLangchain.ts`
+- **Location**: `app/lib/chatGraph.ts`, `app/lib/chatToolsLangchain.ts`, `app/lib/chatTools.ts`
 - **Flow**: `createReactAgent` from `@langchain/langgraph/prebuilt` — a ReAct-style agent that decides when to call tools vs. respond directly.
 - **Model**: `ChatOpenAI` (GPT-4o) from `@langchain/openai`.
-- **Tools**: Defined with `tool()` from `@langchain/core/tools` and Zod schemas. Each tool wraps handlers in `chatTools.js`.
+- **Tools**: Defined with `tool()` from `@langchain/core/tools` and Zod schemas. Each tool wraps handlers in `chatTools.ts`.
 - **API**: `POST /api/chat` streams via `runChatGraphStream`, emitting `tool_started` when `generate_meal_plan` runs (for loader UX) and `done` with the final message, timer, and meal plan link.
 
 ### Recipe Generation (LangGraph StateGraph)
 
 - **Location**: `app/lib/recipeGraph.ts`, `app/api/generateRecipeDetails/route.ts`
+- **Lib structure**: `app/lib/` is organized into `stores/` (vector stores), `meal-plan/` (meal plan logic), and root-level AI/chat files.
 - **Flow**: `StateGraph` with nodes: `check_cache` → [hit] `__end__` | [miss] `generate` → `enrich` → `store_cache` → `__end__`.
 - **Model**: `ChatOpenAI` (gpt-4o-mini) for JSON recipe generation.
 - **Caching**: `recipeVectorStore` checks semantic similarity before generating; on miss, generates, enriches (classify, summary, macro, pairing), then stores in the vector cache.
@@ -84,10 +85,10 @@ The app uses **pgvector** via LangChain's `PGVectorStore` and `OpenAIEmbeddings`
 
 | Table | Lib | Purpose | Key Features |
 |-------|-----|---------|--------------|
-| **recipe_embeddings** | `recipeVectorStore.ts` | Semantic cache for generated recipes | Used by LangGraph `recipeGraph` pipeline. Before generating, checks if a similar query exists. Cache hit → 0 API calls. Cache miss → generate via OpenAI, enrich, then store for future hits. |
-| **recipe_index** | `similarRecipesStore.ts` | Similar recipes search | Recipes synced from Firestore. Powers `get_similar_recipes` and `find_by_ingredients` chat tools. Similarity search by embedding (title + ingredients + directions + summary). |
-| **enrichment_cache** | `enrichmentCache.ts` | Granular enrichment cache | Used by LangGraph `recipeGraph` enrich node. Caches classify, summary, macro, and pairing results by semantic similarity. Avoids redundant API calls for similar recipe content. |
-| **conversation_memory** | `conversationMemoryStore.ts` | Pro users chat recall | Injected into chat system prompt. Stores chat turns for semantic search. Enables queries like "what was that chicken recipe?" by retrieving relevant past turns. |
+| **recipe_embeddings** | `lib/stores/recipeVectorStore.ts` | Semantic cache for generated recipes | Used by LangGraph `recipeGraph` pipeline. Before generating, checks if a similar query exists. Cache hit → 0 API calls. Cache miss → generate via OpenAI, enrich, then store for future hits. |
+| **recipe_index** | `lib/stores/similarRecipesStore.ts` | Similar recipes search | Recipes synced from Firestore. Powers `get_similar_recipes` and `find_by_ingredients` chat tools. Similarity search by embedding (title + ingredients + directions + summary). |
+| **enrichment_cache** | `lib/stores/enrichmentCache.ts` | Granular enrichment cache | Used by LangGraph `recipeGraph` enrich node. Caches classify, summary, macro, and pairing results by semantic similarity. Avoids redundant API calls for similar recipe content. |
+| **conversation_memory** | `lib/stores/conversationMemoryStore.ts` | Pro users chat recall | Injected into chat system prompt. Stores chat turns for semantic search. Enables queries like "what was that chicken recipe?" by retrieving relevant past turns. |
 
 ### Setup
 

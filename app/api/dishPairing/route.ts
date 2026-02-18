@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-export async function POST(req) {
+export async function POST(req: Request) {
   const { recipe } = await req.json();
 
   if (!recipe) {
@@ -20,7 +20,7 @@ export async function POST(req) {
         "Authorization": `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini", // Use "gpt-4" or "gpt-3.5-turbo" if unavailable
+        model: "gpt-4o-mini",
         max_tokens: 500,  
         temperature: 0.7,
         messages: [

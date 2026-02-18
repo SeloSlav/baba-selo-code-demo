@@ -8,7 +8,7 @@ import { Pool, PoolConfig } from "pg";
 import { Document } from "@langchain/core/documents";
 
 const TABLE_NAME = "enrichment_cache";
-const SIMILARITY_THRESHOLD = 0.08; // stricter for enrichment (more exact match)
+const SIMILARITY_THRESHOLD = 0.08;
 
 export type EnrichmentType = "classify" | "summary" | "macro" | "pairing";
 
@@ -54,7 +54,6 @@ async function getVectorStore(): Promise<PGVectorStore | null> {
   }
 }
 
-/** Check cache for enrichment result. Returns null on miss. */
 export async function checkEnrichmentCache<T>(
   type: EnrichmentType,
   inputText: string
@@ -81,7 +80,6 @@ export async function checkEnrichmentCache<T>(
   }
 }
 
-/** Store enrichment result in cache */
 export async function storeEnrichmentCache<T>(
   type: EnrichmentType,
   inputText: string,

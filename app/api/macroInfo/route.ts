@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-export async function POST(req) {
+export async function POST(req: Request) {
   const { recipe } = await req.json();
 
   if (!recipe) {
@@ -57,25 +57,16 @@ export async function POST(req) {
     }
 
     try {
-      // Get the raw content and clean it up
       let rawContent = data.choices[0].message.content;
-      
-      // Remove any markdown code block syntax and whitespace
       rawContent = rawContent.replace(/```json\s*|\s*```/g, '').trim();
-      
-      // Additional cleanup to handle potential text before or after JSON
       const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         throw new Error('No valid JSON found in response');
       }
-      
       const nutritionData = JSON.parse(jsonMatch[0]);
-      
-      // Validate the structure
       if (!nutritionData.servings || !nutritionData.total || !nutritionData.per_serving) {
         throw new Error('Invalid nutrition data structure');
       }
-
       return NextResponse.json({
         macros: nutritionData,
       });

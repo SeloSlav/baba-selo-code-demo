@@ -13,7 +13,7 @@ import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import admin from "firebase-admin";
-import type { IndexedRecipe } from "../app/lib/similarRecipesStore";
+import type { IndexedRecipe } from "../app/lib/stores/similarRecipesStore";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, "..");
@@ -146,7 +146,7 @@ async function main() {
   }
 
   // Dynamic import to ensure env is loaded
-  const { indexRecipes } = await import("../app/lib/similarRecipesStore");
+  const { indexRecipes } = await import("../app/lib/stores/similarRecipesStore");
 
   let synced = 0;
   let runningTokens = 0;

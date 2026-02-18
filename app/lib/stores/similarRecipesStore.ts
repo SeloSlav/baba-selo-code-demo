@@ -68,7 +68,6 @@ async function getVectorStore(): Promise<PGVectorStore | null> {
   }
 }
 
-/** Build text for embedding from recipe (title + ingredients + directions + summary) */
 export function recipeToEmbeddingText(recipe: {
   recipeTitle?: string;
   ingredients?: string[];
@@ -85,7 +84,6 @@ export function recipeToEmbeddingText(recipe: {
   return parts.join("\n\n").slice(0, 8000);
 }
 
-/** Add or update a recipe in the index */
 export async function indexRecipe(recipe: IndexedRecipe): Promise<void> {
   const store = await getVectorStore();
   if (!store) return;
@@ -104,7 +102,6 @@ export async function indexRecipe(recipe: IndexedRecipe): Promise<void> {
   }
 }
 
-/** Add multiple recipes (batch). Clears table first if clearFirst. */
 export async function indexRecipes(
   recipes: IndexedRecipe[],
   clearFirst = false
@@ -154,7 +151,6 @@ function getEmbeddingPool(): Pool | null {
   return _embeddingPool;
 }
 
-/** Get stored embedding for a recipe (avoids OpenAI call when recipe is indexed) */
 async function getStoredEmbedding(recipeId: string): Promise<number[] | null> {
   const pool = getEmbeddingPool();
   if (!pool) return null;
@@ -188,7 +184,6 @@ export interface SimilarRecipesTiming {
   usedStoredEmbedding: boolean;
 }
 
-/** Find similar recipes by recipe ID (excludes the given recipe) */
 export async function getSimilarRecipes(
   recipeId: string,
   recipeText: string,
@@ -198,7 +193,6 @@ export async function getSimilarRecipes(
   return results;
 }
 
-/** Same as getSimilarRecipes but returns timing breakdown (for profiling) */
 export async function getSimilarRecipesWithTiming(
   recipeId: string,
   recipeText: string,

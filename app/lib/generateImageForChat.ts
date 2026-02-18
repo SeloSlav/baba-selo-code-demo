@@ -1,14 +1,11 @@
 import { getStorage } from 'firebase-admin/storage';
-import '../firebase/firebaseAdmin'; // Ensure Firebase Admin is initialized before using getStorage
+import '../firebase/firebaseAdmin';
 
 /**
  * Generate an image for chat (food, dish, etc.) and upload to Firebase.
  * Uses gpt-image-1 with quality low (same as recipe page).
- * @param {string} prompt - Description of what to draw (e.g. "A dish of kajmak on bread")
- * @param {string} userId - User ID for storage path (use 'anonymous' if not logged in)
- * @returns {Promise<{ imageUrl: string }>}
  */
-export async function generateImageForChat(prompt, userId = 'anonymous') {
+export async function generateImageForChat(prompt: string, userId = 'anonymous'): Promise<{ imageUrl: string }> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error('OPENAI_API_KEY not configured');
 

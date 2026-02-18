@@ -4,11 +4,11 @@
  */
 import { StateGraph, Annotation } from "@langchain/langgraph";
 import { ChatOpenAI } from "@langchain/openai";
-import { checkRecipeCache, storeRecipeCache, CachedRecipeData } from "./recipeVectorStore";
+import { checkRecipeCache, storeRecipeCache, CachedRecipeData } from "./stores/recipeVectorStore";
 import {
   checkEnrichmentCache,
   storeEnrichmentCache,
-} from "./enrichmentCache";
+} from "./stores/enrichmentCache";
 
 const RecipeStateAnnotation = Annotation.Root({
   queryText: Annotation<string>,

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { admin } from '../../firebase/firebaseAdmin';
-import { generateMealPlan } from '../../lib/mealPlanGenerator';
+import { generateMealPlan } from '../../lib/meal-plan/mealPlanGenerator';
 
 export async function POST(req: Request) {
   try {

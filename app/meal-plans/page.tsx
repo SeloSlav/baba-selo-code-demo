@@ -10,7 +10,7 @@ import { auth, db } from "../firebase/firebase";
 import { doc, getDoc, updateDoc, setDoc, collection, getDocs, deleteDoc, Timestamp } from "firebase/firestore";
 import { SidebarLayout } from "../components/SidebarLayout";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { FALLBACK_FUN_FACTS } from "../lib/mealPlanFacts";
+import { FALLBACK_FUN_FACTS } from "../lib/meal-plan/mealPlanFacts";
 import { faCheck, faArrowRight, faChevronDown, faCalendarDays, faStop, faTrashCan, faPaperPlane, faStar, faPlay } from "@fortawesome/free-solid-svg-icons";
 
 const EXAMPLE_PROMPTS = [

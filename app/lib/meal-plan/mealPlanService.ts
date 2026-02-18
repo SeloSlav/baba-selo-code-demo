@@ -1,9 +1,8 @@
 /**
  * Shared meal plan generation logic.
  * Used by: /api/meal-plan/send, /api/cron/meal-plans, and chat generate_meal_plan tool.
- * DRY: Single source of truth for creating meal plans with real recipes.
  */
-import { admin } from '../firebase/firebaseAdmin';
+import { admin } from '../../firebase/firebaseAdmin';
 import OpenAI from 'openai';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });

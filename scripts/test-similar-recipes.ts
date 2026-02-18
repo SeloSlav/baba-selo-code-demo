@@ -80,7 +80,7 @@ async function testViaApi(id: string) {
 async function testViaStore(id: string) {
   console.log("\n🔬 Testing store directly (step-by-step timing)\n");
 
-  const { getSimilarRecipesWithTiming, recipeToEmbeddingText } = await import("../app/lib/similarRecipesStore");
+  const { getSimilarRecipesWithTiming, recipeToEmbeddingText } = await import("../app/lib/stores/similarRecipesStore");
 
   const key = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
   if (!key) throw new Error("FIREBASE_SERVICE_ACCOUNT_KEY not set");

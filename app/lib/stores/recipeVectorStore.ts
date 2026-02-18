@@ -25,7 +25,6 @@ export interface CachedRecipeData {
 let vectorStore: PGVectorStore | null = null;
 
 function getConnectionConfig(): PoolConfig | null {
-  // POSTGRES_URL = Vercel/Neon; DATABASE_URL = Railway or local
   const url = process.env.POSTGRES_URL ?? process.env.DATABASE_URL;
   if (!url) return null;
   return { connectionString: url };
@@ -65,10 +64,6 @@ async function getVectorStore(): Promise<PGVectorStore | null> {
   }
 }
 
-/**
- * Check if a similar recipe exists in the cache.
- * Returns cached recipe data if similarity is above threshold, else null.
- */
 export async function checkRecipeCache(
   queryText: string
 ): Promise<CachedRecipeData | null> {
@@ -80,7 +75,6 @@ export async function checkRecipeCache(
     if (results.length === 0) return null;
 
     const [doc, score] = results[0];
-    // Cosine distance: lower = more similar. 0 = identical.
     if (score > SIMILARITY_THRESHOLD) return null;
 
     const metadata = doc.metadata as Record<string, unknown>;
@@ -95,9 +89,6 @@ export async function checkRecipeCache(
   }
 }
 
-/**
- * Store a generated recipe in the vector cache for future lookups.
- */
 export async function storeRecipeCache(
   queryText: string,
   recipeData: CachedRecipeData

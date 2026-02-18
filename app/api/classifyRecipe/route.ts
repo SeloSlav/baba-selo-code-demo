@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-export async function POST(req) {
+export async function POST(req: Request) {
   const body = await req.json();
   let message = body.message;
 
@@ -29,7 +29,7 @@ export async function POST(req) {
         "Authorization": `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini", // If "gpt-4o-mini" is unsupported, use "gpt-4" or "gpt-3.5-turbo"
+        model: "gpt-4o-mini",
         max_tokens: 300,
         temperature: 0.0,
         messages: [
@@ -76,7 +76,7 @@ Return only the JSON, no extra text.`
     }
 
     const data = await response.json();
-    let classification = {};
+    let classification: { diet?: string[]; cuisine?: string; cooking_time?: string; difficulty?: string } = {};
     try {
       classification = JSON.parse(data.choices[0].message.content.trim());
     } catch (err) {
@@ -84,7 +84,6 @@ Return only the JSON, no extra text.`
       return NextResponse.json({ error: "Invalid JSON from model" }, { status: 500 });
     }
 
-    // Validate fields
     if (!classification.diet || !Array.isArray(classification.diet)) {
       return NextResponse.json({ error: "Missing or invalid diet field" }, { status: 500 });
     }
@@ -98,38 +97,32 @@ Return only the JSON, no extra text.`
       return NextResponse.json({ error: "Missing or invalid difficulty field" }, { status: 500 });
     }
 
-    // Check forbidden words
     const forbiddenWords = ["none", "standard"];
-    const hasForbiddenWords = classification.diet.some(d =>
+    const hasForbiddenWords = classification.diet.some((d: string) =>
       forbiddenWords.includes(d.toLowerCase())
     );
     if (hasForbiddenWords) {
       return NextResponse.json({ error: "Diet classification included forbidden words." }, { status: 500 });
     }
 
-    // Check main category presence
     const mainCategories = ["vegan", "vegetarian", "pescetarian", "omnivore", "carnivore", "keto"];
-    const presentMainCats = classification.diet.filter(d => mainCategories.includes(d.toLowerCase()));
+    const presentMainCats = classification.diet.filter((d: string) => mainCategories.includes(d.toLowerCase()));
     if (presentMainCats.length !== 1) {
       return NextResponse.json({ error: "Diet classification missing a clear single main category." }, { status: 500 });
     }
 
-    // Validate difficulty
     const allowedDifficulties = ["easy", "medium", "hard"];
-    if (!allowedDifficulties.includes(classification.difficulty.toLowerCase())) {
+    if (!allowedDifficulties.includes(classification.difficulty!.toLowerCase())) {
       return NextResponse.json({ error: "Invalid difficulty. Must be easy, medium, or hard." }, { status: 500 });
     }
 
-    // Validate cooking_time
     const allowedTimes = ["15 minutes", "30 minutes", "45 minutes", "1 hour", "2 hours"];
-    // Normalize to lowercase for comparison
-    const cookingTimeLower = classification.cooking_time.toLowerCase();
+    const cookingTimeLower = classification.cooking_time!.toLowerCase();
     const isValidTime = allowedTimes.some(t => t.toLowerCase() === cookingTimeLower);
     if (!isValidTime) {
       return NextResponse.json({ error: "Invalid cooking_time. Must be one of the predefined durations." }, { status: 500 });
     }
 
-    // If all checks pass, return the classification
     return NextResponse.json(classification);
   } catch (error) {
     console.error("Error calling OpenAI for classification:", error);

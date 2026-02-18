@@ -7,54 +7,53 @@ import {
   where, 
   orderBy, 
   limit, 
-  serverTimestamp 
+  serverTimestamp,
+  QueryConstraint
 } from 'firebase/firestore';
 import { db } from '../../firebase/firebase';
 
-// Helper function to store a prompt
-const storePrompt = async (data) => {
+interface StorePromptData {
+  userId?: string;
+  message: string;
+  conversationHistory?: unknown[];
+  type?: string;
+  metadata?: Record<string, unknown>;
+}
+
+const storePrompt = async (data: StorePromptData): Promise<{ success: boolean; id?: string; error?: string }> => {
   try {
     const promptData = {
       ...data,
       timestamp: serverTimestamp(),
     };
-    
     const docRef = await addDoc(collection(db, 'prompts'), promptData);
     return { success: true, id: docRef.id };
-  } catch (error) {
-    console.error('Error storing prompt:', error.code || error.message);
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const err = error as { code?: string; message?: string };
+    console.error('Error storing prompt:', err.code || err.message);
+    return { success: false, error: err.message || 'Unknown error' };
   }
 };
 
-// GET endpoint to retrieve prompts (with optional filtering)
-export async function GET(req) {
+export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('userId');
     const promptType = searchParams.get('type');
     const maxResults = parseInt(searchParams.get('limit') || '100');
     
-    // Build query with filters
-    let promptsQuery = collection(db, 'prompts');
-    let constraints = [];
-    
+    const constraints: QueryConstraint[] = [];
     if (userId) {
       constraints.push(where('userId', '==', userId));
     }
-    
     if (promptType) {
       constraints.push(where('type', '==', promptType));
     }
-    
-    // Add ordering and limit
     constraints.push(orderBy('timestamp', 'desc'));
     constraints.push(limit(maxResults));
     
-    // Execute query
-    const querySnapshot = await getDocs(query(promptsQuery, ...constraints));
+    const querySnapshot = await getDocs(query(collection(db, 'prompts'), ...constraints));
     
-    // Format results
     const prompts = querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
@@ -62,8 +61,9 @@ export async function GET(req) {
     }));
     
     return NextResponse.json({ prompts });
-  } catch (error) {
-    console.error('Error fetching prompts:', error.code || error.message);
+  } catch (error: unknown) {
+    const err = error as { code?: string; message?: string };
+    console.error('Error fetching prompts:', err.code || err.message);
     return NextResponse.json(
       { error: 'Failed to fetch prompts' },
       { status: 500 }
@@ -71,12 +71,10 @@ export async function GET(req) {
   }
 }
 
-// POST endpoint to store a new prompt
-export async function POST(req) {
+export async function POST(req: Request) {
   try {
     const data = await req.json();
     
-    // Validate required fields
     if (!data.message) {
       return NextResponse.json(
         { error: 'Message is required' },
@@ -104,11 +102,12 @@ export async function POST(req) {
         { status: 500 }
       );
     }
-  } catch (error) {
-    console.error('Error processing prompt storage:', error.code || error.message);
+  } catch (error: unknown) {
+    const err = error as { code?: string; message?: string };
+    console.error('Error processing prompt storage:', err.code || err.message);
     return NextResponse.json(
       { error: 'Failed to process prompt' },
       { status: 500 }
     );
   }
-} 
+}

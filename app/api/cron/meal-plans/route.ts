@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { admin } from '../../../firebase/firebaseAdmin';
 import { Resend } from 'resend';
-import { generateMealPlanWithRecipes } from '../../../lib/mealPlanService';
+import { generateMealPlanWithRecipes } from '../../../lib/meal-plan/mealPlanService';
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 const FROM_EMAIL = process.env.MEAL_PLAN_FROM_EMAIL || 'Baba Selo <onboarding@resend.dev>';

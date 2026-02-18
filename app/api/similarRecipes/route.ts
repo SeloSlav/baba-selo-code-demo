@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { admin } from "../../firebase/firebaseAdmin";
-import { getSimilarRecipes, recipeToEmbeddingText } from "../../lib/similarRecipesStore";
+import { getSimilarRecipes, recipeToEmbeddingText } from "../../lib/stores/similarRecipesStore";
 
 /** GET /api/similarRecipes?recipeId=xxx - returns similar recipes from pgvector */
 export async function GET(req: Request) {

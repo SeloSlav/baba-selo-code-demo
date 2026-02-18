@@ -9,7 +9,7 @@ import { Document } from "@langchain/core/documents";
 
 const TABLE_NAME = "conversation_memory";
 const RETRIEVAL_LIMIT = 5;
-const SIMILARITY_THRESHOLD = 0.35; // looser for conversational recall
+const SIMILARITY_THRESHOLD = 0.35;
 
 export interface StoredMessage {
   role: "user" | "assistant";
@@ -59,7 +59,6 @@ async function getVectorStore(): Promise<PGVectorStore | null> {
   }
 }
 
-/** Store a chat turn (Pro users only) */
 export async function storeConversationTurn(
   userId: string,
   userMessage: string,
@@ -87,7 +86,6 @@ export async function storeConversationTurn(
   }
 }
 
-/** Retrieve relevant past conversation turns for context (Pro users only) */
 export async function getRelevantMemory(
   userId: string,
   query: string
@@ -105,7 +103,7 @@ export async function getRelevantMemory(
     for (const [doc, score] of results) {
       if (score > SIMILARITY_THRESHOLD) continue;
       const meta = doc.metadata as Record<string, unknown>;
-      if (meta?.userId !== userId) continue; // ensure we only get this user's data
+      if (meta?.userId !== userId) continue;
       if (meta?.userMessage && meta?.assistantMessage) {
         out.push(
           { role: "user", content: String(meta.userMessage), timestamp: String(meta.timestamp || "") },
@@ -113,7 +111,7 @@ export async function getRelevantMemory(
         );
       }
     }
-    return out.slice(-6); // last 3 turns max to avoid token overflow
+    return out.slice(-6);
   } catch (err) {
     console.error("Conversation memory retrieval failed:", err);
     return [];

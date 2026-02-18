@@ -3,7 +3,7 @@ import { SpoonPointSystem } from '../../lib/spoonPoints';
 import { admin } from '../../firebase/firebaseAdmin';
 
 // Add timer detection helper
-const isTimerRequest = (text) => {
+const isTimerRequest = (text: string): { isTimer: boolean; seconds: number } => {
     const lowerText = text.toLowerCase().trim();
     
     // Common timer keywords that might appear in the request
@@ -17,7 +17,7 @@ const isTimerRequest = (text) => {
     if (!hasTimerKeyword) return { isTimer: false, seconds: 0 };
     
     // Complex time patterns
-    const timePatterns = [
+    const timePatterns: { pattern: RegExp; handler: (match: RegExpMatchArray) => number }[] = [
         // Hours and minutes patterns
         {
             pattern: /(\d+)\s*hours?\s*(?:and\s*)?(\d+)\s*(?:min(?:ute)?s?)?/i,
@@ -83,7 +83,7 @@ const isTimerRequest = (text) => {
 };
 
 // Helper function to store user prompts in Firebase (uses Admin SDK to bypass rules on server)
-const storeUserPrompt = async (userId, message, conversationHistory) => {
+const storeUserPrompt = async (userId: string, message: string, conversationHistory: unknown[]): Promise<void> => {
   if (!userId || userId === 'anonymous') return;
   try {
     const adminDb = admin.firestore();
@@ -93,40 +93,35 @@ const storeUserPrompt = async (userId, message, conversationHistory) => {
       conversationHistory,
       timestamp: admin.firestore.FieldValue.serverTimestamp(),
     });
-  } catch (error) {
+  } catch (error: unknown) {
+    const err = error as { code?: number | string };
     // Check specifically for Firestore permission errors
-    if (error.code === 7 || error.code === 'permission-denied') {
+    if (err.code === 7 || err.code === 'permission-denied') {
         console.error('Firestore Permission Error storing user prompt:', error);
-        // Don't throw, but log that permission was denied
     } else {
         console.error('Error storing user prompt:', error);
     }
-    // Don't throw error to prevent disrupting the main flow
   }
 };
 
-export async function POST(req) {
-  let verifiedUserId = 'anonymous'; // Default to anonymous
+export async function POST(req: Request) {
+  let verifiedUserId = 'anonymous';
   let userIsAuthenticated = false;
   try {
       const authorization = req.headers.get('authorization');
       if (authorization?.startsWith('Bearer ')) {
           const idToken = authorization.split('Bearer ')[1];
           const decodedToken = await admin.auth().verifyIdToken(idToken);
-          verifiedUserId = decodedToken.uid; // Use this verified UID
+          verifiedUserId = decodedToken.uid;
           userIsAuthenticated = true;
-      } else {
-          // console.log("No auth token provided for chat, proceeding as anonymous.");
       }
   } catch (error) {
-      // Token invalid or expired, treat as anonymous but log the error
       console.error("Auth Error in chat (treating as anonymous):", error);
       verifiedUserId = 'anonymous';
       userIsAuthenticated = false;
   }
 
-  // Use verifiedUserId instead of userId from body
-  const { messages, dietaryPreferences, preferredCookingOil /*, userId */ } = await req.json();
+  const { messages, dietaryPreferences, preferredCookingOil } = await req.json();
 
   if (!messages || !Array.isArray(messages)) {
     return NextResponse.json({ error: "Invalid or missing messages array" }, { status: 400 });
@@ -183,7 +178,6 @@ export async function POST(req) {
 
   // Store user message in Firebase if it's from a user (and user is authenticated)
   if (lastMessage.role === "user" && userIsAuthenticated) {
-    // Pass the verifiedUserId to the store function
     storeUserPrompt(verifiedUserId, lastMessage.content, messages.slice(0, -1));
   }
 
@@ -196,10 +190,10 @@ export async function POST(req) {
       const adminDoc = await admin.firestore().collection("admins").doc(verifiedUserId).get();
       isProUser = userDoc.data()?.plan === "pro" || (adminDoc.exists && adminDoc.data()?.active === true);
       if (isProUser) {
-        const { getRelevantMemory } = await import("../../lib/conversationMemoryStore");
+        const { getRelevantMemory } = await import("../../lib/stores/conversationMemoryStore");
         const memory = await getRelevantMemory(verifiedUserId, lastMessage.content || "");
         if (memory.length > 0) {
-          memoryContext = `\n\nRELEVANT PAST CONVERSATION (use this to answer questions like "what was that recipe?" or "remember when..."):\n${memory.map((m) => `${m.role}: ${m.content}`).join("\n")}\n\n`;
+          memoryContext = `\n\nRELEVANT PAST CONVERSATION (use this to answer questions like "what was that recipe?" or "remember when..."):\n${memory.map((m: { role: string; content: string }) => `${m.role}: ${m.content}`).join("\n")}\n\n`;
         }
       }
     } catch (e) {
@@ -211,7 +205,6 @@ export async function POST(req) {
   if (lastMessage.role === "user") {
     const timerCheck = isTimerRequest(lastMessage.content);
     if (timerCheck.isTimer && timerCheck.seconds > 0) {
-      // If it's less than 5 seconds, return a friendly message
       if (timerCheck.seconds < 5) {
         return NextResponse.json({
           assistantMessage: "Oh dear, that's too short for a timer! Let me help you with something at least 5 seconds long. *winks*"
@@ -362,13 +355,13 @@ Extras:
   - If someone asks if she's been to a city: "Ha! The city? I've been there, but the noise... the hustle... it's not for me. I prefer the peace of the village, where the loudest thing is the crow of the rooster at dawn."
   - If anyone asks for Baba Selo's favorite soccer or football team, she'll respond, "Hajduk, of course! A team with heart and soul, unlike those Dinamo show-offs. Pah!" (She'll even make a spitting sound for emphasis.)
 
-Note: The user has these dietary preferences: ${dietaryPreferences.join(", ")}.
-The user also prefers to use ${preferredCookingOil} as a cooking oil.
+Note: The user has these dietary preferences: ${(dietaryPreferences || []).join(", ")}.
+The user also prefers to use ${preferredCookingOil || 'olive oil'} as a cooking oil.
 ${randomizationHint}
 ${memoryContext}`;
 
   const encoder = new TextEncoder();
-  const write = (obj) => encoder.encode(JSON.stringify(obj) + "\n");
+  const write = (obj: object) => encoder.encode(JSON.stringify(obj) + "\n");
 
   try {
     const { runChatGraphStream } = await import("../../lib/chatGraph");
@@ -400,7 +393,7 @@ ${memoryContext}`;
 
               if (isProUser && lastMessage.role === "user") {
                 try {
-                  const { storeConversationTurn } = await import("../../lib/conversationMemoryStore");
+                  const { storeConversationTurn } = await import("../../lib/stores/conversationMemoryStore");
                   await storeConversationTurn(verifiedUserId, lastMessage.content || "", assistantMessage);
                 } catch (e) {
                   console.error("Conversation memory store error:", e);
@@ -414,7 +407,7 @@ ${memoryContext}`;
               const hasDirections = assistantMessage.toLowerCase().includes("directions");
               const isRecipe = hasRecipeName && hasIngredients && hasDirections;
 
-              let pointsAwarded = null;
+              let pointsAwarded: { points: number; message: string } | null = null;
               if (isRecipe && userIsAuthenticated) {
                 const docId = `${verifiedUserId}-${Date.now()}`;
                 const recipeHash = `${verifiedUserId}-${Date.now()}-${firstLine}`;
@@ -437,9 +430,10 @@ ${memoryContext}`;
                     })();
                     pointsAwarded = { points: 0, message: errorMessage };
                   }
-                } catch (error) {
+                } catch (error: unknown) {
                   console.error("Error awarding points:", error);
-                  pointsAwarded = { points: 0, message: (error.code === 7 || error.code === 'permission-denied') ? "Permission denied when awarding points." : 'Something went wrong while awarding points' };
+                  const err = error as { code?: number | string };
+                  pointsAwarded = { points: 0, message: (err.code === 7 || err.code === 'permission-denied') ? "Permission denied when awarding points." : 'Something went wrong while awarding points' };
                 }
               }
 

@@ -7,8 +7,13 @@ import { admin } from '../firebase/firebaseAdmin';
 
 const adminDb = admin.firestore();
 
-// --- Parse recipe (shared logic) ---
-function parseRecipe(text) {
+interface ParsedRecipe {
+  recipeTitle: string;
+  ingredients: string[];
+  directions: string[];
+}
+
+function parseRecipe(text: string): ParsedRecipe {
   const raw = (text || '').trim();
   const lower = raw.toLowerCase();
   const ingPos = lower.indexOf('ingredients');
@@ -18,7 +23,7 @@ function parseRecipe(text) {
   }
   const ingredientsBlock = raw.slice(ingPos + 11, dirPos).trim();
   const directionsBlock = raw.slice(dirPos + 10).trim();
-  const ingredients = [];
+  const ingredients: string[] = [];
   for (const line of ingredientsBlock.split('\n')) {
     const parts = line.split(/(?=\s*[-•*]\s+)/);
     for (const p of parts) {
@@ -28,7 +33,7 @@ function parseRecipe(text) {
       }
     }
   }
-  const directions = [];
+  const directions: string[] = [];
   for (const line of directionsBlock.split('\n')) {
     const trimmed = line.trim();
     if (!trimmed) continue;
@@ -44,8 +49,7 @@ function parseRecipe(text) {
   return { recipeTitle: recipeTitle || 'Untitled Recipe', ingredients, directions };
 }
 
-// --- save_recipe ---
-export async function handleSaveRecipe({ recipeContent, userId, classification }) {
+export async function handleSaveRecipe({ recipeContent, userId, classification }: { recipeContent: string; userId: string; classification?: { cuisine?: string; difficulty?: string; cooking_time?: string; diet?: string[] } }) {
   if (!userId || userId === 'anonymous') {
     return { success: false, error: 'User must be logged in to save recipes.' };
   }
@@ -66,7 +70,7 @@ export async function handleSaveRecipe({ recipeContent, userId, classification }
     };
     await adminDb.collection('recipes').doc(docId).set(newRecipe);
     try {
-      const { indexRecipe } = await import('./similarRecipesStore');
+      const { indexRecipe } = await import('./stores/similarRecipesStore');
       await indexRecipe({
         id: docId,
         recipeTitle: newRecipe.recipeTitle,
@@ -84,20 +88,19 @@ export async function handleSaveRecipe({ recipeContent, userId, classification }
     return { success: true, recipeId: docId, title: newRecipe.recipeTitle };
   } catch (err) {
     console.error('Save recipe error:', err);
-    return { success: false, error: err.message };
+    return { success: false, error: (err as Error).message };
   }
 }
 
-// --- get_similar_recipes ---
-export async function handleGetSimilarRecipes({ recipeText, limit = 6 }) {
+export async function handleGetSimilarRecipes({ recipeText, limit = 6 }: { recipeText: string; limit?: number }) {
   if (!recipeText || !recipeText.trim()) {
     return { similar: [], error: 'No recipe text provided.' };
   }
   try {
-    const { getSimilarRecipes } = await import('./similarRecipesStore');
+    const { getSimilarRecipes } = await import('./stores/similarRecipesStore');
     const results = await getSimilarRecipes('chat-search', recipeText, Math.min(limit, 8));
     return {
-      similar: results.map((r) => ({
+      similar: results.map((r: { id: string; recipeTitle: string; cuisineType?: string }) => ({
         id: r.id,
         title: r.recipeTitle,
         cuisineType: r.cuisineType,
@@ -106,12 +109,11 @@ export async function handleGetSimilarRecipes({ recipeText, limit = 6 }) {
     };
   } catch (err) {
     console.error('Similar recipes error:', err);
-    return { similar: [], error: err.message };
+    return { similar: [], error: (err as Error).message };
   }
 }
 
-// --- convert_servings ---
-export async function handleConvertServings({ recipeContent, targetServings }) {
+export async function handleConvertServings({ recipeContent, targetServings }: { recipeContent: string; targetServings: number }) {
   if (!recipeContent || !targetServings || targetServings < 1) {
     return { success: false, error: 'Need recipe content and valid target servings.' };
   }
@@ -122,7 +124,6 @@ export async function handleConvertServings({ recipeContent, targetServings }) {
   if (ingPos === -1 || dirPos === -1) {
     return { success: false, error: 'Could not parse recipe structure.' };
   }
-  // Guess original servings from common patterns (e.g. "serves 4", "4 servings")
   let originalServings = 4;
   const serveMatch = recipeContent.match(/(?:serves?|portions?|yield)\s*(\d+)/i) || recipeContent.match(/(\d+)\s*(?:servings?|portions?|people)/i);
   if (serveMatch) originalServings = parseInt(serveMatch[1], 10) || 4;
@@ -162,8 +163,7 @@ export async function handleConvertServings({ recipeContent, targetServings }) {
   return { success: true, scaledRecipe: newRecipe, originalServings, targetServings };
 }
 
-// --- get_nutrition ---
-export async function handleGetNutrition({ recipeContent }) {
+export async function handleGetNutrition({ recipeContent }: { recipeContent: string }) {
   if (!recipeContent || !recipeContent.trim()) {
     return { success: false, error: 'No recipe content.' };
   }
@@ -181,12 +181,11 @@ export async function handleGetNutrition({ recipeContent }) {
     return { success: true, macros: data.macros };
   } catch (err) {
     console.error('Get nutrition error:', err);
-    return { success: false, error: err.message };
+    return { success: false, error: (err as Error).message };
   }
 }
 
-// --- ingredient_substitution ---
-const BALKAN_SUBSTITUTIONS = {
+const BALKAN_SUBSTITUTIONS: Record<string, string[]> = {
   kajmak: ['cream cheese', 'mascarpone', 'clotted cream', 'sour cream mixed with butter'],
   'sour cream': ['Greek yogurt', 'crème fraîche', 'buttermilk', 'kajmak'],
   ajvar: ['roasted red pepper spread', 'harissa', 'tomato paste with roasted peppers'],
@@ -198,7 +197,8 @@ const BALKAN_SUBSTITUTIONS = {
   feta: ['goat cheese', 'cottage cheese', 'ricotta salata'],
   'cottage cheese': ['ricotta', 'farmer cheese', 'quark'],
 };
-export async function handleIngredientSubstitution({ ingredient }) {
+
+export async function handleIngredientSubstitution({ ingredient }: { ingredient: string }) {
   const lower = (ingredient || '').toLowerCase().trim();
   if (!lower) return { success: false, error: 'No ingredient specified.' };
   for (const [key, subs] of Object.entries(BALKAN_SUBSTITUTIONS)) {
@@ -209,14 +209,12 @@ export async function handleIngredientSubstitution({ ingredient }) {
   return { success: false, error: `No substitution for "${ingredient}" in my book. Try asking Baba in your own words!` };
 }
 
-// --- set_timer ---
-export async function handleSetTimer({ seconds }) {
-  const s = Math.max(5, Math.min(7200, parseInt(seconds, 10) || 60));
+export async function handleSetTimer({ seconds }: { seconds: number }) {
+  const s = Math.max(5, Math.min(7200, parseInt(String(seconds), 10) || 60));
   return { success: true, seconds: s, message: `Timer set for ${s} seconds.` };
 }
 
-// --- translate_recipe ---
-export async function handleTranslateRecipe({ recipeContent, targetLanguage }) {
+export async function handleTranslateRecipe({ recipeContent, targetLanguage }: { recipeContent: string; targetLanguage: string }) {
   if (!recipeContent || !targetLanguage) {
     return { success: false, error: 'Need recipe and target language.' };
   }
@@ -245,23 +243,22 @@ export async function handleTranslateRecipe({ recipeContent, targetLanguage }) {
     return { success: true, translatedRecipe: translated, targetLanguage };
   } catch (err) {
     console.error('Translate error:', err);
-    return { success: false, error: err.message };
+    return { success: false, error: (err as Error).message };
   }
 }
 
-// --- generate_meal_plan ---
-function extractBabaTip(plan) {
-  const match = (plan || '').match(/Baba'?s?\s*Tip\s*:?\s*(.+?)(?:\n|$)/is);
+function extractBabaTip(plan: string): string {
+  const match = (plan || '').match(/Baba'?s?\s*Tip\s*:?\s*([\s\S]+?)(?:\n|$)/i);
   return match ? match[1].trim() : '';
 }
 
-export async function handleGenerateMealPlan({ userId, preferences, days = 7 }) {
+export async function handleGenerateMealPlan({ userId, preferences, days = 7 }: { userId: string; preferences?: string; days?: number }) {
   if (!userId || userId === 'anonymous') {
     return { success: false, error: 'Sign in to create and save meal plans. Your plans will be saved with clickable recipe links!' };
   }
   try {
     let mealPlanPrompt = (preferences || '').trim();
-    let dietaryPreferences = [];
+    let dietaryPreferences: string[] = [];
     let preferredCookingOil = 'olive oil';
 
     const userDoc = await adminDb.collection('users').doc(userId).get();
@@ -270,58 +267,55 @@ export async function handleGenerateMealPlan({ userId, preferences, days = 7 }) 
     dietaryPreferences = Array.isArray(userData.dietaryPreferences) ? userData.dietaryPreferences : [];
     preferredCookingOil = userData.preferredCookingOil || 'olive oil';
 
-    const numDays = Math.min(Math.max(1, parseInt(days, 10) || 7), 7);
-    let plan;
-    let planId = null;
+    const numDays = Math.min(Math.max(1, parseInt(String(days), 10) || 7), 7);
 
     try {
-        const { generateMealPlanWithRecipes } = await import('./mealPlanService');
-        const result = await generateMealPlanWithRecipes({
-          userId,
-          mealPlanPrompt,
-          ingredientsOnHand: (userData.ingredientsOnHand || '').trim(),
-          calorieTarget: userData.mealPlanCalorieTarget,
-          dietaryPreferences,
-          preferredCookingOil,
+      const { generateMealPlanWithRecipes } = await import('./meal-plan/mealPlanService');
+      const result = await generateMealPlanWithRecipes({
+        userId,
+        mealPlanPrompt,
+        ingredientsOnHand: (userData.ingredientsOnHand || '').trim(),
+        calorieTarget: userData.mealPlanCalorieTarget,
+        dietaryPreferences,
+        preferredCookingOil,
+        type: 'weekly',
+        includeShoppingList: true,
+        source: 'chat',
+      });
+
+      const plan = result.planTextWithLinks;
+      const planId = result.planId;
+      return { success: true, mealPlan: plan || '', planId };
+    } catch (e) {
+      console.error('Structured meal plan failed, falling back to simple:', e);
+      const { generateMealPlan } = await import('./meal-plan/mealPlanGenerator');
+      const plan = await generateMealPlan({
+        mealPlanPrompt,
+        dietaryPreferences,
+        preferredCookingOil,
+        days: numDays,
+      });
+      if (plan) {
+        const historyCol = adminDb.collection('users').doc(userId).collection('mealPlanHistory');
+        const historyRef = await historyCol.add({
           type: 'weekly',
-          includeShoppingList: true,
+          content: plan,
+          subject: "Baba Selo's Weekly Meal Plan",
+          babaTip: extractBabaTip(plan) || '',
           source: 'chat',
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });
-
-        plan = result.planTextWithLinks;
-        planId = result.planId;
-      } catch (e) {
-        console.error('Structured meal plan failed, falling back to simple:', e);
-        const { generateMealPlan } = await import('./mealPlanGenerator');
-        plan = await generateMealPlan({
-          mealPlanPrompt,
-          dietaryPreferences,
-          preferredCookingOil,
-          days: numDays,
-        });
-        if (plan) {
-          const historyCol = adminDb.collection('users').doc(userId).collection('mealPlanHistory');
-          const historyRef = await historyCol.add({
-            type: 'weekly',
-            content: plan,
-            subject: "Baba Selo's Weekly Meal Plan",
-            babaTip: extractBabaTip(plan) || '',
-            source: 'chat',
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          });
-          planId = historyRef.id;
-        }
+        return { success: true, mealPlan: plan, planId: historyRef.id };
       }
-
-    return { success: true, mealPlan: plan || '', planId };
+      return { success: true, mealPlan: '', planId: null };
+    }
   } catch (err) {
     console.error('Generate meal plan error:', err);
-    return { success: false, error: err.message };
+    return { success: false, error: (err as Error).message };
   }
 }
 
-// --- add_to_meal_plan ---
-export async function handleAddToMealPlan({ recipeContent, dayOfWeek, userId }) {
+export async function handleAddToMealPlan({ recipeContent, dayOfWeek, userId }: { recipeContent: string; dayOfWeek: string; userId: string }) {
   if (!userId || userId === 'anonymous') {
     return { success: false, error: 'Sign in to add recipes to your meal plan!' };
   }
@@ -345,12 +339,11 @@ export async function handleAddToMealPlan({ recipeContent, dayOfWeek, userId }) 
     return { success: true, day: normalizedDay, title: parsed.recipeTitle };
   } catch (err) {
     console.error('Add to meal plan error:', err);
-    return { success: false, error: err.message };
+    return { success: false, error: (err as Error).message };
   }
 }
 
-// --- seasonal_tips ---
-const SEASONAL_BY_MONTH = {
+const SEASONAL_BY_MONTH: Record<number, { northern: string[]; balkan: string[] }> = {
   1: { northern: ['citrus', 'root vegetables', 'cabbage', 'kale'], balkan: ['sauerkraut', 'pickled vegetables', 'winter stews'] },
   2: { northern: ['citrus', 'leeks', 'parsnips'], balkan: ['preserved meats', 'dried beans'] },
   3: { northern: ['asparagus', 'spring greens', 'rhubarb'], balkan: ['early greens', 'wild herbs'] },
@@ -364,7 +357,8 @@ const SEASONAL_BY_MONTH = {
   11: { northern: ['squash', 'brussels', 'pears'], balkan: ['cabbage', 'preserving season'] },
   12: { northern: ['citrus', 'winter squash', 'nuts'], balkan: ['festive meats', 'baklava ingredients'] },
 };
-export async function handleSeasonalTips({ region = 'balkan' }) {
+
+export async function handleSeasonalTips({ region = 'balkan' }: { region?: string }) {
   const month = new Date().getMonth() + 1;
   const data = SEASONAL_BY_MONTH[month] || SEASONAL_BY_MONTH[1];
   const items = region.toLowerCase().includes('balkan') ? data.balkan : data.northern;
@@ -372,45 +366,31 @@ export async function handleSeasonalTips({ region = 'balkan' }) {
   return { success: true, month: monthNames[month], items, region: region.includes('balkan') ? 'Balkan' : 'Northern hemisphere' };
 }
 
-// --- find_by_ingredients ---
-export async function handleFindByIngredients({ ingredients, userId }) {
+export async function handleFindByIngredients({ ingredients, userId }: { ingredients: string[]; userId?: string }) {
   if (!ingredients || !Array.isArray(ingredients) || ingredients.length === 0) {
     return { success: false, error: 'List the ingredients you have.' };
   }
   const text = ingredients.join(', ');
   try {
-    const { getSimilarRecipes } = await import('./similarRecipesStore');
+    const { getSimilarRecipes } = await import('./stores/similarRecipesStore');
     const results = await getSimilarRecipes('chat-search', `Ingredients: ${text}`, 6);
     return {
       success: true,
-      recipes: results.map((r) => ({ id: r.id, title: r.recipeTitle, url: `https://www.babaselo.com/recipe/${r.id}` })),
+      recipes: results.map((r: { id: string; recipeTitle: string }) => ({ id: r.id, title: r.recipeTitle, url: `https://www.babaselo.com/recipe/${r.id}` })),
     };
   } catch (err) {
     console.error('Find by ingredients error:', err);
-    return { success: false, error: err.message };
+    return { success: false, error: (err as Error).message };
   }
 }
 
-// --- unit_conversion ---
-const CONVERSIONS = {
-  'g to cups flour': (g) => (g / 120).toFixed(2),
-  'g to cups sugar': (g) => (g / 200).toFixed(2),
-  'g to cups rice': (g) => (g / 185).toFixed(2),
-  'cups to g flour': (c) => Math.round(c * 120),
-  'cups to g sugar': (c) => Math.round(c * 200),
-  'cups to g rice': (c) => Math.round(c * 185),
-  'ml to cups': (ml) => (ml / 240).toFixed(2),
-  'cups to ml': (c) => Math.round(c * 240),
-  'tbsp to ml': (t) => Math.round(t * 15),
-  'tsp to ml': (t) => (t * 5).toFixed(1),
-};
-export async function handleUnitConversion({ amount, fromUnit, toUnit }) {
-  const amt = parseFloat(amount);
+export async function handleUnitConversion({ amount, fromUnit, toUnit }: { amount: number; fromUnit: string; toUnit: string }) {
+  const amt = parseFloat(String(amount));
   if (isNaN(amt) || amt <= 0) return { success: false, error: 'Invalid amount.' };
   const from = (fromUnit || '').toLowerCase().replace(/\s+/g, ' ');
   const to = (toUnit || '').toLowerCase().replace(/\s+/g, ' ');
   const key = `${from} to ${to}`;
-  let result = null;
+  let result: string | null = null;
   if (key.includes('g') && key.includes('cups')) {
     if (from.includes('g') && to.includes('cup')) {
       if (key.includes('flour')) result = (amt / 120).toFixed(2) + ' cups';

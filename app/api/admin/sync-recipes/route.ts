@@ -3,7 +3,7 @@ import { admin } from "../../../firebase/firebaseAdmin";
 import {
   indexRecipes,
   type IndexedRecipe,
-} from "../../../lib/similarRecipesStore";
+} from "../../../lib/stores/similarRecipesStore";
 
 /** Admin-only: sync Firestore recipes to pgvector for similar-recipe search */
 export async function POST(req: Request) {
