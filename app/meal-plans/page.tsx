@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { Suspense, useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
@@ -131,7 +131,7 @@ async function fetchPlan(): Promise<"free" | "pro"> {
   return "free";
 }
 
-export default function MealPlansPage() {
+function MealPlansContent() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
   const rawPlanId = searchParams.get("plan");
@@ -1106,5 +1106,21 @@ export default function MealPlansPage() {
           </div>
         </div>
       </SidebarLayout>
+  );
+}
+
+export default function MealPlansPage() {
+  return (
+    <Suspense
+      fallback={
+        <SidebarLayout>
+          <div className="min-h-screen flex items-center justify-center">
+            <div className="animate-pulse text-amber-600">Loading...</div>
+          </div>
+        </SidebarLayout>
+      }
+    >
+      <MealPlansContent />
+    </Suspense>
   );
 }
